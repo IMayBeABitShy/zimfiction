@@ -1,0 +1,59 @@
+This file describes the ZIM layout.
+
+
++-/
+| The root directory, redirects to index.html
+|
++---index.html
+|   The main page.
+|
++-+-story/
+| | Contains the stories
+| |
+| +-+-PUBLISHER/
+|   | Contains the stories of the specific publisher
+|   |
+|   +-+-ID/
+|     | The story with the specified ID from this publisher. Redirects to ./1
+|     |
+|     +---index
+|     |   List of chapters in this story.
+|     |
+|     +---CHAPTER
+|         The specific chapter of a story
+|
++-+-author/
+| | Contains the authors
+| |
+| +-+-PUBLISHER/
+|   | Contains the authors of the specific publisher
+|   |
+|   +-+-NAME
+|     | The page for this author
+|     |
+|     +-PAGENUM
+|       A page of the list of stories created by this author
+|
++-+-tag/
+| | Contains the tags, ...
+| |
+| +-+-TYPE/
+|   | All tags of a specific type
+|   |
+|   +-+-TAG
+|     | This specific tag, Redirects to ./1
+|     |
+|     +-PAGENUM
+|       A page of stories with this tag
+|
++-+-category/
+| | Contains the category, ...
+| |
+| +-+-PUBLISHER/
+|   | All categories by a specific publisher
+|   |
+|   +-+-CATEGORY
+|     | Stories in this category
+|     |
+|     +-PAGENUM
+|       A page of stories in this category

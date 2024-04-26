@@ -1,0 +1,46 @@
+{# This file contains page buttons. Expects "to_root", "num_pages", and "cur_page" #}
+{# indexes/pagenumbers are 1-based #}
+
+<DIV class="page_buttons">
+    {# to-start navigation #}
+    {% if cur_page > 3 %}
+        {# to page 1 button #}
+        {% with pagenum=1, to_root=to_root %}
+            {% include "pagebutton.html.jinja" %}
+        {% endwith %}
+    {% endif %}
+    {% if cur_page > 4 %}
+        {# we are skipping buttons #}
+        {% with to_root=to_root %}
+            {% include "pagebuttonskip.html.jinja" %}
+        {% endwith %}
+    {% endif %}
+
+    {# around current page navigation #}
+    {% for i in range([1, cur_page-2]|max, [cur_page+3, num_pages+1]|min) %}
+        {% if i == cur_page %}
+            {# the button for the current page #}
+            {% with pagenum=i, to_root=to_root %}
+                {% include "curpagebutton.html.jinja" %}
+            {% endwith %}
+        {% else %}
+            {% with pagenum=i, to_root=to_root %}
+                {% include "pagebutton.html.jinja" %}
+            {% endwith %}
+        {% endif %}
+    {% endfor %}
+
+    {# to-end navigation #}
+    {% if cur_page + 3 < num_pages %}
+        {# to we are skipping pages #}
+        {% with to_root=to_root %}
+            {% include "pagebuttonskip.html.jinja" %}
+        {% endwith %}
+    {% endif %}
+    {% if cur_page + 2 < num_pages %}
+        {# to last page button #}
+        {% with pagenum=num_pages, to_root=to_root %}
+            {% include "pagebutton.html.jinja" %}
+        {% endwith %}
+    {% endif %}
+</DIV>

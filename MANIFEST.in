@@ -1,0 +1,2 @@
+recursive-include zimfiction/resources *
+recursive-include zimfiction/zimbuild/templates *

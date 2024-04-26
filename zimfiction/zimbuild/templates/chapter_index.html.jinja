@@ -1,0 +1,22 @@
+{# This is a page for the chapter index of a story. Expects "story" and "to_root" argument.#}
+{% extends "chapter.html.jinja" %}
+
+{% block title %}
+    <TITLE>ZimFiction - {{story.title}} - Index</TITLE>
+{% endblock %}
+
+{% block content %}
+    {% with story=story, to_root=to_root, extended=True %}
+        {% include "storysummary.html.jinja" %}
+    {% endwith %}
+    <HR>
+    {% block storyindex %}
+        <DIV class="storytext index" id="storytext">
+            <UL class="chapter_index_list">
+                {% for chapter in story.chapters|sort(attribute="index") %}
+                    <LI class="chapterlink"><A href="{{ chapter.index }}">{{ chapter.index }}. {{ chapter.title }} ({{ chapter.num_words|format_number }} words)</A></LI>
+                {% endfor %}
+            </UL>
+        </DIV>
+    {% endblock %}
+{% endblock %}

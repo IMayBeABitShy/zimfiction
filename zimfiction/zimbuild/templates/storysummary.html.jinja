@@ -1,0 +1,115 @@
+{# This is a div containing the summary of a story. Expects "to_root", "story" and "extended" argument #}
+
+<DIV class="story_summary_div">
+    <DIV class="story_summary_title">
+        <A href="{{ to_root}}/story/{{ story.publisher }}/{{ story.id }}/" class="story_summary_title_link">{{ story.title }}</A> by <A class="story_summary_author_link" href="{{ to_root}}/author/{{ story.author.publisher }}/{{ story.author_name|normalize_tag }}/">{{ story.author_name }}</A>
+        {% if not extended %}
+            <P class="story_updated_text">{{ story.updated|format_date }}</P>
+            <DIV class="story_short_categories">
+                {% with categories=story.categories, to_root=to_root %}
+                    {% include "categorylist.html.jinja" %}
+                {% endwith %}
+            </DIV>
+        {% endif %}
+    </DIV>
+    {% if extended %}
+        <TABLE class="story_summary_meta">
+            {% if story.categories|length > 0 %}
+                <TR>
+                    <TH>Fandom</TH>
+                    <TD>
+                        {% with categories=story.categories, to_root=to_root %}
+                            {% include "categorylist.html.jinja" %}
+                        {% endwith %}
+                    </TD>
+                </TR>
+            {% endif %}
+            <TR>
+                <TH>Status</TH>
+                <TD>{{ story.status }}</TD>
+            </TR>
+            <TR>
+                <TH>Language</TH>
+                <TD>{{ story.language }}</TD>
+            </TR>
+            <TR>
+                <TH>Rating</TH>
+                <TD>{{ story.rating|title }}</TD>
+            </TR>
+            <TR>
+                <TH>Published</TH>
+                <TD>{{ story.published|format_date }}</TD>
+            </TR>
+            <TR>
+                <TH>Updated</TH>
+                <TD>{{ story.updated|format_date }}</TD>
+            </TR>
+            <TR>
+                <TH>Packaged</TH>
+                <TD>{{ story.packaged|format_date }}</TD>
+            </TR>
+            {% if story.warnings|length > 0 %}
+                <TR>
+                    <TH>Warnings</TH>
+                    <TD>
+                        {% with to_root=to_root, tags=story.warnings %}
+                            {% include "taglist.html.jinja" %}
+                        {% endwith %}
+                    </TD>
+                </TR>
+            {% endif %}
+            {% if story.relationships|length > 0 %}
+                <TR>
+                    <TH>Relationships</TH>
+                    <TD>
+                        {% with to_root=to_root, tags=story.relationships %}
+                            {% include "taglist.html.jinja" %}
+                        {% endwith %}
+                    </TD>
+                </TR>
+            {% endif %}
+            {% if story.genres|length > 0 %}
+                <TR>
+                    <TH>Tags</TH>
+                    <TD>
+                        {% with to_root=to_root, tags=story.genres %}
+                            {% include "taglist.html.jinja" %}
+                        {% endwith %}
+                    </TD>
+                </TR>
+            {% endif %}
+            <TR>
+                <TH>Chapters</TH>
+                <TD>{{ story.chapters|length }} (<A href="index" class="indexlink">Index</A>)</TD>
+            </TR>
+            <TR>
+                <TH>Words</TH>
+                <TD>{{ story.total_words|format_number }}</TD>
+            </TR>
+            <TR>
+                <TH>Score</TH>
+                <TD>{{ story.score|format_number }}</TD>
+            </TR>
+        </TABLE>
+    {% else %}
+        <DIV class="story_short_tags">
+            {% with to_root=to_root, tags=story.ordered_tags %}
+                {% include "taglist.html.jinja" %}
+            {% endwith %}
+        </DIV>
+        <BR>
+    {% endif %}
+    <DIV class="story_summary_text">
+        {{ story.summary|safe }}
+    </DIV>
+    {% if not extended %}
+        <DIV class="story_summary_footer">
+            <P>
+                {% if story.series is not none %}
+                    Part <B>{{ story.series_index }}</B> of {{ story.series.name }}
+                {% endif %}
+                <B>Language:</B> {{ story.language }} <B>Status:</B> {{ story.status }} <B>Words:</B> {{ story.total_words|format_number }} <B>Chapters:</B> {{ story.chapters|length }} <B>Score:</B> {{ story.score|format_number }}
+            </P>
+        </DIV>
+    {% endif %}
+</DIV>

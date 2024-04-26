@@ -1,0 +1,30 @@
+{# The base template provides the basic strucure for all HTML pages #}
+<!DOCTYPE html>
+<HTML>
+    <HEAD>
+        {% block head %}
+            {% block htmlmeta %}
+                <META http-equiv="Content-Type" content="text/html;charset=UTF-8">
+            {% endblock %}
+            {% block title %}
+                <TITLE>ZimFiction</TITLE>
+            {% endblock %}
+            {% block css %}
+                <link rel="stylesheet" href="{{ to_root }}/style.css">
+            {% endblock %}
+            {% block scripts %}
+            {% endblock %}
+        {% endblock %}
+    </HEAD>
+    <BODY>
+        {% block body %}
+            {% block navigation %}
+                {% include "navigation.html.jinja" %}
+            {% endblock %}
+            <DIV class="content-container">
+                {% block content %}
+                {% endblock %}
+            </DIV>
+        {% endblock %}
+    </BODY>
+</HTML>

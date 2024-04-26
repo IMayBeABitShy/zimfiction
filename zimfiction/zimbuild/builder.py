@@ -1,0 +1,608 @@
+"""
+This module builds the ZIM files.
+
+@var MAX_OUTSTANDING_TASKS: max size of the task queue
+@type MAX_OUTSTANDING_TASKS: L{int}
+@var MAX_RESULT_BACKLOG: max size of the task result queue
+@type MAX_RESULT_BACKLOG: L{int}
+@var STORIES_PER_TASK: number of storiy IDs to send per worker tasks
+@type STORIES_PER_TASK: L{int}
+"""
+import multiprocessing
+import threading
+import datetime
+import time
+import os
+import contextlib
+import math
+
+import psutil
+
+from sqlalchemy import select, func
+from sqlalchemy.orm import Session
+from libzim.writer import Creator, Item, StringProvider, FileProvider, Hint
+
+from ..util import format_timedelta, format_size, get_resource_file_path
+from ..db.models import Story, Tag, Author, Category
+from ..reporter import StdoutReporter
+from .renderer import HtmlPage, Redirect
+from .worker import Worker, StopTask, StoryRenderTask, TagRenderTask, AuthorRenderTask, CategoryRenderTask
+from .worker import MARKER_TASK_COMPLETED, MARKER_WORKER_STOPPED
+from .buckets import BucketMaker
+
+
+MAX_OUTSTANDING_TASKS = 1024 * 16
+MAX_RESULT_BACKLOG = 1024
+STORIES_PER_TASK = 64
+
+
+# =============== HELPER FUNCTIONS ================
+
+
+def get_n_cores():
+    """
+    Return the number of cores to use.
+    If multiprocessing is available, this is the number of cores available.
+    Otherwise, this will be 1.
+
+    @return: the number of cores to use.
+    @rtype: L{int}
+    """
+    if multiprocessing is not None:
+        return multiprocessing.cpu_count()
+    else:
+        return 1
+
+
+# =============== ITEM DEFINITIONS ================
+
+
+class HtmlPageItem(Item):
+    """
+    A L{libzim.writer.Item} for HTML pages.
+    """
+    def __init__(self, path, title, content, is_front=True):
+        """
+        The default constructor.
+
+        @param path: path of the page in the ZIM file
+        @type path: L{str}
+        @param title: title of the page
+        @type title: L{str}
+        @param content: the content of the page
+        @type content: L{str}
+        @param is_front: if this is nonzero, set this as a front article
+        @type is_front: L{bool}
+        """
+        super().__init__()
+        self._path = path
+        self._title = title
+        self._content = content
+        self._is_front = is_front
+
+    def get_path(self):
+        return self._path
+
+    def get_title(self):
+        return self._title
+
+    def get_mimetype(self):
+        return "text/html"
+
+    def get_contentprovider(self):
+        return StringProvider(self._content)
+
+    def get_hints(self):
+        return {
+            Hint.FRONT_ARTICLE: self._is_front,
+            Hint.COMPRESS: True,
+        }
+
+
+class StylesheetItem(Item):
+    """
+    A L{libzim.writer.Item} for the CSS stylesheet.
+    """
+    def __init__(self):
+        """
+        The default constructor.
+        """
+        super().__init__()
+
+    def get_path(self):
+        return "style.css"
+
+    def get_title(self):
+        return "CSS Stylesheet"
+
+    def get_mimetype(self):
+        return "text/css"
+
+    def get_contentprovider(self):
+        return FileProvider(get_resource_file_path("style.css"))
+
+    def get_hints(self):
+        return {
+            Hint.FRONT_ARTICLE: False,
+            Hint.COMPRESS: True,
+        }
+
+
+# =============== BUILD LOGIC =================
+
+
+class BuildOptions(object):
+    """
+    A class containing the build options for the ZIM.
+
+    @ivar name: human-readable identifier of the resource
+    @type name: L{str}
+    @ivar title: title of ZIM file
+    @type title: L{str}
+    @ivar creator: creator of the ZIM file content
+    @type creator: L{str}
+    @ivar publisher: publisher of the ZIM file
+    @type publisher: L{str}
+    @ivar description: description of the ZIM file
+    @type description: L{str}
+    @ivar language: language to use (e.g. "eng")
+    @type language: L{str}
+    @ivar indexing: whether indexing should be enabled or not
+    @type indexing: L{bool}
+    """
+    def __init__(
+        self,
+        name="zimfiction_eng",
+        title="ZimFiction",
+        creator="Various fanfiction communities",
+        publisher="ZimFiction",
+        description="ZIM file containing dumps of various fanfiction sites",
+        language="eng",
+        indexing=True,
+        ):
+        """
+        The default constructor.
+
+        @param name: human-readable identifier of the resource
+        @type name: L{str}
+        @param title: title of ZIM file
+        @type title: L{str}
+        @param creator: creator of the ZIM file content
+        @type creator: L{str}
+        @param publisher: publisher of the ZIM file
+        @type publisher: L{str}
+        @param description: description of the ZIM file
+        @type description: L{str}
+        @param language: language to use (e.g. "eng")
+        @type language: L{str}
+        @param indexing: whether indexing should be enabled or not
+        @type indexing: L{bool}
+        """
+        self.name = name
+        self.title = title
+        self.creator = creator
+        self.publisher = publisher
+        self.description = description
+        self.language = language
+        self.indexing = indexing
+
+    def get_metadata_dict(self):
+        """
+        Return a dictionary encoding the ZIM metadata described by this file.
+
+        Additional metadata will likely be added.
+
+        @return: a dictionary containing the metadata of this ZIM file.
+        @rtype: L{bool}
+        """
+        tags = [
+            "_sw:no",
+            "_ftindex:" + ("yes" if self.indexing else "no"),
+            "_pictures:no",  # may change in the future
+            "_videos:no",  # unlikely to change
+            "_category:fanfiction",
+        ]
+        metadata = {
+            "Name": self.name,
+            "Title": self.title,
+            "Creator": self.creator,
+            "Date": datetime.date.today().isoformat(),
+            "Publisher": self.publisher,
+            "Description": self.description,
+            "Language": self.language,
+            "Tags": ";".join(tags),
+            "Scraper": "zimfiction",
+        }
+        return metadata
+
+
+class ZimBuilder(object):
+    """
+    The ZimBuilder manages the ZIM build process.
+
+    @ivar inqueue: the queue where tasks will be put
+    @type inqueue: L{multiprocessing.Queue}
+    @ivar outqueue: the queue containing the task results
+    @type outqueue: L{multiprocessing.Queue}
+    @ivar engine: engine used for database connection
+    @type engine: L{sqlalchemy.engine.Engine}
+    @ivar session: database session
+    @type session: L{sqlalchemy.orm.Session}
+    @ivar reporter: reporter used for status reports
+    @type reporter: L{zimfiction.reporter.BaseReporter}
+    """
+    def __init__(self, engine):
+        """
+        The default constructor.
+
+        @param engine: engine used for database connection
+        @type engine: L{sqlalchemy.engine.Engine}
+        """
+        self.engine = engine
+
+        self.session = Session(engine)
+        self.inqueue = multiprocessing.Queue(maxsize=MAX_OUTSTANDING_TASKS)
+        self.outqueue = multiprocessing.Queue(maxsize=MAX_RESULT_BACKLOG)
+        self.reporter = StdoutReporter();
+
+    def cleanup(self):
+        """
+        Perform clean up tasks.
+        """
+        self.session.close()
+        self.engine.dispose()
+
+    def build(self, outpath, options):
+        """
+        Build a ZIM.
+
+        @param outpath: path to write ZIM to
+        @type outpath: L{str}
+        @param options: build options for the ZIM
+        @type options: L{BuildOptions}
+        """
+        # prepare build
+        self.reporter.msg("Preparing build...")
+
+        start = time.time()
+
+        self.reporter.msg(" -> Generating ZIM creation config...")
+        compression = "zstd"
+        clustersize = 8 * 1024 * 1024  # 8 MiB
+        verbose = True
+        n_creator_workers = get_n_cores()
+        n_render_workers = get_n_cores()
+        self.reporter.msg("        -> Path:             {}".format(outpath))
+        self.reporter.msg("        -> Verbose:          {}".format(verbose))
+        self.reporter.msg("        -> Compression:      {}".format(compression))
+        self.reporter.msg("        -> Cluster size:     {}".format(format_size(clustersize)))
+        self.reporter.msg("        -> Creator Workers:  {}".format(n_creator_workers))
+        self.reporter.msg("        -> Render Workers:   {}".format(n_render_workers))
+        self.reporter.msg("        -> Done.")
+
+        # open the ZIM creator
+        self.reporter.msg("Opening ZIM creator, writing to path '{}'... ".format(outpath), end="")
+        with Creator(outpath) \
+            .config_indexing(options.indexing, options.language) \
+            .config_clustersize(clustersize) \
+            .config_verbose(verbose) \
+            .config_nbworkers(n_creator_workers) as creator:
+            self.reporter.msg("Done.")
+
+            # add illustration
+            self.reporter.msg("Adding illustration... ", end="")
+            imagepath = get_resource_file_path("icon.png")
+            with open(imagepath, "rb") as fin:
+                creator.add_illustration(48, fin.read())
+            self.reporter.msg("Done.")
+
+            # add metadata
+            self.reporter.msg("Adding metadata... ", end="")
+            metadata = options.get_metadata_dict()
+            for key, value in metadata.items():
+                creator.add_metadata(key, value)
+            self.reporter.msg("Done.")
+
+            # add general pages
+            self.reporter.msg("Adding stylesheet... ", end="")
+            creator.add_item(StylesheetItem())
+            self.reporter.msg("Done.")
+
+            # add content
+            self._add_content(creator, n_workers=n_render_workers)
+
+            # finish up
+            self.reporter.msg("Finalizing ZIM...")
+        self.reporter.msg("Done.")
+        self.reporter.msg("Cleaning up... ", end="")
+        self.cleanup()
+        self.reporter.msg("Done.")
+
+        final_size = os.stat(outpath).st_size
+        end = time.time()
+        time_elapsed = end - start
+        self.reporter.msg("Finished ZIM creation in {}.".format(format_timedelta(time_elapsed)))
+        self.reporter.msg("Final size: {}".format(format_size(final_size)))
+
+
+    def _add_content(self, creator, n_workers):
+        """
+        Add the content of the ZIM file.
+
+        @param creator: the ZIM creator
+        @type creator: L{zimfiction.writer.Creator}
+        @param n_workers: number of worker processes to use
+        @type n_workers: L{int}
+        """
+        self.reporter.msg("Adding content...")
+        # --- stories ---
+        self.reporter.msg(" -> Adding stories...")
+        self.reporter.msg("     -> Finding stories... ", end="")
+        n_stories = self.session.execute(
+            select(func.count(Story.id))
+        ).scalar_one()
+        self.reporter.msg("found {} stories.".format(n_stories))
+        n_story_tasks = math.ceil(n_stories / STORIES_PER_TASK)
+        with self._run_stage(
+            creator=creator,
+            n_workers=n_workers,
+            task_name="Adding stories...",
+            n_tasks=n_story_tasks,
+            task_unit="stories",
+            task_multiplier=STORIES_PER_TASK,
+        ):
+            self._send_story_tasks()
+        # --- tags ---
+        self.reporter.msg(" -> Adding tags...")
+        self.reporter.msg("     -> Finding tags... ", end="")
+        n_tags = self.session.execute(
+            select(func.count(Tag.name))  # not distinct
+        ).scalar_one()
+        self.reporter.msg("found {} tags.".format(n_tags))
+        with self._run_stage(
+            creator=creator,
+            n_workers=n_workers,
+            task_name="Adding Tags...",
+            n_tasks=n_tags,
+            task_unit="tags",
+        ):
+            self._send_tag_tasks()
+        # --- authors ---
+        self.reporter.msg(" -> Adding Authors...")
+        self.reporter.msg("     -> Finding authors... ", end="")
+        n_authors = self.session.execute(
+            select(func.count(Author.name))  # not distinct
+        ).scalar_one()
+        self.reporter.msg("found {} authors.".format(n_authors))
+        with self._run_stage(
+            creator=creator,
+            n_workers=n_workers,
+            task_name="Adding Authors...",
+            n_tasks=n_authors,
+            task_unit="authors",
+        ):
+            self._send_author_tasks()
+        # --- authors ---
+        self.reporter.msg(" -> Adding Categories...")
+        self.reporter.msg("     -> Finding categories... ", end="")
+        n_categories = self.session.execute(
+            select(func.count(Category.name))  # not distinct
+        ).scalar_one()
+        self.reporter.msg("found {} categories.".format(n_categories))
+        with self._run_stage(
+            creator=creator,
+            n_workers=n_workers,
+            task_name="Adding categories...",
+            n_tasks=n_categories,
+            task_unit="categories",
+        ):
+            self._send_category_tasks()
+
+    @contextlib.contextmanager
+    def _run_stage(self, **kwargs):
+        """
+        Add the content of the ZIM file.
+
+        @param kwargs: keyword arguments passed to L{ZmBuilder._creator_thread}
+        @type kwargs: L{dict}
+        """
+
+        n_workers = kwargs["n_workers"]
+
+        # start worker processes
+        self.reporter.msg("     -> Starting worker processes... ", end="")
+        workers = []
+        for i in range(n_workers):
+            worker = multiprocessing.Process(
+                name="Content worker process {}".format(i),
+                target=self._worker_process,
+            )
+            worker.daemon = True
+            worker.start()
+            workers.append(worker)
+        self.reporter.msg("Done.")
+
+        # start the background creator thread
+        # for the duration of this method, only the thread is allowed
+        # to work with the creator directly
+        self.reporter.msg("     -> Starting creator thread... ", end="")
+        creator_thread = threading.Thread(
+            name="Creator content adder thread",
+            target=self._creator_thread,
+            kwargs=kwargs,
+        )
+        creator_thread.daemon = True
+        creator_thread.start()
+        self.reporter.msg("Done.")
+
+        # now it's finally time to add the tasks
+        yield
+
+        # finish up
+        self.reporter.msg("     -> Waiting for worker processes... ", end="")
+        # put stop tasks on queue
+        for i in range(n_workers):
+            self.inqueue.put(StopTask())
+        # join with all workers
+        for worker in workers:
+            worker.join()
+            worker.close()
+        self.reporter.msg("Done.")
+
+        self.reporter.msg("     -> Joining with creator thread... ", end="")
+        creator_thread.join()
+        self.reporter.msg("Done.")
+        self.reporter.msg("     -> Done.")
+
+    def _creator_thread(
+        self,
+        creator,
+        n_workers,
+        task_name,
+        n_tasks,
+        task_unit,
+        task_multiplier=1,
+        ):
+        """
+        This method will be executed as the creator thread.
+
+        This function is responsible to get results from the outqueue
+        and adding them to the ZIM file.
+
+        @param creator: creator for the ZIM file
+        @type creator: L{libzim.creator.Creator}
+        @param n_workers: number of workers started. Will be used to detect worker shutdown.
+        @type n_workers: L{int}
+        @param taskname
+        @param task_name: name of the task that is currently being processed
+        @type task_name: L{str}
+        @param n_tasks: number of tasks issued
+        @type n_tasks: L{int}
+        @param task_unit: string describing the unit of the task (e.g. stories)
+        @type task_unit: L{str}
+        @param task_multiplier: multiply bar advancement per task by this factor
+        @type task_multiplier: L{int}
+        """
+        # setup priority first
+        p = psutil.Process()
+        if psutil.LINUX:
+            p.nice(2)
+            p.ionice(psutil.IOPRIO_CLASS_BE, 7)
+        else:
+            p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)
+            p.ionice(psutil.IOPRIO_NORMAL)
+        # main loop - get results from queue and add them to ZIM
+        running = True
+        n_finished = 0
+        with self.reporter.with_progress(description=task_name, max=n_tasks*task_multiplier, unit=task_unit) as bar:
+            while running:
+                render_result = self.outqueue.get(block=True)
+                if render_result == MARKER_WORKER_STOPPED:
+                    # worker finished
+                    n_finished += 1
+                    if n_finished == n_workers:
+                        # all workers shut down
+                        running = False
+                elif render_result == MARKER_TASK_COMPLETED:
+                    # task was completed
+                    bar.advance(task_multiplier)
+                else:
+                    # add the rendered objects to the ZIM
+                    for rendered_object in render_result.iter_objects():
+                        if isinstance(rendered_object, HtmlPage):
+                            # add a HTML page
+                            item = HtmlPageItem(
+                                path=rendered_object.path,
+                                title=rendered_object.title,
+                                content=rendered_object.content,
+                                is_front=rendered_object.is_front,
+                            )
+                            creator.add_item(item)
+                        elif isinstance(rendered_object, Redirect):
+                            # create a redirect
+                            creator.add_redirection(
+                                rendered_object.source,
+                                rendered_object.title,
+                                rendered_object.target,
+                                hints = {
+                                    Hint.FRONT_ARTICLE: rendered_object.is_front,
+                                }
+                            )
+                        else:
+                            # unknown result object
+                            raise RuntimeError("Unknown render result: {}".format(type(rendered_object)))
+
+    def _worker_process(self):
+        """
+        This method will be executed as a worker process.
+
+        The workers take tasks from the inqueue, process them and add
+        the result to the outqueue.
+        """
+        # before starting the worker, clean up engine connections
+        self.engine.dispose(close=False)
+        # also, prepare the process priority
+        p = psutil.Process()
+        if psutil.LINUX:
+            p.nice(10)
+            p.ionice(psutil.IOPRIO_CLASS_BE, 5)
+        else:
+            p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+            p.ionice(psutil.IOPRIO_LOW)
+        # start the worker
+        worker = Worker(
+            inqueue=self.inqueue,
+            outqueue=self.outqueue,
+            engine=self.engine,
+        )
+        worker.run()
+
+    def _send_story_tasks(self):
+        """
+        Create and send the tasks for the stories to the worker inqueue.
+        """
+        story_bucket_maker = BucketMaker(maxsize=STORIES_PER_TASK)
+        select_story_ids_stmt = select(Story.publisher, Story.id)
+        result = self.session.execute(select_story_ids_stmt)
+        # create buckets and turn them into tasks
+        for story in result:
+            bucket = story_bucket_maker.feed((story.publisher, story.id))
+            if bucket is not None:
+                # send out a task
+                task = StoryRenderTask(bucket)
+                self.inqueue.put(task)
+        # send out all remaining tasks
+        bucket = story_bucket_maker.finish()
+        if bucket is not None:
+            task = StoryRenderTask(bucket)
+            self.inqueue.put(task)
+
+    def _send_tag_tasks(self):
+        """
+        Create and send the tasks for the tags to the worker inqueue.
+        """
+        select_tags_stmt = select(Tag.type, Tag.name)
+        result = self.session.execute(select_tags_stmt)
+        for tag in result:
+            task = TagRenderTask(tag.type, tag.name)
+            self.inqueue.put(task)
+
+    def _send_author_tasks(self):
+        """
+        Create and send the tasks for the authors to the worker inqueue.
+        """
+        select_authors_stmt = select(Author.publisher, Author.name)
+        result = self.session.execute(select_authors_stmt)
+        for author in result:
+            task = AuthorRenderTask(author.publisher, author.name)
+            self.inqueue.put(task)
+
+    def _send_category_tasks(self):
+        """
+        Create and send the tasks for the categories to the worker inqueue.
+        """
+        select_categories_stmt = select(Category.publisher, Category.name)
+        result = self.session.execute(select_categories_stmt)
+        for category in result:
+            task = CategoryRenderTask(category.publisher, category.name)
+            self.inqueue.put(task)

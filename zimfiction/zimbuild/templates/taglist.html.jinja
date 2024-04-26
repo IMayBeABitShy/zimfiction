@@ -1,0 +1,9 @@
+{# This is a div containing a list of tags. Expects "to_root"and "tags" arguments #}
+
+<DIV class="taglist">
+    {% for tag in tags %}
+        <A class="taglink taglink-{{ tag.type }}" href="{{ to_root }}/tag/{{ tag.type }}/{{ tag.name|normalize_tag }}/">{{ tag.name }}</A>{% if not loop.last -%}
+            ,
+        {% endif %}
+    {% endfor %}
+</DIV>

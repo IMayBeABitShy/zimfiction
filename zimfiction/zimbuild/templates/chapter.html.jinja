@@ -1,0 +1,30 @@
+{# This is a page for a chapter of a story. Expects "chapter" and "to_root" argument. NOTE: stories don't have their own page #}
+{% extends "base.html.jinja" %}
+
+{% block title %}
+    <TITLE>ZimFiction - {{chapter.story.title}} - {{chapter.index}}. {{chapter.title}}</TITLE>
+{% endblock %}
+
+{% block content %}
+    {% with story=chapter.story, to_root=to_root, extended=True %}
+        {% include "storysummary.html.jinja" %}
+    {% endwith %}
+    <HR>
+    {% block storytext %}
+        <CENTER>
+            <H1 class="storytitle">{{ chapter.story.title }}</H1>
+            <H2 class="chaptertitle">{{ chapter.title }}</H2>
+        </CENTER>
+        <DIV class="storytext" id="storytext">
+            {{ chapter.text|render_storytext }}
+        </DIV>
+        <DIV class="chapternavigation">
+            {% with to_root=to_root, num_pages=chapter.story.chapters|length, cur_page=chapter.index %}
+                {% include "pagebuttons.html.jinja" %}
+            {% endwith %}
+            {% with to_root=to_root  %}
+                {% include "indexbutton.html.jinja" %}
+            {% endwith %}
+        </DIV>
+    {% endblock %}
+{% endblock %}

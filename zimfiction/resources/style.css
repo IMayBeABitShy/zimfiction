@@ -1,0 +1,143 @@
+/* CSS file for zimfiction */
+
+/* general layout */
+
+body {
+  width: 100%;
+  margin: 0px;
+}
+
+.content-container {
+  margin: 10px;
+}
+
+HR {
+  margin: 20px;
+  margin-bottom: 28px;
+}
+
+.navigation {
+  background-color: #333399;
+  display: flex;
+  width: 100%;
+}
+
+.navigation * {
+  color: #ffffff;
+}
+
+/* story summary */
+
+.story_summary_footer P {
+  text-align: right;
+}
+
+.story_summary_meta TH {
+  text-align: left;
+  padding-right: 40px;
+}
+
+.taglink {
+  color: #111;
+  text-decoration: none;
+  border-bottom: 1px dotted;
+}
+
+.taglink-warning {
+  font-weight: bold;
+}
+
+.taglink-relationship {
+  background: #eee;
+}
+
+.story_summary_title {
+  margin-bottom: 10px;
+  font-weight: bolder;
+  font-size: 132%
+}
+
+.story_updated_text {
+  display:inline;
+  float: right;
+  font-weight: initial;
+  font-size:initial;
+}
+
+.story_short_categories {
+  font-size: initial;
+  font-weight: initial;
+  margin-bottom: 16px;
+  margin-left: 16px;
+}
+
+.story_short_tags {
+    margin-left: 16px;
+}
+
+.categorylink {
+  text-decoration: none;
+  color: black;
+  border-bottom: 1px dotted black;
+}
+
+/* story list page */
+.story_list_page_item {
+  background-color: lightgray;
+  padding: 10px;
+  border: 1px solid gray;
+}
+
+/* page buttons */
+
+.page_button {
+  display: inline;
+  background: lightgray;
+  border: 1px solid darkgray;
+  border-radius: 5px;
+  padding: 8px;
+  margin: 5px;
+}
+
+.page_button P  {
+  display: initial;
+}
+
+.page_button_link {
+  text-decoration: none;
+}
+
+.cur_page_button_link {
+  color: black;
+  font-weight: bold;
+}
+
+.page_buttons {
+  display: flex;
+  justify-content: center;
+}
+
+/* chapter index */
+
+.chapter_index_list {
+  list-style-type: none;
+}
+
+.chapter_index_list li {
+  text-align: left;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  padding-left: 16px;
+  border: 1px solid black;
+}
+
+.chapter_index_list li:nth-child(even) {
+  background: darkgray;
+}
+.chapter_index_list li:nth-child(odd) {
+  background: lightgray;;
+}
+
+.chapter_index_list a {
+  color: black;
+}
