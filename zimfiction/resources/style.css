@@ -81,6 +81,12 @@ HR {
   border-bottom: 1px dotted black;
 }
 
+.serieslink {
+  color: #111;
+  text-decoration: none;
+  border-bottom: 1px dotted;
+}
+
 /* story list page */
 .story_list_page_item {
   background-color: lightgray;
@@ -140,4 +146,83 @@ HR {
 
 .chapter_index_list a {
   color: black;
+}
+
+/* publisher */
+
+.publisher_categories {
+  background: lightgray;
+  border: 1px solid gray;
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-top: 1px;
+}
+
+.publisher_categories * {
+  display: inline;
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+.publisher_categories H2 {
+  width: 100%;
+  border-bottom: 1px solid black;
+  margin-bottom: 0px;
+  display: flex;
+}
+
+.category_long_list {
+  columns: 2;
+  -webkit-columns: 2;
+  -moz-columns: 2;
+  display: inline-block;
+}
+
+.category_long_list LI {
+  display: block;
+  list-style: none;
+}
+
+.category_list_story_count {
+  color: gray;
+}
+
+/* category page */
+
+.category_story_count {
+  margin-left: 16px;
+  margin-bottom: -10px;
+}
+
+/* index page */
+
+.publisher_list UL {
+  list-style: none;
+}
+
+.publisher {
+  background: lightgray;
+  padding-left: 20px;
+  padding-bottom: 20px;
+  border: 1px solid gray;
+  border-radius: 10px;
+  width: 40%;
+}
+
+.publisher_div_link {
+  text-decoration: none;
+  color: black;
+}
+
+.publisher_name {
+  font-weight: bolder;
+  font-size: 150%;
+  border-bottom: 1px dotted black;
+  width: fit-content;
+}
+
+.publisher_num_categories, .publisher_num_stories {
+  display: inline;
+  margin: 10px;
+  color: #353535;
 }

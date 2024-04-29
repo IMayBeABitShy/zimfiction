@@ -52,8 +52,23 @@ This file describes the ZIM layout.
 | +-+-PUBLISHER/
 |   | All categories by a specific publisher
 |   |
-|   +-+-CATEGORY
+|   +-+-CATEGORY/
 |     | Stories in this category
 |     |
 |     +-PAGENUM
 |       A page of stories in this category
+|
++-+-series/
+| | contains series of stories
+| |
+| +-+-PUBLISHER/
+|   | Series from this publisher
+|   |
+|   +-NAME
+|     A page containing all stories in this series
+|
++-+-publisher/
+| | The pages for publishers
+| |
+| +---PUBLISHER
+|     A page for a publisher, showing all available categorie

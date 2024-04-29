@@ -23,10 +23,12 @@ from sqlalchemy.orm import Session
 from libzim.writer import Creator, Item, StringProvider, FileProvider, Hint
 
 from ..util import format_timedelta, format_size, get_resource_file_path
-from ..db.models import Story, Tag, Author, Category
+from ..db.models import Story, Tag, Author, Category, Series, Publisher
 from ..reporter import StdoutReporter
 from .renderer import HtmlPage, Redirect
-from .worker import Worker, StopTask, StoryRenderTask, TagRenderTask, AuthorRenderTask, CategoryRenderTask
+from .worker import Worker, StopTask, StoryRenderTask, TagRenderTask
+from .worker import AuthorRenderTask, CategoryRenderTask, SeriesRenderTask
+from .worker import PublisherRenderTask, EtcRenderTask
 from .worker import MARKER_TASK_COMPLETED, MARKER_WORKER_STOPPED
 from .buckets import BucketMaker
 
@@ -289,6 +291,11 @@ class ZimBuilder(object):
             .config_nbworkers(n_creator_workers) as creator:
             self.reporter.msg("Done.")
 
+            # configurations
+            self.reporter.msg("Configuring ZIM... ", end="")
+            creator.set_mainpath("index.html")
+            self.reporter.msg("Done.")
+
             # add illustration
             self.reporter.msg("Adding illustration... ", end="")
             imagepath = get_resource_file_path("icon.png")
@@ -382,7 +389,7 @@ class ZimBuilder(object):
             task_unit="authors",
         ):
             self._send_author_tasks()
-        # --- authors ---
+        # --- categories ---
         self.reporter.msg(" -> Adding Categories...")
         self.reporter.msg("     -> Finding categories... ", end="")
         n_categories = self.session.execute(
@@ -397,6 +404,47 @@ class ZimBuilder(object):
             task_unit="categories",
         ):
             self._send_category_tasks()
+        # --- series ---
+        self.reporter.msg(" -> Adding Series...")
+        self.reporter.msg("     -> Finding series... ", end="")
+        n_series = self.session.execute(
+            select(func.count(Series.name))  # not distinct
+        ).scalar_one()
+        self.reporter.msg("found {} series.".format(n_series))
+        with self._run_stage(
+            creator=creator,
+            n_workers=n_workers,
+            task_name="Adding series...",
+            n_tasks=n_series,
+            task_unit="series",
+        ):
+            self._send_series_tasks()
+        # --- publisher ---
+        self.reporter.msg(" -> Adding Publishers...")
+        self.reporter.msg("     -> Finding publishers... ", end="")
+        n_publishers = self.session.execute(
+            select(func.count(Publisher.name))
+        ).scalar_one()
+        self.reporter.msg("found {} publishers.".format(n_publishers))
+        with self._run_stage(
+            creator=creator,
+            n_workers=n_workers,
+            task_name="Adding publishers...",
+            n_tasks=n_series,
+            task_unit="publishers",
+        ):
+            self._send_publisher_tasks()
+        # --- etc ---
+        self.reporter.msg(" -> Adding miscelaneous pages...")
+        n_misc_pages = 1
+        with self._run_stage(
+            creator=creator,
+            n_workers=n_workers,
+            task_name="Adding miscelaneous pages...",
+            n_tasks=n_misc_pages,
+            task_unit="pages",
+        ):
+            self._send_etc_tasks()
 
     @contextlib.contextmanager
     def _run_stage(self, **kwargs):
@@ -497,6 +545,7 @@ class ZimBuilder(object):
         with self.reporter.with_progress(description=task_name, max=n_tasks*task_multiplier, unit=task_unit) as bar:
             while running:
                 render_result = self.outqueue.get(block=True)
+                bar.advance(0)  # redraw
                 if render_result == MARKER_WORKER_STOPPED:
                     # worker finished
                     n_finished += 1
@@ -562,11 +611,11 @@ class ZimBuilder(object):
         Create and send the tasks for the stories to the worker inqueue.
         """
         story_bucket_maker = BucketMaker(maxsize=STORIES_PER_TASK)
-        select_story_ids_stmt = select(Story.publisher, Story.id)
+        select_story_ids_stmt = select(Story.publisher_name, Story.id)
         result = self.session.execute(select_story_ids_stmt)
         # create buckets and turn them into tasks
         for story in result:
-            bucket = story_bucket_maker.feed((story.publisher, story.id))
+            bucket = story_bucket_maker.feed((story.publisher_name, story.id))
             if bucket is not None:
                 # send out a task
                 task = StoryRenderTask(bucket)
@@ -591,18 +640,45 @@ class ZimBuilder(object):
         """
         Create and send the tasks for the authors to the worker inqueue.
         """
-        select_authors_stmt = select(Author.publisher, Author.name)
+        select_authors_stmt = select(Author.publisher_name, Author.name)
         result = self.session.execute(select_authors_stmt)
         for author in result:
-            task = AuthorRenderTask(author.publisher, author.name)
+            task = AuthorRenderTask(author.publisher_name, author.name)
             self.inqueue.put(task)
 
     def _send_category_tasks(self):
         """
         Create and send the tasks for the categories to the worker inqueue.
         """
-        select_categories_stmt = select(Category.publisher, Category.name)
+        select_categories_stmt = select(Category.publisher_name, Category.name)
         result = self.session.execute(select_categories_stmt)
         for category in result:
-            task = CategoryRenderTask(category.publisher, category.name)
+            task = CategoryRenderTask(category.publisher_name, category.name)
             self.inqueue.put(task)
+
+    def _send_series_tasks(self):
+        """
+        Create and send the tasks for the series to the worker inqueue.
+        """
+        select_series_stmt = select(Series.publisher_name, Series.name)
+        result = self.session.execute(select_series_stmt)
+        for series in result:
+            task = SeriesRenderTask(series.publisher_name, series.name)
+            self.inqueue.put(task)
+
+    def _send_publisher_tasks(self):
+        """
+        Create and send the tasks for the publishers to the worker inqueue.
+        """
+        select_publishers_stmt = select(Publisher.name)
+        result = self.session.execute(select_publishers_stmt)
+        for publisher in result:
+            task = PublisherRenderTask(publisher.name)
+            self.inqueue.put(task)
+
+    def _send_etc_tasks(self):
+        """
+        Create and send the tasks for the miscelaneous pages to the worker inqueue.
+        """
+        indextask = EtcRenderTask("index")
+        self.inqueue.put(indextask)

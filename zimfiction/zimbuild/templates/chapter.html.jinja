@@ -13,7 +13,7 @@
     {% block storytext %}
         <CENTER>
             <H1 class="storytitle">{{ chapter.story.title }}</H1>
-            <H2 class="chaptertitle">{{ chapter.title }}</H2>
+            <H2 class="chaptertitle">{{ chapter.index }}. {{ chapter.title }}</H2>
         </CENTER>
         <DIV class="storytext" id="storytext">
             {{ chapter.text|render_storytext }}

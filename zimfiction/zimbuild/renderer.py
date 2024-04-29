@@ -183,16 +183,8 @@ class HtmlRenderer(object):
         @rtype: L{RenderResult}
         """
         result = RenderResult()
-        # add redirect from story -> page 1
-        result.add(
-            Redirect(
-                "story/{}/{}/".format(story.publisher, story.id),
-                "story/{}/{}/1".format(story.publisher, story.id),
-                title="{} by {} on {}".format(story.title, story.author_name, story.publisher),
-                is_front=True,
-            ),
-        )
         chapter_template = self.environment.get_template("chapter.html.jinja")
+        min_chapter_i = None
         for chapter in story.chapters:
             chapter_page = chapter_template.render(
                 chapter=chapter,
@@ -200,12 +192,25 @@ class HtmlRenderer(object):
             )
             result.add(
                 HtmlPage(
-                    path="story/{}/{}/{}".format(story.publisher, story.id, chapter.index),
+                    path="story/{}/{}/{}".format(story.publisher.name, story.id, chapter.index),
                     title="{} by {} - Chapter {} - {}".format(story.title, story.author_name, chapter.index, chapter.title),
                     content=self.minify_html(chapter_page),
                     is_front=True,
                 ),
             )
+            # keep track of lowest chapter index so we can redirect to it
+            if (min_chapter_i is None) or (chapter.index < min_chapter_i):
+                min_chapter_i = chapter.index
+        # add redirect from story -> page 1
+        result.add(
+            Redirect(
+                "story/{}/{}/".format(story.publisher.name, story.id),
+                "story/{}/{}/{}".format(story.publisher.name, story.id, min_chapter_i),
+                title="{} by {} on {}".format(story.title, story.author_name, story.publisher.name),
+                is_front=True,
+            ),
+        )
+        # add index
         chapter_index_template = self.environment.get_template("chapter_index.html.jinja")
         chapter_index_page = chapter_index_template.render(
             story=story,
@@ -213,9 +218,9 @@ class HtmlRenderer(object):
         )
         result.add(
             HtmlPage(
-                path="story/{}/{}/index".format(story.publisher, story.id),
+                path="story/{}/{}/index".format(story.publisher.name, story.id),
                 content=self.minify_html(chapter_index_page),
-                title="{} by {} on {} - List of chapters".format(story.title, story.author_name, story.publisher),
+                title="{} by {} on {} - List of chapters".format(story.title, story.author_name, story.publisher.name),
                 is_front=False,
             ),
         )
@@ -280,9 +285,9 @@ class HtmlRenderer(object):
         bucketmaker = BucketMaker(STORIES_PER_PAGE)
         result.add(
             Redirect(
-                "author/{}/{}/".format(author.publisher, normalize_tag(author.name)),
-                "author/{}/{}/1".format(author.publisher, normalize_tag(author.name)),
-                title="Author {} on {}".format(author.name, author.publisher),
+                "author/{}/{}/".format(author.publisher.name, normalize_tag(author.name)),
+                "author/{}/{}/1".format(author.publisher.name, normalize_tag(author.name)),
+                title="Author {} on {}".format(author.name, author.publisher.name),
                 is_front=True,
             ),
         )
@@ -305,9 +310,9 @@ class HtmlRenderer(object):
             )
             result.add(
                 HtmlPage(
-                    path="author/{}/{}/{}".format(author.publisher, normalize_tag(author.name), i),
+                    path="author/{}/{}/{}".format(author.publisher.name, normalize_tag(author.name), i),
                     content=self.minify_html(page),
-                    title="Author {} on {} - Page {}".format(author.name, author.publisher, i),
+                    title="Author {} on {} - Page {}".format(author.name, author.publisher.name, i),
                     is_front=False,
                 ),
             )
@@ -327,9 +332,9 @@ class HtmlRenderer(object):
         bucketmaker = BucketMaker(STORIES_PER_PAGE)
         result.add(
             Redirect(
-                "category/{}/{}/".format(category.publisher, normalize_tag(category.name)),
-                "category/{}/{}/1".format(category.publisher, normalize_tag(category.name)),
-                title="Category: {} on {}".format(category.name, category.publisher),
+                "category/{}/{}/".format(category.publisher.name, normalize_tag(category.name)),
+                "category/{}/{}/1".format(category.publisher.name, normalize_tag(category.name)),
+                title="Category: {} on {}".format(category.name, category.publisher.name),
                 is_front=True,
             ),
         )
@@ -352,12 +357,88 @@ class HtmlRenderer(object):
             )
             result.add(
                 HtmlPage(
-                    path="category/{}/{}/{}".format(category.publisher, normalize_tag(category.name), i),
+                    path="category/{}/{}/{}".format(category.publisher.name, normalize_tag(category.name), i),
                     content=self.minify_html(page),
-                    title="{} fanfiction on {} - Page {}".format(category.name, category.publisher, i),
+                    title="{} fanfiction on {} - Page {}".format(category.name, category.publisher.name, i),
                     is_front=False,
                 ),
             )
+        return result
+
+
+    def render_series(self, series):
+        """
+        Render an series.
+
+        @param series: series to render
+        @type series: L{zimfiction.db.models.Series}
+        @return: the rendered pages and redirects
+        @rtype: L{RenderResult}
+        """
+        result = RenderResult()
+        series_template = self.environment.get_template("series.html.jinja")
+        page = series_template.render(
+            to_root="../..",
+            series=series,
+        )
+        result.add(
+            HtmlPage(
+                path="series/{}/{}".format(series.publisher.name, normalize_tag(series.name)),
+                content=self.minify_html(page),
+                title="Series: '{}' on {}".format(series.name, series.publisher.name),
+                is_front=True,
+            ),
+        )
+        return result
+
+    def render_publisher(self, publisher):
+        """
+        Render a publisher.
+
+        @param publisher_name: publisher to render
+        @type publisher_name: L{zimfiction.db.models.Publisher}
+        @return: the rendered pages and redirects
+        @rtype: L{RenderResult}
+        """
+        result = RenderResult()
+        publisher_template = self.environment.get_template("publisher.html.jinja")
+        page = publisher_template.render(
+            to_root="..",
+            publisher=publisher,
+        )
+        result.add(
+            HtmlPage(
+                path="publisher/{}".format(publisher.name),
+                content=self.minify_html(page),
+                title="Publisher: {}".format(publisher.name),
+                is_front=True,
+            ),
+        )
+        return result
+
+    def render_index(self, publishers):
+        """
+        Render the indexpage.
+
+        @param publishers: list of publishers
+        @type publishers: L{list}
+        @return: the rendered pages and redirects
+        @rtype: L{RenderResult}
+        """
+        result = RenderResult()
+        index_template = self.environment.get_template("index.html.jinja")
+        page = index_template.render(
+            to_root=".",
+            publishers=publishers,
+        )
+        result.add(
+            HtmlPage(
+                path="index.html",
+                content=self.minify_html(page),
+                title="Welcome to ZimFiction!",
+                is_front=True,
+            ),
+        )
         return result
 
 

@@ -1,0 +1,19 @@
+{# This is the page for a publisher. Expects "to_root" and "publisher" as arguments #}
+{% extends "base.html.jinja" %}
+
+{% block title %}
+    <TITLE>ZimFiction - {{ publisher.name }}</TITLE>
+{% endblock %}
+
+{% block content %}
+    <H1>{{ publisher.name }}</H1>
+    <HR>
+    <DIV class="publisher_categories">
+        <H2>Categories</H2>
+        <UL class="category_long_list">
+            {% for category in publisher.categories|sort(attribute="name")|sort(attribute="num_stories", reverse=True) %}
+                <LI><A href="{{ to_root }}/category/{{ category.publisher.name }}/{{ category.name|normalize_tag }}/">{{ category.name }}</A> <P class="category_list_story_count">[{{ category.num_stories|format_number }}]</P></LI>
+            {% endfor %}
+        </UL>
+    </DIV>
+{% endblock %}

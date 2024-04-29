@@ -2,7 +2,7 @@
 
 <DIV class="categorylist">
     {% for category in categories %}
-        <A class="categorylink" href="{{ to_root }}/category/{{ category.publisher }}/{{ category.name|normalize_tag }}/">{{ category.name }}</A>{% if not loop.last -%}
+        <A class="categorylink" href="{{ to_root }}/category/{{ category.publisher.name }}/{{ category.name|normalize_tag }}/">{{ category.name }}</A>{% if not loop.last -%}
             ,
         {% endif %}
     {% endfor %}

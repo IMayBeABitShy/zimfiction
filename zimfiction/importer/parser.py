@@ -5,7 +5,8 @@ import datetime
 import re
 
 from ..util import add_to_dict_list, count_words
-from ..db.models import Story, Chapter, Author, Category, Tag, Series
+from ..db.models import Story, Chapter, Author, Category, Tag, Series, Publisher
+from ..db.models import StoryTagAssociation, StorySeriesAssociation
 from ..exceptions import ParseError
 
 
@@ -30,10 +31,12 @@ def parse_story(session, fin):
     n_empty_lines = 0
     meta = {}
     tags = {}  # tag type -> tag list
+    series = []  # tuples of (name, index)
     chapters = []
     cur_lines = []
     cur_chapter_i = None
     cur_chapter_title = None
+    publisher = None
 
     for line in fin:
         if not in_body:
@@ -71,12 +74,14 @@ def parse_story(session, fin):
             #     meta["summary"] += ("\n" + line)
             #     continue
             key, value = line.split(": ", 1)
-            if key in (
+            if key == "Publisher":
+                assert publisher is None
+                publisher = Publisher.as_unique(session, name=value.strip())
+            elif key in (
                 "Category",
                 "Language",
                 "Rating",
                 "Summary",
-                "Publisher",
                 "Author URL",
             ):
                 if "author" not in meta:
@@ -116,8 +121,7 @@ def parse_story(session, fin):
             elif key == "Series":
                 series_index = int(value[value.rfind("[")+1: value.rfind("]")])
                 series_name = value[:value.rfind("[") - 1]
-                meta["series"] = series_name
-                meta["series_index"] = series_index
+                series.append((series_name, series_index))
             elif key in ("Series URL", "Collections"):
                 # ignore tags
                 pass
@@ -132,9 +136,10 @@ def parse_story(session, fin):
             if is_chapter_title_line(line):
                 if cur_chapter_i is not None:
                     text = "\n".join(cur_lines)
+                    assert publisher is not None
                     chapters.append(
                         Chapter(
-                            publisher=meta["publisher"],
+                            publisher=publisher,
                             story_id=meta["id"],
                             index=cur_chapter_i,
                             title=cur_chapter_title,
@@ -156,19 +161,25 @@ def parse_story(session, fin):
     if not meta:
         raise ParseError("Story does not contain any metadata!")
 
-    # unconsumed chapter
+    # check for unconsumed chapter
     if "End file." in cur_lines:
         # TODO: only remove last occurence
         cur_lines.remove("End file.")
     text = "\n".join(cur_lines)
-    if text:
+    if text or ((not text) and (not chapters)):
+        # either an unconsumed chapter or not story content at all
+        if not text:
+            # not story content at all, provide a short placeholder text
+            # we do this to simply the build later
+            text = "**[Story is empty]**"
         if cur_chapter_i is None:
             # only one chapter, no chapter line
             cur_chapter_i = 1
             cur_chapter_title = "Chapter 1"
+        assert publisher is not None
         chapters.append(
             Chapter(
-                publisher=meta["publisher"],
+                publisher=publisher,
                 story_id=meta["id"],
                 index=cur_chapter_i,
                 title=cur_chapter_title,
@@ -179,14 +190,14 @@ def parse_story(session, fin):
 
     meta["author"] = Author.as_unique(
         session,
-        publisher=meta["publisher"],
+        publisher=publisher,
         name=meta["author"],
         url=meta["author url"]
     )
     if "series" in meta:
         meta["series"] = Series.as_unique(
             session,
-            publisher=meta["publisher"],
+            publisher=publisher,
             name=meta["series"],
         )
     if "category" not in meta:
@@ -196,19 +207,14 @@ def parse_story(session, fin):
     # split categories
     categories = [c.strip() for c in meta["category"].split(",")]
     del meta["category"]
-    # convert categories into objeczs
+    # convert categories into objects
     meta["categories"] = [
         Category.as_unique(
             session,
-            publisher=meta["publisher"],
+            publisher=publisher,
             name=c,
         )
         for c in categories
-    ]
-    meta["tags"] = [
-        Tag.as_unique(session, type=tagtype, name=tagname)
-        for tagtype in tags.keys()
-        for tagname in tags[tagtype]
     ]
     if "summary" not in meta:
         meta["summary"] = ""
@@ -218,9 +224,29 @@ def parse_story(session, fin):
     if "author url" in meta:
         del meta["author url"]
 
-    return Story(
+    story = Story(
         **meta,
     )
+    # link tags
+    tag_i = 0
+    for tagtype in tags.keys():
+        for tagname in tags[tagtype]:
+            story.tag_associations.append(
+                StoryTagAssociation(
+                    Tag.as_unique(session, type=tagtype, name=tagname),
+                    index=tag_i,
+                ),
+            )
+            tag_i += 1
+    # link series
+    for series_name, series_i in series:
+        story.series_associations.append(
+            StorySeriesAssociation(
+                Series.as_unique(session, publisher=publisher, name=series_name),
+                index=series_i,
+            ),
+        )
+    return story
 
 
 def is_done_from_status(status):

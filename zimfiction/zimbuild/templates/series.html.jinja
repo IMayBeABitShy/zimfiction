@@ -1,0 +1,18 @@
+{# This is a page for a series of stories. Expects "to_root" and "series" as arguments #}
+{% extends "base.html.jinja" %}
+
+{% block title %}
+    <TITLE>ZimFiction - {{ series.name }} on {{ series.publisher.name }}</TITLE>
+{% endblock %}
+
+{% block content %}
+    <H1>{{ series.name }} (Series) on {{ series.publisher.name }}</H1>
+    <HR>
+    {% for story in series.stories %}
+        <DIV class="story_list_page_item">
+            {% with story=story, to_root=to_root, extended=False %}
+                {% include "storysummary.html.jinja" %}
+            {% endwith %}
+        </DIV>
+    {% endfor %}
+{% endblock %}

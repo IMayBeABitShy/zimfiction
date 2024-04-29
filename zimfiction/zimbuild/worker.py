@@ -9,10 +9,11 @@ The worker logic for multi process rendering.
 import time
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload, subqueryload
+from sqlalchemy.orm import Session, joinedload, subqueryload, undefer
 
 from .renderer import HtmlRenderer
-from ..db.models import Story, Tag, Author, Category
+from ..db.models import Story, Chapter, Tag, Author, Category, Publisher
+from ..db.models import StoryTagAssociation, StorySeriesAssociation, Series
 
 
 DEBUG_PERFOMANCE = False
@@ -54,6 +55,10 @@ class StoryRenderTask(Task):
         @param story_ids: ids of stories to render, as list of tuples of (publisher, id)
         @type story_ids: L{list} of L{tuple} of (L{str}, L{int})
         """
+        assert isinstance(story_ids, (list, tuple))
+        assert isinstance(story_ids[0], tuple)
+        assert isinstance(story_ids[0][0], str)
+        assert isinstance(story_ids[0][1], int)
         self.story_ids = story_ids
 
 
@@ -77,6 +82,8 @@ class TagRenderTask(Task):
         @param tag_name: name of tag to render
         @type tag_name: L{str}
         """
+        assert isinstance(tag_type, str)
+        assert isinstance(tag_name, str)
         self.tag_type = tag_type
         self.tag_name = tag_name
 
@@ -101,6 +108,8 @@ class AuthorRenderTask(Task):
         @param name: name of the author to render
         @type name: L{str}
         """
+        assert isinstance(publisher, str)
+        assert isinstance(name, str)
         self.publisher = publisher
         self.name = name
 
@@ -125,8 +134,76 @@ class CategoryRenderTask(Task):
         @param name: name of the category to render
         @type name: L{str}
         """
+        assert isinstance(publisher, str)
+        assert isinstance(name, str)
         self.publisher = publisher
         self.name = name
+
+
+class SeriesRenderTask(Task):
+    """
+    A L{Task} for rendering series.
+
+    @ivar publisher: publisher this series is from
+    @type publisher: L{str}
+    @ivar name: name of the series to render
+    @type name: L{str}
+    """
+    type = "series"
+
+    def __init__(self, publisher, name):
+        """
+        The default constructor.
+
+        @param publisher: publisher this series is from
+        @type publisher: L{str}
+        @param name: name of the series to render
+        @type name: L{str}
+        """
+        assert isinstance(publisher, str)
+        assert isinstance(name, str)
+        self.publisher = publisher
+        self.name = name
+
+
+class PublisherRenderTask(Task):
+    """
+    A L{Task} for rendering publishers.
+
+    @ivar publisher: publisher to render
+    @type publisher: L{str}
+    """
+    type = "publisher"
+
+    def __init__(self, publisher):
+        """
+        The default constructor.
+
+        @param publisher: name of publisher to render
+        @type publisher: L{str}
+        """
+        assert isinstance(publisher, str)
+        self.publisher = publisher
+
+
+class EtcRenderTask(Task):
+    """
+    A L{Task} for rendering specific, individual pages.
+
+    @ivar subtask: the name of the subtask to perform (e.g. index)
+    @type subtask: L{str}
+    """
+    type = "etc"
+
+    def __init__(self, subtask):
+        """
+        The default constructor.
+
+        @param subtask: name of the subtask to perform
+        @type subtask: L{str}
+        """
+        assert isinstance(subtask, str)
+        self.subtask = subtask
 
 
 class Worker(object):
@@ -196,6 +273,12 @@ class Worker(object):
                 self.process_author_task(task)
             elif task.type == "category":
                 self.process_category_task(task)
+            elif task.type == "series":
+                self.process_series_task(task)
+            elif task.type == "publisher":
+                self.process_publisher_task(task)
+            elif task.type == "etc":
+                self.process_etc_task(task)
             else:
                 raise ValueError("Task {} has an unknown task type '{}'!".format(repr(task), task.type))
             if task.type != "stop":
@@ -225,14 +308,15 @@ class Worker(object):
             t0 = time.time()
             story = self.session.scalars(
                 select(Story)
-                .where(Story.publisher == publisher, Story.id == story_id)
+                .where(Story.publisher_name == publisher, Story.id == story_id)
                 .options(
                     # eager loading options
                     # as it turns out, lazyloading is simply the fastest... This seems wrong...
-                    joinedload(Story.chapters),
+                    joinedload(Story.chapters).undefer(Chapter.text),
                     # selectinload(Story.tags),
                     joinedload(Story.author),
-                    joinedload(Story.series),
+                    joinedload(Story.series_associations),
+                    joinedload(Story.series_associations, StorySeriesAssociation.series),
                     subqueryload(Story.categories),
                 )
             ).first()
@@ -258,7 +342,8 @@ class Worker(object):
             .where(Tag.type == task.tag_type, Tag.name == task.tag_name)
             .options(
                 # eager loading options
-                joinedload(Tag.stories),
+                joinedload(Tag.story_associations),
+                joinedload(Tag.story_associations, StoryTagAssociation.story),
             )
         ).first()
         t1 = time.time()
@@ -280,7 +365,7 @@ class Worker(object):
         t0 = time.time()
         author = self.session.scalars(
             select(Author)
-            .where(Author.publisher == task.publisher, Author.name == task.name)
+            .where(Author.publisher_name == task.publisher, Author.name == task.name)
             .options(
                 # eager loading options
                 joinedload(Author.stories),
@@ -305,7 +390,7 @@ class Worker(object):
         t0 = time.time()
         category = self.session.scalars(
             select(Category)
-            .where(Category.publisher == task.publisher, Category.name == task.name)
+            .where(Category.publisher_name == task.publisher, Category.name == task.name)
             .options(
                 # eager loading options
                 joinedload(Category.stories),
@@ -318,3 +403,78 @@ class Worker(object):
         t3 = time.time()
         if DEBUG_PERFOMANCE:
             print(f"Got category in {t1-t0}s, rendered it in {t2-t1}s and put it in outqueue in {t3-t2}s (total: {t3-t0}s)")
+
+    def process_series_task(self, task):
+        """
+        Process a received series task.
+
+        @param task: task to process
+        @type task: L{SeriesRenderTask}
+        """
+        # get the series
+        t0 = time.time()
+        series = self.session.scalars(
+            select(Series)
+            .where(Series.publisher_name == task.publisher, Series.name == task.name)
+            .options(
+                # eager loading options
+                joinedload(Series.story_associations),
+                joinedload(Series.story_associations, StorySeriesAssociation.story),
+            )
+        ).first()
+        t1 = time.time()
+        result = self.renderer.render_series(series)
+        t2 = time.time()
+        self.outqueue.put(result)
+        t3 = time.time()
+        if DEBUG_PERFOMANCE:
+            print(f"Got series in {t1-t0}s, rendered it in {t2-t1}s and put it in outqueue in {t3-t2}s (total: {t3-t0}s)")
+
+    def process_publisher_task(self, task):
+        """
+        Process a received publisher task.
+
+        @param task: task to process
+        @type task: L{PublisherRenderTask}
+        """
+        # get the categories in the series
+        t0 = time.time()
+        publisher = self.session.scalars(
+            select(Publisher)
+            .where(Publisher.name == task.publisher)
+            .options(
+                # eager loading options
+                joinedload(Publisher.categories),
+                joinedload(Publisher.categories, Category.stories),
+            )
+        ).first()
+        t1 = time.time()
+        result = self.renderer.render_publisher(
+            publisher=publisher,
+        )
+        t2 = time.time()
+        self.outqueue.put(result)
+        t3 = time.time()
+        if DEBUG_PERFOMANCE:
+            print(f"Got publisher in {t1-t0}s, rendered it in {t2-t1}s and put it in outqueue in {t3-t2}s (total: {t3-t0}s)")
+
+    def process_etc_task(self, task):
+        """
+        Process a received etc task.
+
+        @param task: task to process
+        @type task: L{PublisherRenderTask}
+        """
+        if task.subtask == "index":
+            publishers = self.session.scalars(
+                select(Publisher)
+                .options(
+                    # eager loading options
+                    subqueryload(Publisher.categories),
+                    joinedload(Publisher.categories, Category.stories),
+                )
+            ).all()
+            result = self.renderer.render_index(publishers=publishers)
+        else:
+            raise ValueError("Unknown etc subtask: '{}'!".format(task.subtask))
+        self.outqueue.put(result)

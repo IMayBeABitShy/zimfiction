@@ -2,7 +2,7 @@
 
 <DIV class="story_summary_div">
     <DIV class="story_summary_title">
-        <A href="{{ to_root}}/story/{{ story.publisher }}/{{ story.id }}/" class="story_summary_title_link">{{ story.title }}</A> by <A class="story_summary_author_link" href="{{ to_root}}/author/{{ story.author.publisher }}/{{ story.author_name|normalize_tag }}/">{{ story.author_name }}</A>
+        <A href="{{ to_root}}/story/{{ story.publisher.name }}/{{ story.id }}/" class="story_summary_title_link">{{ story.title }}</A> by <A class="story_summary_author_link" href="{{ to_root}}/author/{{ story.author.publisher.name }}/{{ story.author_name|normalize_tag }}/">{{ story.author_name }}</A>
         {% if not extended %}
             <P class="story_updated_text">{{ story.updated|format_date }}</P>
             <DIV class="story_short_categories">
@@ -24,6 +24,16 @@
                     </TD>
                 </TR>
             {% endif %}
+            {% for series_association in story.series_associations %}
+                <TR>
+                    <TH>Series</TH>
+                    <TD><B>Part</B> {{ series_association.index }} <B>of</B> <A class="serieslink" href="{{to_root}}/series/{{ series_association.series.publisher.name }}/{{ series_association.series.name|normalize_tag }}">{{ series_association.series.name }}</A></TD>
+                </TR>
+            {% endfor %}
+            <TR>
+                <TH>Publisher</TH>
+                <TD>{{ story.publisher.name }}</TD>
+            </TR>
             <TR>
                 <TH>Status</TH>
                 <TD>{{ story.status }}</TD>
@@ -105,9 +115,9 @@
     {% if not extended %}
         <DIV class="story_summary_footer">
             <P>
-                {% if story.series is not none %}
-                    Part <B>{{ story.series_index }}</B> of {{ story.series.name }}
-                {% endif %}
+                {% for series_association in story.series_associations  %}
+                    <B>Part</B> {{ series_association.index }} <B>of</B> <A class="serieslink" href="{{to_root}}/series/{{ series_association.series.publisher.name }}/{{ series_association.series.name|normalize_tag }}">{{ series_association.series.name }}</A>
+                {% endfor %}
                 <B>Language:</B> {{ story.language }} <B>Status:</B> {{ story.status }} <B>Words:</B> {{ story.total_words|format_number }} <B>Chapters:</B> {{ story.chapters|length }} <B>Score:</B> {{ story.score|format_number }}
             </P>
         </DIV>
