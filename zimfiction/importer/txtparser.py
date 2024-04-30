@@ -1,5 +1,5 @@
 """
-This module contains the story parse logic.
+This module contains the txt/markdown story parse logic.
 """
 import datetime
 import re
@@ -13,9 +13,9 @@ from ..exceptions import ParseError
 CHAPTER_TITLE_REGEX = re.compile(r"\t[0-9]+\. .+")
 
 
-def parse_story(session, fin):
+def parse_txt_story(session, fin):
     """
-    Parse a story.
+    Parse a story in txt/markdown format.
 
     @param session: sqlalchemy session to use
     @type session: L{sqlalchemy.orm.Session}
@@ -43,15 +43,21 @@ def parse_story(session, fin):
             # process header
             line = line.strip()
             if not line:
-                # title will definitely end on empty line
-                in_title = False
-                # body starts after a couple of empty lines
                 n_empty_lines += 1
+                # body starts after a couple of empty lines
                 if got_meta and n_empty_lines >= 3:
                     # leaving header
                     in_body = True
                 continue
             else:
+                # line is not empty, we need to:
+                #   - reset empty line counter
+                #   - check if it ends a potential multi line field (e.g. title)
+                # check if in title and it ends here
+                if n_empty_lines > 0 and in_title and line.startswith("by "):
+                    # end of title
+                    in_title = False
+                    # but continue parsing for now, as we still need to extract the author
                 n_empty_lines = 0
             if "title" not in meta:
                 meta["title"] = line
@@ -60,7 +66,7 @@ def parse_story(session, fin):
             if in_title:
                 # because for some reason titles can sometimes be multiline
                 meta["title"] += "\n" + line
-                # in_title will be set to False in empty line check
+                # in_title will be set to False in a separate check
                 continue
             elif in_summary:
                 meta["summary"] += ("\n" + line)
@@ -115,6 +121,9 @@ def parse_story(session, fin):
             elif key == "Warnings":
                 for tag in value.split(", "):
                     add_to_dict_list(tags, "warning", tag)
+            elif key == "Characters":
+                for tag in value.split(", "):
+                    add_to_dict_list(tags, "character", tag)
             elif key == "Relationships":
                 for tag in value.split(", "):
                     add_to_dict_list(tags, "relationship", tag)
@@ -223,6 +232,9 @@ def parse_story(session, fin):
     meta["chapters"] = chapters
     if "author url" in meta:
         del meta["author url"]
+    meta["publisher"] = publisher
+    # clean title
+    meta["title"] = meta["title"].strip()
 
     story = Story(
         **meta,

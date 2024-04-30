@@ -38,6 +38,8 @@ setup(
         "jinja2",
         "mistune",
         "psutil",
+        "EBookLib",
+        "html2text",
         ],
     entry_points={
         "console_scripts": [

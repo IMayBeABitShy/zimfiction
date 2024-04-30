@@ -9,7 +9,7 @@ The worker logic for multi process rendering.
 import time
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload, subqueryload, undefer
+from sqlalchemy.orm import Session, joinedload, subqueryload
 
 from .renderer import HtmlRenderer
 from ..db.models import Story, Chapter, Tag, Author, Category, Publisher

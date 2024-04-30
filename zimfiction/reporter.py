@@ -215,7 +215,7 @@ class StdoutProgressReporter(BaseProgressReporter):
         """
         Print the current progress.
         """
-        progress = self.steps / self.max
+        progress = ((self.steps / self.max) if self.max > 0 else 0.0)
         bar = self._get_bar(progress)
         eta = self.get_eta()
         eta_string = (format_timedelta(round(eta, 2)) if eta is not None else "??:??")

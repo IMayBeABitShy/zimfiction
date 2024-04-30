@@ -2,11 +2,11 @@
 {% extends "base.html.jinja" %}
 
 {% block title %}
-    <TITLE>ZimFiction - {{ category.name }} on {{ category.publisher }}</TITLE>
+    <TITLE>ZimFiction - {{ category.name }} on {{ category.publisher.name }}</TITLE>
 {% endblock %}
 
 {% block content %}
-    <H1>{{ category.name }} on {{ category.publisher }} - Page {{ cur_page }}</H1>
+    <H1>{{ category.name }} on {{ category.publisher.name }} - Page {{ cur_page }}</H1>
     <P class="category_story_count">{{ category.num_stories }} stories in this category</P>
     <HR>
     {% for story in stories %}

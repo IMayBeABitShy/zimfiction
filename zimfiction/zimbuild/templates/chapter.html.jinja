@@ -22,9 +22,6 @@
             {% with to_root=to_root, num_pages=chapter.story.chapters|length, cur_page=chapter.index %}
                 {% include "pagebuttons.html.jinja" %}
             {% endwith %}
-            {% with to_root=to_root  %}
-                {% include "indexbutton.html.jinja" %}
-            {% endwith %}
         </DIV>
     {% endblock %}
 {% endblock %}

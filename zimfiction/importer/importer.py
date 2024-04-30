@@ -8,7 +8,8 @@ from fs.walk import Walker
 from sqlalchemy import and_, exists
 from sqlalchemy.sql import func
 
-from .parser import parse_story
+from .txtparser import parse_txt_story
+from .epubparser import parse_epub_story
 from ..exceptions import ParseError
 from ..db.models import Story, Chapter
 from ..db.unique import clear_unique_cache
@@ -35,11 +36,22 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, verbose=False):
     # all of the stories in the current batch to avoid duplicates.
     current_story_ids_to_stories = {}
 
-    walker = Walker(filter=["*.txt"])
+    walker = Walker(filter=["*.txt", "*.epub"])
     for i, path in enumerate(walker.files(fs)):
-        with fs.open(path, "r", encoding="utf-8", errors="replace") as fin:
+        use_encoding = path.split(".")[-1] in ("txt", )
+        open_kwargs = {}
+        if use_encoding:
+            open_kwargs["encoding"] = ("utf-8" if use_encoding else None)
+            open_kwargs["errors"] = "replace"
+        open_kwargs["mode"] = ("r" if use_encoding else "rb")
+        with fs.open(path, **open_kwargs) as fin:
             try:
-                story = parse_story(session, fin)
+                if path.endswith(".txt"):
+                    story = parse_txt_story(session, fin)
+                elif path.endswith(".epub"):
+                    story = parse_epub_story(session, fin)
+                else:
+                    raise ValueError("Don't know how to parse '{}'!".format(path))
             except Exception as e:
                 if verbose:
                     print("\nException caught parsing {}:".format(path))
@@ -48,77 +60,78 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, verbose=False):
                     continue
                 raise ParseError("Error parsing: {}".format(path)) from e
 
-            full_story_id = (story.publisher, story.id)
+        full_story_id = (story.publisher.name, story.id)
 
-            # check if session in story:
-            with session.no_autoflush:
-                # check if story already in database
-                already_exists = (
-                    session.query(
-                        exists().
-                        where(
-                            and_(
-                                Story.publisher == story.publisher,
-                                Story.id == story.id,
-                            )
-                        )
-                    ).scalar()
-                )
-                if already_exists:
-                    # check if current story has more words than story in DB
-                    n_new_words = sum([c.num_words for c in story.chapters])
-                    n_old_words = session.query(
-                        func.sum(Chapter.num_words),
-                    ).where(
+        # check if session in story:
+        with session.no_autoflush:
+            # check if story already in database
+            already_exists = (
+                session.query(
+                    exists().
+                    where(
                         and_(
-                            Chapter.publisher == story.publisher,
-                            Chapter.story_id == story.id,
+                            Story.publisher_name == story.publisher.name,
+                            Story.id == story.id,
                         )
-                    ).scalar()
-                    if n_new_words > n_old_words:
-                        if verbose:
-                            print(
-                                "Story {}-{} already exists in DB, replacing it...".format(
-                                    story.publisher,
-                                    story.id,
-                                )
-                            )
-                        session.query(Story).filter(
-                            and_(
-                                Story.publisher == story.publisher,
-                                Story.id == story.id,
-                            )
-                        ).delete()
-                    else:
-                        if verbose:
-                            print(
-                                "Story {}-{} already exists in DB and has more words, not replacing it...".format(
-                                    story.publisher,
-                                    story.id,
-                                )
-                            )
-                        continue
-                elif full_story_id in current_story_ids_to_stories:
-                    n_new_words = sum([c.num_words for c in story.chapters])
-                    old_story = current_story_ids_to_stories[full_story_id]
-                    n_old_words = sum([c.num_words for c in old_story.chapters])
-                    if n_new_words < n_old_words:
-                        # do not replace old story
+                    )
+                ).scalar()
+            )
+            if already_exists:
+                # check if current story has more words than story in DB
+                n_new_words = sum([c.num_words for c in story.chapters])
+                n_old_words = session.query(
+                    func.sum(Chapter.num_words),
+                ).where(
+                    and_(
+                        Chapter.publisher_name == story.publisher.name,
+                        Chapter.story_id == story.id,
+                    )
+                ).scalar()
+                if n_new_words > n_old_words:
+                    if verbose:
                         print(
-                            "Story {}-{} already staged for commit and has more words, not replacing it...".format(
-                                story.publisher,
+                            "Story {}-{} already exists in DB, replacing it...".format(
+                                story.publisher.name,
                                 story.id,
                             )
                         )
-                        continue
-                    else:
-                        stories.remove(old_story)
+                    session.query(Story).filter(
+                        and_(
+                            Story.publisher_name == story.publisher.name,
+                            Story.id == story.id,
+                        )
+                    ).delete()
+                else:
+                    if verbose:
+                        print(
+                            "Story {}-{} already exists in DB and has more words, not replacing it...".format(
+                                story.publisher.name,
+                                story.id,
+                            )
+                        )
+                    continue
+            elif full_story_id in current_story_ids_to_stories:
+                n_new_words = sum([c.num_words for c in story.chapters])
+                old_story = current_story_ids_to_stories[full_story_id]
+                n_old_words = sum([c.num_words for c in old_story.chapters])
+                if n_new_words < n_old_words:
+                    # do not replace old story
+                    print(
+                        "Story {}-{} already staged for commit and has more words, not replacing it...".format(
+                            story.publisher.name,
+                            story.id,
+                        )
+                    )
+                    continue
+                else:
+                    stories.remove(old_story)
             stories.append(story)
             current_story_ids_to_stories[full_story_id] = story
             if verbose:
                 print("Added story: ", story.title, end="   \r")
-            #  if i % 10000 == 0 and i > 0 and stories:
+            # if i % 10000 == 0 and i > 0 and stories:
             if i % 20 == 1 and i > 0 and stories:
+            # if i % 1 == 0 and i > 0 and stories:
                 if verbose:
                     print("Committing {} stories...".format(len(stories)), end="   \r")
                 session.expunge_all()

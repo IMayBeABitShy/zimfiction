@@ -198,15 +198,25 @@ HR {
 
 .publisher_list UL {
   list-style: none;
+  display: block;
+  columns: 2;
+  -webkit-columns: 2;
+  -moz-columns: 2;
+}
+
+.publisher_list LI {
+  display: inline;
 }
 
 .publisher {
+  display: inline-block;
   background: lightgray;
   padding-left: 20px;
   padding-bottom: 20px;
   border: 1px solid gray;
   border-radius: 10px;
-  width: 40%;
+  width: 90%;
+  margin: 10px;
 }
 
 .publisher_div_link {
