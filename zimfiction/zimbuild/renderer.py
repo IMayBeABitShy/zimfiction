@@ -8,6 +8,7 @@ import mistune
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from ..util import format_size, format_number, normalize_tag
+from ..statistics import StoryListStatCreator
 from .buckets import BucketMaker
 
 
@@ -247,7 +248,9 @@ class HtmlRenderer(object):
         )
         list_page_template = self.environment.get_template("storylistpage.html.jinja")
         pages = []
+        stat_creator = StoryListStatCreator()
         for story in tag.stories:
+            stat_creator.feed(story)
             bucket = bucketmaker.feed(story)
             if bucket is not None:
                 pages.append(bucket)
@@ -270,6 +273,22 @@ class HtmlRenderer(object):
                     is_front=False,
                 ),
             )
+        stats = stat_creator.get_stats()
+        stats_page_template = self.environment.get_template("storyliststatspage.html.jinja")
+        page = stats_page_template.render(
+            to_root="../../..",
+            title="Stories tagged '{}' [{}] - Statistics".format(tag.name, tag.type),
+            stats=stats,
+            backref="1",
+        )
+        result.add(
+            HtmlPage(
+                path="tag/{}/{}/stats".format(tag.type, normalize_tag(tag.name)),
+                content=self.minify_html(page),
+                title="Stories tagged '{}' [{}] - Statistics".format(tag.name, tag.type),
+                is_front=False
+            )
+        )
         return result
 
     def render_author(self, author):
@@ -293,18 +312,22 @@ class HtmlRenderer(object):
         )
         list_page_template = self.environment.get_template("author.html.jinja")
         pages = []
+        stat_creator = StoryListStatCreator()
         for story in sorted(author.stories, key=lambda x: x.published, reverse=True):
+            stat_creator.feed(story)
             bucket = bucketmaker.feed(story)
             if bucket is not None:
                 pages.append(bucket)
         bucket = bucketmaker.finish()
         if bucket is not None:
             pages.append(bucket)
+        stats = stat_creator.get_stats()
         for i, stories in enumerate(pages, start=1):
             page = list_page_template.render(
                 to_root="../../..",
                 author=author,
                 stories=stories,
+                stats=stats,
                 num_pages=len(pages),
                 cur_page=i,
             )
@@ -340,7 +363,9 @@ class HtmlRenderer(object):
         )
         list_page_template = self.environment.get_template("category.html.jinja")
         pages = []
+        stat_creator = StoryListStatCreator()
         for story in sorted(category.stories, key=lambda x: (x.score, x.total_words), reverse=True):
+            stat_creator.feed(story)
             bucket = bucketmaker.feed(story)
             if bucket is not None:
                 pages.append(bucket)
@@ -363,6 +388,22 @@ class HtmlRenderer(object):
                     is_front=False,
                 ),
             )
+        stats = stat_creator.get_stats()
+        stats_page_template = self.environment.get_template("storyliststatspage.html.jinja")
+        page = stats_page_template.render(
+            to_root="../../..",
+            title="{} fanfiction on {} - Statistics".format(category.name, category.publisher),
+            stats=stats,
+            backref="1",
+        )
+        result.add(
+            HtmlPage(
+                path="category/{}/{}/stats".format(category.publisher.name, normalize_tag(category.name)),
+                content=self.minify_html(page),
+                title="{} fanfiction on {} - Statistics".format(category.publisher.name, category.publisher),
+                is_front=False
+            )
+        )
         return result
 
 
@@ -377,9 +418,11 @@ class HtmlRenderer(object):
         """
         result = RenderResult()
         series_template = self.environment.get_template("series.html.jinja")
+        stats = StoryListStatCreator.get_stats_from_iterable(series.stories)
         page = series_template.render(
             to_root="../..",
             series=series,
+            stats=stats,
         )
         result.add(
             HtmlPage(
@@ -402,9 +445,11 @@ class HtmlRenderer(object):
         """
         result = RenderResult()
         publisher_template = self.environment.get_template("publisher.html.jinja")
+        stats = StoryListStatCreator.get_stats_from_iterable(publisher.stories)
         page = publisher_template.render(
             to_root="..",
             publisher=publisher,
+            stats=stats,
         )
         result.add(
             HtmlPage(
@@ -436,6 +481,34 @@ class HtmlRenderer(object):
                 path="index.html",
                 content=self.minify_html(page),
                 title="Welcome to ZimFiction!",
+                is_front=True,
+            ),
+        )
+        return result
+
+
+    def render_global_stats(self, stats):
+        """
+        Render the global statistic page.
+
+        @param stats: statistics to render
+        @type stats: L{zimfiction.statistics.StoryListStats}
+        @return: the rendered pages and redirects
+        @rtype: L{RenderResult}
+        """
+        result = RenderResult()
+        stats_template = self.environment.get_template("storyliststatspage.html.jinja")
+        page = stats_template.render(
+            to_root=".",
+            title="Global Statistics",
+            stats=stats,
+            backref=None,
+        )
+        result.add(
+            HtmlPage(
+                path="statistics.html",
+                content=self.minify_html(page),
+                title="Global Statistics",
                 is_front=True,
             ),
         )

@@ -436,7 +436,7 @@ class ZimBuilder(object):
             self._send_publisher_tasks()
         # --- etc ---
         self.reporter.msg(" -> Adding miscelaneous pages...")
-        n_misc_pages = 1
+        n_misc_pages = 2
         with self._run_stage(
             creator=creator,
             n_workers=n_workers,
@@ -682,3 +682,5 @@ class ZimBuilder(object):
         """
         indextask = EtcRenderTask("index")
         self.inqueue.put(indextask)
+        statstask = EtcRenderTask("stats")
+        self.inqueue.put(statstask)

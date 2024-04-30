@@ -20,6 +20,8 @@ HR {
   background-color: #333399;
   display: flex;
   width: 100%;
+  color: #ffffff;
+  padding: 4px;
 }
 
 .navigation * {
@@ -94,6 +96,14 @@ HR {
   border: 1px solid gray;
 }
 
+.statslink {
+  background: lightgray;
+  border: 1px solid darkgray;
+  border-radius: 5px;
+  padding: 8px;
+  margin: auto;
+}
+
 /* page buttons */
 
 .page_button {
@@ -150,12 +160,17 @@ HR {
 
 /* publisher */
 
-.publisher_categories {
+.publisher_categories, .publisher_statistics {
   background: lightgray;
   border: 1px solid gray;
   padding-left: 16px;
   padding-right: 16px;
   padding-top: 1px;
+}
+
+.publisher_statistics {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
 }
 
 .publisher_categories * {
@@ -235,4 +250,37 @@ HR {
   display: inline;
   margin: 10px;
   color: #353535;
+}
+
+/* statistics */
+
+.statstable {
+  width: 90%;
+  padding: 1px;
+  margin: auto;
+  background: gray;
+}
+
+.statstable TR {
+  background: lightgray;
+}
+
+.statstable TR:nth-child(even) {
+  background: darkgray;
+}
+
+.statstable TH {
+  text-align: left;
+}
+
+.statstable TD {
+  text-align: right;
+}
+
+.stats_back_link {
+  background: lightgray;
+  border: 1px solid darkgray;
+  border-radius: 5px;
+  padding: 8px;
+  margin-left: 20px
 }

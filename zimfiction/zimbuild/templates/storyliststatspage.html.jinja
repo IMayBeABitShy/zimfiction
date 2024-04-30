@@ -1,0 +1,18 @@
+{# This is a page for statistics about a list of stories. Expects "to_root", "stats", "title", "backref"  as arguments #}
+{% extends "base.html.jinja" %}
+
+{% block title %}
+    <TITLE>{{ title }}</TITLE>
+{% endblock %}
+
+{% block content %}
+    <H1>{{ title }}</H1>
+    <HR>
+    {% with stats=stats, to_root=to_root %}
+        {% include "storyliststats.html.jinja" %}
+    {% endwith %}
+    <HR>
+    {% if not backref is none %}
+        <A class="stats_back_link" href="{{ backref }}">Back</A>
+    {% endif %}
+{% endblock %}

@@ -7,6 +7,7 @@
 
 {% block content %}
     <H1>{{ category.name }} on {{ category.publisher.name }} - Page {{ cur_page }}</H1>
+    <A class="statslink" href="stats">View statistics</A>
     <P class="category_story_count">{{ category.num_stories }} stories in this category</P>
     <HR>
     {% for story in stories %}

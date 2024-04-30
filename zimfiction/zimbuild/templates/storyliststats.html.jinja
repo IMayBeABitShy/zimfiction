@@ -1,0 +1,44 @@
+{# This is a template for rendering statistics about a list of stories. Expects "to_root", "stats" as arguments #}
+
+<DIV class="stats">
+    <TABLE class="statstable storyliststatstable">
+        <TR class="statstableheader">
+            <TH>Collected statistic</TH>
+            <TH>Value</TH>
+        </TR>
+        {%
+            for name, key in [
+                ("Number of stories", "story_count"),
+                ("Total number of words", "total_words"),
+                ("Average number of words in a story", "average_story_words"),
+                ("Number of words in shortest story", "min_story_words"),
+                ("Number of words in longest story", "max_story_words"),
+                ("Number of chapters", "chapter_count"),
+                ("Average number of chapters in a story", "average_chapter_count"),
+                ("Lowest number of chapters in a story", "min_chapter_count"),
+                ("Highest number of chapters in a story", "max_chapter_count"),
+                ("Average number of chapters in a story", "average_chapter_count"),
+                ("Lowest number of words in a chapter", "min_chapter_words"),
+                ("Highest number of words in a chapter", "max_chapter_words"),
+                ("Average number of words in a chapter", "average_chapter_words"),
+                ("Number of unique categories tagged", "category_count"),
+                ("Total amount of categories tagged", "total_category_count"),
+                ("Average amount of categories tagged per story", "average_category_count"),
+                ("Number of unique authors", "author_count"),
+                ("Total amount of authors", "total_author_count"),
+                ("Average amount of authors per story", "average_author_count"),
+                ("Number of unique tags", "tag_count"),
+                ("Total amount of tags", "total_tag_count"),
+                ("Average amount of Tags per story", "average_tag_count"),
+                ("Number of unique series", "series_count"),
+                ("Total number of series tags", "total_series_count"),
+
+            ]
+        %}
+            <TR>
+                <TH> {{ name }}</TH>
+                <TD>{{ stats|attr(key)|format_number }}</TD>
+            </TR>
+        {% endfor %}
+    </TABLE>
+</DIV>

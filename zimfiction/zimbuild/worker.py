@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, subqueryload
 
 from .renderer import HtmlRenderer
+from ..statistics import StoryListStatCreator
 from ..db.models import Story, Chapter, Tag, Author, Category, Publisher
 from ..db.models import StoryTagAssociation, StorySeriesAssociation, Series
 
@@ -466,6 +467,7 @@ class Worker(object):
         @type task: L{PublisherRenderTask}
         """
         if task.subtask == "index":
+            # render the indexpage
             publishers = self.session.scalars(
                 select(Publisher)
                 .options(
@@ -475,6 +477,23 @@ class Worker(object):
                 )
             ).all()
             result = self.renderer.render_index(publishers=publishers)
+        elif task.subtask == "stats":
+            # render the global statistics
+            stories = self.session.scalars(
+                select(Story)
+                .options(
+                    # eager loading options
+                    # as it turns out, lazyloading is simply the fastest... This seems wrong...
+                    # joinedload(Story.chapters),
+                    # selectinload(Story.tags),
+                    # joinedload(Story.author),
+                    # joinedload(Story.series_associations),
+                    # joinedload(Story.series_associations, StorySeriesAssociation.series),
+                    subqueryload(Story.categories),
+                )
+            ).all()
+            stats = StoryListStatCreator.get_stats_from_iterable(stories)
+            result = self.renderer.render_global_stats(stats)
         else:
             raise ValueError("Unknown etc subtask: '{}'!".format(task.subtask))
         self.outqueue.put(result)

@@ -4,7 +4,6 @@ Various utility functions.
 import datetime
 import re
 import os
-import urllib.parse
 
 from PIL import Image
 

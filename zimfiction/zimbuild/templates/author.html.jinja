@@ -1,4 +1,4 @@
-{# This is a page for list of stories by an author. Expects "to_root", "author", "stories", "num_pages" and "cur_page" as argument #}
+{# This is a page for list of stories by an author. Expects "to_root", "author", "stories", "stats", "num_pages" and "cur_page" as argument #}
 {% extends "base.html.jinja" %}
 
 {% block title %}
@@ -7,6 +7,10 @@
 
 {% block content %}
     <H1>Stories written by {{ author.name }} [{{ author.publisher }}]</H1>
+    <HR>
+    {% with stats=stats, to_root=to_root %}
+        {% include "storyliststats.html.jinja" %}
+    {% endwith %}
     <HR>
     {% for story in stories %}
         <DIV class="story_list_page_item">

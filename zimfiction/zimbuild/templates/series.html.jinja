@@ -8,6 +8,10 @@
 {% block content %}
     <H1>{{ series.name }} (Series) on {{ series.publisher.name }}</H1>
     <HR>
+    {% with to_root=to_root, stats=stats %}
+        {% include "storyliststats.html.jinja" %}
+    {% endwith %}
+    <HR>
     {% for story in series.stories %}
         <DIV class="story_list_page_item">
             {% with story=story, to_root=to_root, extended=False %}

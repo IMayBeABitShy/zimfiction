@@ -1,4 +1,4 @@
-{# This is the page for a publisher. Expects "to_root" and "publisher" as arguments #}
+{# This is the page for a publisher. Expects "to_root", "publisher" and "stats" as arguments #}
 {% extends "base.html.jinja" %}
 
 {% block title %}
@@ -8,6 +8,12 @@
 {% block content %}
     <H1>{{ publisher.name }}</H1>
     <HR>
+    <DIV class="publisher_statistics">
+        <H2>Statistics</H2>
+        {% with stats=stats, to_root=to_root %}
+            {% include "storyliststats.html.jinja" %}
+        {% endwith %}
+    </DIV>
     <DIV class="publisher_categories">
         <H2>Categories</H2>
         <UL class="category_long_list">

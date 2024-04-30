@@ -7,6 +7,9 @@ This file describes the ZIM layout.
 +---index.html
 |   The main page.
 |
++---statistics.html
+|   Global content statistics
+|
 +-+-story/
 | | Contains the stories
 | |
@@ -44,7 +47,9 @@ This file describes the ZIM layout.
 |     | This specific tag, Redirects to ./1
 |     |
 |     +-PAGENUM
-|       A page of stories with this tag
+|     | A page of stories with this tag
+|     +-stats
+        The statistics about stories in this tag
 |
 +-+-category/
 | | Contains the category, ...
@@ -56,7 +61,9 @@ This file describes the ZIM layout.
 |     | Stories in this category
 |     |
 |     +-PAGENUM
-|       A page of stories in this category
+|     | A page of stories in this category
+|     +-stats
+|       The statistic about stories in this category
 |
 +-+-series/
 | | contains series of stories
