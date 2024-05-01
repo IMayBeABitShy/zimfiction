@@ -350,7 +350,7 @@ class Story(Base):
     series = relationship(
         "Series",
         back_populates="stories",
-        cascade="all, delete",
+        cascade="all, delete-orphan",
         overlaps="stories",
     )
     series_associations = relationship(

@@ -206,6 +206,8 @@ class StoryListStats(_Stats):
     @type total_author_count: L{int}
     @ivar average_author_count: average number of categories per story
     @type average_author_count: L{float}
+    @ivar average_stories_per_author: average number of stories per author
+    @type average_stories_per_author: L{float}
 
     @ivar series_count: number of unique series encountered
     @type series_count: L{int}
@@ -309,6 +311,7 @@ class StoryListStats(_Stats):
         self.author_count = author_count
         self.total_author_count = total_author_count
         self.average_author_count = self.total_author_count / self.story_count
+        self.average_stories_per_author = self.story_count / self.author_count
 
         self.series_count = series_count
         self.total_series_count = total_series_count

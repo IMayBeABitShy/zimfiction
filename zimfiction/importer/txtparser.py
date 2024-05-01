@@ -130,7 +130,10 @@ def parse_txt_story(session, fin):
             elif key == "Series":
                 series_index = int(value[value.rfind("[")+1: value.rfind("]")])
                 series_name = value[:value.rfind("[") - 1]
-                series.append((series_name, series_index))
+                # ensure that we don't add a series twice - because apparently
+                # some fics contain the data multiple times
+                if not any([e[0] == series_name for e in series]):
+                    series.append((series_name, series_index))
             elif key in ("Series URL", "Collections"):
                 # ignore tags
                 pass
