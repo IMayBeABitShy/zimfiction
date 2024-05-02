@@ -1,6 +1,11 @@
 """
 The worker logic for multi process rendering.
 
+Workers receive their tasks from an inqueue fed from the builder. They
+process the tasks by loading the required objects and feed them to a
+renderer. The result is put into the outqueue, where the builder will
+take the results and add them to the creator.
+
 @var MARKER_WORKER_STOPPED: a symbolic constant put into the output queue when the worker is finished
 @type MARKER_WORKER_STOPPED: L{str}
 @var MARKER_TASK_COMPLETED: a symbolic constant put into the output queue when a task was completed

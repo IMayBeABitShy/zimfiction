@@ -1,5 +1,8 @@
 """
-This module builds the ZIM files.
+This module manages the build of the ZIM files.
+
+It handles the ZIM creator, add basic content, instantiates the workers,
+issues them their tasks and adds the result to the creator.
 
 @var MAX_OUTSTANDING_TASKS: max size of the task queue
 @type MAX_OUTSTANDING_TASKS: L{int}
@@ -25,7 +28,7 @@ from libzim.writer import Creator, Item, StringProvider, FileProvider, Hint
 from ..util import format_timedelta, format_size, get_resource_file_path
 from ..db.models import Story, Tag, Author, Category, Series, Publisher
 from ..reporter import StdoutReporter
-from .renderer import HtmlPage, Redirect
+from .renderer import HtmlPage, Redirect, JsonObject
 from .worker import Worker, StopTask, StoryRenderTask, TagRenderTask
 from .worker import AuthorRenderTask, CategoryRenderTask, SeriesRenderTask
 from .worker import PublisherRenderTask, EtcRenderTask
@@ -97,6 +100,45 @@ class HtmlPageItem(Item):
     def get_hints(self):
         return {
             Hint.FRONT_ARTICLE: self._is_front,
+            Hint.COMPRESS: True,
+        }
+
+
+class JsonItem(Item):
+    """
+    A L{libzim.writer.Item} for json.
+    """
+    def __init__(self, path, title, content):
+        """
+        The default constructor.
+
+        @param path: path of to store item in ZIM file
+        @type path: L{str}
+        @param title: title of the json file
+        @type title: L{str}
+        @param content: the content of the json file
+        @type content: L{str}
+        """
+        super().__init__()
+        self._path = path
+        self._title = title
+        self._content = content
+
+    def get_path(self):
+        return self._path
+
+    def get_title(self):
+        return self._title
+
+    def get_mimetype(self):
+        return "application/json"
+
+    def get_contentprovider(self):
+        return StringProvider(self._content)
+
+    def get_hints(self):
+        return {
+            Hint.FRONT_ARTICLE: False,
             Hint.COMPRESS: True,
         }
 
@@ -565,6 +607,14 @@ class ZimBuilder(object):
                                 title=rendered_object.title,
                                 content=rendered_object.content,
                                 is_front=rendered_object.is_front,
+                            )
+                            creator.add_item(item)
+                        elif isinstance(rendered_object, JsonObject):
+                            # add a json object
+                            item = JsonItem(
+                                path=rendered_object.path,
+                                title=rendered_object.title,
+                                content=rendered_object.content,
                             )
                             creator.add_item(item)
                         elif isinstance(rendered_object, Redirect):

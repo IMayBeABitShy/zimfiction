@@ -22,6 +22,9 @@ This file describes the ZIM layout.
 |     +---index
 |     |   List of chapters in this story.
 |     |
+|     +---preview.json
+|     |   A json file containing the necessary data to render a preview.
+|     |
 |     +---CHAPTER
 |         The specific chapter of a story
 |
@@ -48,8 +51,11 @@ This file describes the ZIM layout.
 |     |
 |     +-PAGENUM
 |     | A page of stories with this tag
+|     |
 |     +-stats
-        The statistics about stories in this tag
+|     | The statistics about stories in this tag
+|     |
+|     +-[search metadata]
 |
 +-+-category/
 | | Contains the category, ...
@@ -62,8 +68,11 @@ This file describes the ZIM layout.
 |     |
 |     +-PAGENUM
 |     | A page of stories in this category
+|     |
 |     +-stats
-|       The statistic about stories in this category
+|     | The statistic about stories in this category
+|     |
+|     +-[search metadata]
 |
 +-+-series/
 | | contains series of stories
@@ -79,3 +88,21 @@ This file describes the ZIM layout.
 | |
 | +---PUBLISHER
 |     A page for a publisher, showing all available categorie
+
+
+
+SEARCH METADATA LAYOUT
+
+files:
+- search_header.json - header data
+- search_content_I.json - searh metadata of stories, I is index >= 0
+
+header:
+{
+    "num_pages": number of content files,
+    "tag_ids": {
+        field (e.g. warnings): {
+            tagname: tag_id,
+        }
+    }
+}
