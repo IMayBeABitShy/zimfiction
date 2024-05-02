@@ -10,6 +10,7 @@ This module builds the ZIM files.
 """
 import multiprocessing
 import threading
+import queue
 import datetime
 import time
 import os
@@ -151,6 +152,11 @@ class BuildOptions(object):
     @type language: L{str}
     @ivar indexing: whether indexing should be enabled or not
     @type indexing: L{bool}
+
+    @ivar use_threads: if nonzero, use threads instead of processes
+    @type use_threads: L{bool}
+    @ivar num_workers: number of (non-zim) workers to use
+    @type num_workers: L{int}
     """
     def __init__(
         self,
@@ -161,6 +167,9 @@ class BuildOptions(object):
         description="ZIM file containing dumps of various fanfiction sites",
         language="eng",
         indexing=True,
+
+        use_threads=False,
+        num_workers=None,
         ):
         """
         The default constructor.
@@ -179,6 +188,11 @@ class BuildOptions(object):
         @type language: L{str}
         @param indexing: whether indexing should be enabled or not
         @type indexing: L{bool}
+
+        @ivar use_threads: if nonzero, use threads instead of processes
+        @type use_threads: L{bool}
+        @ivar num_workers: number of (non-zim) workers to use (None -> auto)
+        @type num_workers: L{int} or L{None}
         """
         self.name = name
         self.title = title
@@ -187,6 +201,12 @@ class BuildOptions(object):
         self.description = description
         self.language = language
         self.indexing = indexing
+
+        self.use_threads = bool(use_threads)
+        if num_workers is None:
+            self.num_workers = get_n_cores()
+        else:
+            self.num_workers = int(num_workers)
 
     def get_metadata_dict(self):
         """
@@ -223,9 +243,9 @@ class ZimBuilder(object):
     The ZimBuilder manages the ZIM build process.
 
     @ivar inqueue: the queue where tasks will be put
-    @type inqueue: L{multiprocessing.Queue}
+    @type inqueue: L{multiprocessing.Queue} or L{queue.Queue}
     @ivar outqueue: the queue containing the task results
-    @type outqueue: L{multiprocessing.Queue}
+    @type outqueue: L{multiprocessing.Queue} or L{queue.Queue}
     @ivar engine: engine used for database connection
     @type engine: L{sqlalchemy.engine.Engine}
     @ivar session: database session
@@ -242,10 +262,25 @@ class ZimBuilder(object):
         """
         self.engine = engine
 
+        self.inqueue = None
+        self.outqueue = None
+
         self.session = Session(engine)
-        self.inqueue = multiprocessing.Queue(maxsize=MAX_OUTSTANDING_TASKS)
-        self.outqueue = multiprocessing.Queue(maxsize=MAX_RESULT_BACKLOG)
         self.reporter = StdoutReporter();
+
+    def _init_queues(self, options):
+        """
+        Initialize the queues.
+
+        @param options: build options
+        @type options: L{BuildOptions}
+        """
+        if options.use_threads:
+            self.inqueue = queue.Queue(maxsize=MAX_OUTSTANDING_TASKS)
+            self.outqueue = queue.Queue(maxsize=MAX_RESULT_BACKLOG)
+        else:
+            self.inqueue = multiprocessing.Queue(maxsize=MAX_OUTSTANDING_TASKS)
+            self.outqueue = multiprocessing.Queue(maxsize=MAX_RESULT_BACKLOG)
 
     def cleanup(self):
         """
@@ -273,14 +308,20 @@ class ZimBuilder(object):
         clustersize = 8 * 1024 * 1024  # 8 MiB
         verbose = True
         n_creator_workers = get_n_cores()
-        n_render_workers = get_n_cores()
+        n_render_workers = options.num_workers
+        use_threads = options.use_threads
         self.reporter.msg("        -> Path:             {}".format(outpath))
         self.reporter.msg("        -> Verbose:          {}".format(verbose))
         self.reporter.msg("        -> Compression:      {}".format(compression))
         self.reporter.msg("        -> Cluster size:     {}".format(format_size(clustersize)))
         self.reporter.msg("        -> Creator Workers:  {}".format(n_creator_workers))
         self.reporter.msg("        -> Render Workers:   {}".format(n_render_workers))
+        self.reporter.msg("            -> using: {}".format("threads" if use_threads else "processes"))
         self.reporter.msg("        -> Done.")
+
+        self.reporter.msg(" -> Initiating queues...", end="")
+        self._init_queues(options)
+        self.reporter.msg("Done.")
 
         # open the ZIM creator
         self.reporter.msg("Opening ZIM creator, writing to path '{}'... ".format(outpath), end="")
@@ -316,7 +357,7 @@ class ZimBuilder(object):
             self.reporter.msg("Done.")
 
             # add content
-            self._add_content(creator, n_workers=n_render_workers)
+            self._add_content(creator, options=options)
 
             # finish up
             self.reporter.msg("Finalizing ZIM...")
@@ -332,14 +373,15 @@ class ZimBuilder(object):
         self.reporter.msg("Final size: {}".format(format_size(final_size)))
 
 
-    def _add_content(self, creator, n_workers):
+    def _add_content(self, creator, options):
         """
         Add the content of the ZIM file.
 
         @param creator: the ZIM creator
         @type creator: L{zimfiction.writer.Creator}
-        @param n_workers: number of worker processes to use
-        @type n_workers: L{int}
+        @param options: build options for the ZIM
+        @type options: L{BuildOptions}
+
         """
         self.reporter.msg("Adding content...")
         # --- stories ---
@@ -352,7 +394,7 @@ class ZimBuilder(object):
         n_story_tasks = math.ceil(n_stories / STORIES_PER_TASK)
         with self._run_stage(
             creator=creator,
-            n_workers=n_workers,
+            options=options,
             task_name="Adding stories...",
             n_tasks=n_story_tasks,
             task_unit="stories",
@@ -368,7 +410,7 @@ class ZimBuilder(object):
         self.reporter.msg("found {} tags.".format(n_tags))
         with self._run_stage(
             creator=creator,
-            n_workers=n_workers,
+            options=options,
             task_name="Adding Tags...",
             n_tasks=n_tags,
             task_unit="tags",
@@ -383,7 +425,7 @@ class ZimBuilder(object):
         self.reporter.msg("found {} authors.".format(n_authors))
         with self._run_stage(
             creator=creator,
-            n_workers=n_workers,
+            options=options,
             task_name="Adding Authors...",
             n_tasks=n_authors,
             task_unit="authors",
@@ -398,7 +440,7 @@ class ZimBuilder(object):
         self.reporter.msg("found {} categories.".format(n_categories))
         with self._run_stage(
             creator=creator,
-            n_workers=n_workers,
+            options=options,
             task_name="Adding categories...",
             n_tasks=n_categories,
             task_unit="categories",
@@ -413,7 +455,7 @@ class ZimBuilder(object):
         self.reporter.msg("found {} series.".format(n_series))
         with self._run_stage(
             creator=creator,
-            n_workers=n_workers,
+            options=options,
             task_name="Adding series...",
             n_tasks=n_series,
             task_unit="series",
@@ -428,7 +470,7 @@ class ZimBuilder(object):
         self.reporter.msg("found {} publishers.".format(n_publishers))
         with self._run_stage(
             creator=creator,
-            n_workers=n_workers,
+            options=options,
             task_name="Adding publishers...",
             n_tasks=n_series,
             task_unit="publishers",
@@ -439,7 +481,7 @@ class ZimBuilder(object):
         n_misc_pages = 2
         with self._run_stage(
             creator=creator,
-            n_workers=n_workers,
+            options=options,
             task_name="Adding miscelaneous pages...",
             n_tasks=n_misc_pages,
             task_unit="pages",
@@ -447,22 +489,28 @@ class ZimBuilder(object):
             self._send_etc_tasks()
 
     @contextlib.contextmanager
-    def _run_stage(self, **kwargs):
+    def _run_stage(self, options, **kwargs):
         """
         Add the content of the ZIM file.
 
+        @param options: zim build options
+        @type options: L{BuildOptions}
         @param kwargs: keyword arguments passed to L{ZmBuilder._creator_thread}
         @type kwargs: L{dict}
         """
 
-        n_workers = kwargs["n_workers"]
+        if "options" not in kwargs:
+            kwargs["options"] = options
+        n_workers = options.num_workers
 
-        # start worker processes
-        self.reporter.msg("     -> Starting worker processes... ", end="")
+        worker_class = (threading.Thread if options.use_threads else multiprocessing.Process)
+
+        # start workers
+        self.reporter.msg("     -> Starting workers... ", end="")
         workers = []
         for i in range(n_workers):
-            worker = multiprocessing.Process(
-                name="Content worker process {}".format(i),
+            worker = worker_class(
+                name="Content worker {}".format(i),
                 target=self._worker_process,
             )
             worker.daemon = True
@@ -474,7 +522,7 @@ class ZimBuilder(object):
         # for the duration of this method, only the thread is allowed
         # to work with the creator directly
         self.reporter.msg("     -> Starting creator thread... ", end="")
-        creator_thread = threading.Thread(
+        creator_thread = threading.Thread(  # <-- always use threads here
             name="Creator content adder thread",
             target=self._creator_thread,
             kwargs=kwargs,
@@ -487,14 +535,15 @@ class ZimBuilder(object):
         yield
 
         # finish up
-        self.reporter.msg("     -> Waiting for worker processes... ", end="")
+        self.reporter.msg("     -> Waiting for workers... ", end="")
         # put stop tasks on queue
         for i in range(n_workers):
             self.inqueue.put(StopTask())
         # join with all workers
         for worker in workers:
             worker.join()
-            worker.close()
+            if hasattr(worker, "close"):
+                worker.close()
         self.reporter.msg("Done.")
 
         self.reporter.msg("     -> Joining with creator thread... ", end="")
@@ -505,7 +554,7 @@ class ZimBuilder(object):
     def _creator_thread(
         self,
         creator,
-        n_workers,
+        options,
         task_name,
         n_tasks,
         task_unit,
@@ -519,8 +568,8 @@ class ZimBuilder(object):
 
         @param creator: creator for the ZIM file
         @type creator: L{libzim.creator.Creator}
-        @param n_workers: number of workers started. Will be used to detect worker shutdown.
-        @type n_workers: L{int}
+        @param options: zim build options
+        @type options: L{BuildOptions}
         @param taskname
         @param task_name: name of the task that is currently being processed
         @type task_name: L{str}
@@ -531,14 +580,15 @@ class ZimBuilder(object):
         @param task_multiplier: multiply bar advancement per task by this factor
         @type task_multiplier: L{int}
         """
-        # setup priority first
-        p = psutil.Process()
-        if psutil.LINUX:
-            p.nice(2)
-            p.ionice(psutil.IOPRIO_CLASS_BE, 7)
-        else:
-            p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)
-            p.ionice(psutil.IOPRIO_NORMAL)
+        if not options.use_threads:
+            # setup priority first
+            p = psutil.Process()
+            if psutil.LINUX:
+                p.nice(2)
+                p.ionice(psutil.IOPRIO_CLASS_BE, 7)
+            else:
+                p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)
+                p.ionice(psutil.IOPRIO_NORMAL)
         # main loop - get results from queue and add them to ZIM
         running = True
         n_finished = 0
@@ -549,7 +599,7 @@ class ZimBuilder(object):
                 if render_result == MARKER_WORKER_STOPPED:
                     # worker finished
                     n_finished += 1
-                    if n_finished == n_workers:
+                    if n_finished == options.num_workers:
                         # all workers shut down
                         running = False
                 elif render_result == MARKER_TASK_COMPLETED:

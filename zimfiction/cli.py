@@ -98,7 +98,10 @@ def run_build(ns):
     """
     engine = connect_to_db(ns)
     builder = ZimBuilder(engine)
-    build_options = BuildOptions()
+    build_options = BuildOptions(
+        use_threads=ns.threaded,
+        num_workers=ns.workers,
+    )
     builder.build(ns.outpath, options=build_options)
 
 
@@ -166,6 +169,18 @@ def main():
         "outpath",
         action="store",
         help="path to write ZIM to",
+    )
+    build_parser.add_argument(
+        "--threaded",
+        action="store_true",
+        help="use threads instead of processes for workers"
+    )
+    build_parser.add_argument(
+        "--workers",
+        action="store",
+        type=int,
+        default=None,
+        help="use this many non-zim workers",
     )
 
     ns = parser.parse_args()
