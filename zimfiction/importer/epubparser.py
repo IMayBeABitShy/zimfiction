@@ -139,7 +139,7 @@ def convert_epub(path):
                 chapter_title = chapter_title_match.group(1)
             pages.append((chapter_index, chapter_title, chapter_text))
 
-    # parsing complete, output txt template
+    # parsing complete, output txt
     pages.sort(key=lambda x: x[0])
     for chapter_index, chapter_title, chapter_text in pages:
         text += "\n\n\t{}. {}\n\n{}".format(

@@ -40,6 +40,7 @@ setup(
         "psutil",
         "EBookLib",
         "html2text",
+        "beautifulsoup4",
         ],
     entry_points={
         "console_scripts": [
