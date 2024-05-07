@@ -1,0 +1,12 @@
+{# A long, multi column list of categories. Expects "to_root", "title" and "categories" as arguments #}
+
+{% block category_long_list %}
+    <H2>{{ title }}</H2>
+    <DIV class="categories">
+        <UL class="category_long_list">
+            {% for category in categories %}
+                <LI><A href="{{ to_root }}/category/{{ category.publisher.name }}/{{ category.name|normalize_tag }}/">{{ category.name }}</A> <P class="category_list_story_count">[{{ category.num_stories|format_number }}]</P></LI>
+            {% endfor %}
+        </UL>
+    </DIV>
+{% endblock %}

@@ -14,7 +14,7 @@
         <UL>
             {% for publisher in publishers %}
                 <LI>
-                    <A class="publisher_div_link" href="{{ to_root }}/publisher/{{ publisher.name }}">
+                    <A class="publisher_div_link" href="{{ to_root }}/publisher/{{ publisher.name }}/">
                         <DIV class="publisher">
                             <P class="publisher_name">{{ publisher.name }}</P>
                             <P class="publisher_num_categories">{{ publisher.categories|length|format_number }} Categories</P>

@@ -13,6 +13,8 @@ from .buckets import BucketMaker
 
 
 STORIES_PER_PAGE = 20
+CATEGORIES_PER_PAGE = 200
+CATEGORIES_ON_PUBLISHER_PAGE = 200
 
 
 class RenderedObject(object):
@@ -155,6 +157,7 @@ class HtmlRenderer(object):
         self.environment.filters["format_size"] = format_size
         self.environment.filters["normalize_tag"] = self._normalize_tag
         self.environment.filters["format_date"] = self._format_date
+        self.environment.filters["first_elements"] = self._first_elements
 
     @staticmethod
     def minify_html(s):
@@ -447,18 +450,47 @@ class HtmlRenderer(object):
         publisher_template = self.environment.get_template("publisher.html.jinja")
         stats = StoryListStatCreator.get_stats_from_iterable(publisher.stories)
         page = publisher_template.render(
-            to_root="..",
+            to_root="../..",
             publisher=publisher,
             stats=stats,
+            n_categories=CATEGORIES_ON_PUBLISHER_PAGE,
         )
         result.add(
             HtmlPage(
-                path="publisher/{}".format(publisher.name),
+                path="publisher/{}/".format(publisher.name),
                 content=self.minify_html(page),
                 title="Publisher: {}".format(publisher.name),
                 is_front=True,
             ),
         )
+
+        # category pages
+        bucketmaker = BucketMaker(CATEGORIES_PER_PAGE)
+        categories = []
+        for category in sorted(publisher.categories, key=lambda c: c.name):
+            bucket = bucketmaker.feed(category)
+            if bucket is not None:
+                categories.append(bucket)
+        bucket = bucketmaker.finish()
+        if bucket is not None:
+            categories.append(bucket)
+        category_page_template = self.environment.get_template("category_long_list_page.html.jinja")
+        for i, categorylist in enumerate(categories, start=1):
+            page = category_page_template.render(
+                to_root="../../..",
+                categories=categorylist,
+                title="Categories - Page {} of {}".format(i, len(categories)),
+                cur_page=i,
+                num_pages=len(categories),
+            )
+            result.add(
+                HtmlPage(
+                    path="publisher/{}/categories/{}".format(publisher.name, i),
+                    content=self.minify_html(page),
+                    title="Categories: {} - Page {}".format(publisher.name, i),
+                    is_front=False,
+                ),
+            )
         return result
 
     def render_index(self, publishers):
@@ -549,3 +581,16 @@ class HtmlRenderer(object):
         @rtype: L{str}
         """
         return value.strftime("%Y-%m-%d")
+
+    def _first_elements(self, value, n):
+        """
+        Return the first n elements in a value
+
+        @param value: list whose first elements should be returned
+        @type value: L{list} or L{tuple}
+        @param n: number of elements to return
+        @type n: L{int}
+        @return: the first n elements in value
+        @rtype: L{list}
+        """
+        return list(value)[:n]

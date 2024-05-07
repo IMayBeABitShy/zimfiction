@@ -371,6 +371,20 @@ class Story(Base):
         ),
     )
 
+    def remove_from_related(self):
+        """
+        Remove this story from all related objects.
+        """
+        # self.publisher.stories.remove(self)
+        # self.author.stories.remove(self)
+        self.publisher = None
+        self.author = None
+        # for category in self.categories:
+        #     category.stories.remove(self)
+        self.categories = []
+        self.tag_associations = []
+        self.series_associations = []
+
     @property
     def warnings(self):
         """

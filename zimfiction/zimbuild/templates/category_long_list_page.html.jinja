@@ -1,0 +1,15 @@
+{# This is a page for list of categories in/by a publisher. Expects "to_root", "categories", "title", "cur_page" and "num_pages" as arguments #}
+{% extends "base.html.jinja" %}
+
+{% block title %}
+    <TITLE>ZimFiction - {{ title }}</TITLE>
+{% endblock %}
+
+{% block content %}
+    <DIV class="category_list_page_content">
+        {% include "category_long_list.html.jinja" %}
+    </DIV>
+    {% with num_pages=num_pages, cur_page=cur_page, to_root=to_root %}
+        {% include "pagebuttons.html.jinja" %}
+    {% endwith %}
+{% endblock %}

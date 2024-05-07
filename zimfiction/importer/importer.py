@@ -33,6 +33,7 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, verbose=False):
     """
     assert (limit is None) or (isinstance(limit, int) and limit >= 1)
     stories = []
+    do_not_commit = []
     # as we are not directly flushing stories, we need to keep track of
     # all of the stories in the current batch to avoid duplicates.
     current_story_ids_to_stories = {}
@@ -112,6 +113,7 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, verbose=False):
                                 story.id,
                             )
                         )
+                    do_not_commit.append(story)
                     continue
             elif full_story_id in current_story_ids_to_stories:
                 n_new_words = sum([c.num_words for c in story.chapters])
@@ -125,20 +127,29 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, verbose=False):
                             story.id,
                         )
                     )
+                    do_not_commit.append(story)
                     continue
                 else:
                     stories.remove(old_story)
+                    do_not_commit.append(old_story)
             stories.append(story)
             current_story_ids_to_stories[full_story_id] = story
             if verbose:
                 print("Added story: ", story.title, end="   \r")
             if i % 1000 == 0 and i > 0 and stories:
-            # if i % 20 == 1 and i > 0 and stories:
-            # if i % 1 == 0 and i > 0 and stories:
+            # if i % 5 == 1 and i > 0 and stories:
+            #  if i % 1 == 0 and i > 0 and stories:
                 if verbose:
                     print("Committing {} stories...".format(len(stories)), end="   \r")
                 session.expunge_all()
                 session.add_all(stories)
+                for story in do_not_commit:
+                    story.remove_from_related()
+                    try:
+                        session.expunge(story)
+                    except Exception:
+                        pass
+                do_not_commit = []
                 session.commit()
                 stories = []
                 current_story_ids_to_stories = {}
@@ -149,6 +160,13 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, verbose=False):
 
     session.expunge_all()
     session.add_all(stories)
+    for story in do_not_commit:
+        story.remove_from_related()
+        try:
+            session.expunge(story)
+        except Exception:
+            pass
+    do_not_commit = []
     session.commit()
     stories = []
     clear_unique_cache(session)

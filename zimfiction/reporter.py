@@ -207,7 +207,7 @@ class StdoutProgressReporter(BaseProgressReporter):
             unit_str = ""
         else:
             time_passed = time.time() - self.start_time
-            progress_per_second = round(self.steps / time_passed, 2)
+            progress_per_second = round(self.steps / max(time_passed, 0.00000000000000001), 2)
             unit_str = "{} {}/s".format(progress_per_second, self.unit)
         return unit_str
 

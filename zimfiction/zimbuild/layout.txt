@@ -77,5 +77,11 @@ This file describes the ZIM layout.
 +-+-publisher/
 | | The pages for publishers
 | |
-| +---PUBLISHER
-|     A page for a publisher, showing all available categorie
+| +-+-PUBLISHER/
+|   | A page for a publisher, showing some available categorie
+|   |
+|   +-+-categories/
+|     | categories in this publisher
+|     |
+|     +-PAGENUM
+|       A page of categories

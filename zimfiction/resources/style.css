@@ -97,8 +97,10 @@ HR {
 }
 
 .statslink {
-  background: lightgray;
-  border: 1px solid darkgray;
+  color: black;
+  text-decoration: none;
+  background: darkgray;
+  border: 1px solid gray;
   border-radius: 5px;
   padding: 8px;
   margin: auto;
@@ -108,8 +110,8 @@ HR {
 
 .page_button {
   display: inline;
-  background: lightgray;
-  border: 1px solid darkgray;
+  background: darkgray;
+  border: 1px solid gray;
   border-radius: 5px;
   padding: 8px;
   margin: 5px;
@@ -160,7 +162,7 @@ HR {
 
 /* publisher */
 
-.publisher_categories, .publisher_statistics {
+.publisher_section {
   background: lightgray;
   border: 1px solid gray;
   padding-left: 16px;
@@ -170,10 +172,37 @@ HR {
 
 .publisher_statistics {
   margin-bottom: 20px;
+  margin-top: 20px;
   padding-bottom: 20px;
 }
 
-.publisher_categories * {
+.publisher_quicklinks {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.publisher_quicklinks A {
+  text-decoration: none;
+  color: black;
+  background: darkgray;
+  border: 1px solid gray;
+  border-radius: 5px;
+  margin-right: 15px;
+  padding: 6px;
+}
+
+.publisher_categories .categories {
+  border: none;
+}
+
+/* category long list */
+
+.categories {
+  background: 1px lightgray;
+  border: 1px solid gray;
+}
+
+.categories * {
   display: inline;
   padding-top: 1px;
   padding-bottom: 1px;
@@ -278,8 +307,10 @@ HR {
 }
 
 .stats_back_link {
-  background: lightgray;
-  border: 1px solid darkgray;
+  text-decoration: none;
+  color: black;
+  background: darkgray;
+  border: 1px solid gray;
   border-radius: 5px;
   padding: 8px;
   margin-left: 20px

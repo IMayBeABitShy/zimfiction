@@ -5,7 +5,6 @@ This module contains the html story parse logic.
 @type PARSER: L{str}
 """
 import argparse
-import io
 
 import html2text
 from bs4 import BeautifulSoup
@@ -100,9 +99,7 @@ def parse_html_story(session, fin):
     """
     html = fin.read()
     txt = convert_html(html)
-    # import from txt
-    storyfile = io.StringIO(txt)
-    return parse_txt_story(session, storyfile)
+    return parse_txt_story(session, txt)
 
 
 def main():

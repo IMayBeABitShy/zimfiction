@@ -19,8 +19,8 @@ def parse_txt_story(session, fin):
 
     @param session: sqlalchemy session to use
     @type session: L{sqlalchemy.orm.Session}
-    @param fin: file-like object to read
-    @type fin: file-like
+    @param fin: file-like object to read or text to parse
+    @type fin: file-like or L{str}
     @return: the story
     @rtype: L{zimfiction.db.models.Story}
     """
@@ -38,7 +38,7 @@ def parse_txt_story(session, fin):
     cur_chapter_title = None
     publisher = None
 
-    for line in fin:
+    for line in (fin if not isinstance(fin, str) else fin.splitlines(keepends="")):
         if not in_body:
             # process header
             line = line.strip()
@@ -115,7 +115,7 @@ def parse_txt_story(session, fin):
                 meta["url"] = value
             elif key == "Status":
                 meta["is_done"] = is_done_from_status(value)
-            elif key == "Genre":
+            elif key in ("Genre", "Erotica Tags"):
                 for tag in value.split(", "):
                     add_to_dict_list(tags, "genre", tag)
             elif key == "Warnings":
@@ -232,6 +232,8 @@ def parse_txt_story(session, fin):
         meta["summary"] = ""
     if "language" not in meta:
         meta["language"] = "(Unknown)"
+    if "is_done" not in meta:
+        meta["is_done"] = False
     meta["chapters"] = chapters
     if "author url" in meta:
         del meta["author url"]
@@ -310,6 +312,9 @@ def id_from_url(url):
         if "/" in part:
             part = part[:part.find("/")]
         return int(part)
+    elif "adult-fanfiction.org" in url:
+        start = url.find("?no=") + 4
+        return int(url[start:])
     else:
         raise ParseError("Unknown story URL format: '{}'".format(url))
 
