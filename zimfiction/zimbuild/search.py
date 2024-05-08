@@ -91,16 +91,17 @@ class SearchMetadataCreator(object):
                 "words":  item["words"],
                 "chapters": item["chapters"],
                 "score": item["score"],
+                "tags": []
             }
             for field in self._SEARCH_FIELDS:
                 if isinstance(item[field], (list, tuple)):
                     for tag in item[field]:
                         resolved_tag = self._tag_ids[field][tag]
-                        add_to_dict_list(itemdata, field, resolved_tag)
+                        itemdata["tags"].append(resolved_tag)
                 else:
                     # non-list tag
                     resolved_tag = self._tag_ids[field][item[field]]
-                    itemdata[field] = resolved_tag
+                    itemdata["tags"].append(resolved_tag)
             bucket = bucketmaker.feed(itemdata)
             if bucket is not None:
                 yield (cur_file_i, bucket)
