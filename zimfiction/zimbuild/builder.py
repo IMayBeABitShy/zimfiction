@@ -28,7 +28,7 @@ from libzim.writer import Creator, Item, StringProvider, FileProvider, Hint
 from ..util import format_timedelta, format_size, get_resource_file_path
 from ..db.models import Story, Tag, Author, Category, Series, Publisher
 from ..reporter import StdoutReporter
-from .renderer import HtmlPage, Redirect, JsonObject
+from .renderer import HtmlPage, Redirect, JsonObject, Script
 from .worker import Worker, StopTask, StoryRenderTask, TagRenderTask
 from .worker import AuthorRenderTask, CategoryRenderTask, SeriesRenderTask
 from .worker import PublisherRenderTask, EtcRenderTask
@@ -132,6 +132,45 @@ class JsonItem(Item):
 
     def get_mimetype(self):
         return "application/json"
+
+    def get_contentprovider(self):
+        return StringProvider(self._content)
+
+    def get_hints(self):
+        return {
+            Hint.FRONT_ARTICLE: False,
+            Hint.COMPRESS: True,
+        }
+
+
+class ScriptItem(Item):
+    """
+    A L{libzim.writer.Item} for a js script.
+    """
+    def __init__(self, path, title, content):
+        """
+        The default constructor.
+
+        @param path: path of to store item in ZIM file
+        @type path: L{str}
+        @param title: title of the js file
+        @type title: L{str}
+        @param content: the content of the js file
+        @type content: L{str}
+        """
+        super().__init__()
+        self._path = path
+        self._title = title
+        self._content = content
+
+    def get_path(self):
+        return self._path
+
+    def get_title(self):
+        return self._title
+
+    def get_mimetype(self):
+        return "text/javascript"
 
     def get_contentprovider(self):
         return StringProvider(self._content)
@@ -478,7 +517,7 @@ class ZimBuilder(object):
             self._send_publisher_tasks()
         # --- etc ---
         self.reporter.msg(" -> Adding miscelaneous pages...")
-        n_misc_pages = 2
+        n_misc_pages = 3
         with self._run_stage(
             creator=creator,
             n_workers=n_workers,
@@ -627,6 +666,14 @@ class ZimBuilder(object):
                                     Hint.FRONT_ARTICLE: rendered_object.is_front,
                                 }
                             )
+                        elif isinstance(rendered_object, Script):
+                            # add a script
+                            item = ScriptItem(
+                                path=rendered_object.path,
+                                title=rendered_object.title,
+                                content=rendered_object.content,
+                            )
+                            creator.add_item(item)
                         else:
                             # unknown result object
                             raise RuntimeError("Unknown render result: {}".format(type(rendered_object)))
@@ -734,3 +781,5 @@ class ZimBuilder(object):
         self.inqueue.put(indextask)
         statstask = EtcRenderTask("stats")
         self.inqueue.put(statstask)
+        searchtask = EtcRenderTask("search")
+        self.inqueue.put(searchtask)

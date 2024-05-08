@@ -499,6 +499,9 @@ class Worker(object):
             ).all()
             stats = StoryListStatCreator.get_stats_from_iterable(stories)
             result = self.renderer.render_global_stats(stats)
+        elif task.subtask == "search":
+            # The search script
+            result = self.renderer.render_search_script()
         else:
             raise ValueError("Unknown etc subtask: '{}'!".format(task.subtask))
         self.outqueue.put(result)

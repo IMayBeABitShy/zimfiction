@@ -88,7 +88,12 @@ This file describes the ZIM layout.
 | |
 | +---PUBLISHER
 |     A page for a publisher, showing all available categorie
-
+|
++-+-scripts/
+| | Script files
+| |
+| +---search.js
+|     The search script
 
 
 SEARCH METADATA LAYOUT

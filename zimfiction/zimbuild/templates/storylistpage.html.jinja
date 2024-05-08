@@ -5,17 +5,23 @@
     <TITLE>ZimFiction - {{ title }}</TITLE>
 {% endblock %}
 
+{% block scripts %}
+    <script src="scripts/search.js"></script>
+{% endblock %}
+
 {% block content %}
     <H1>{{ title }}</H1>
     <A class="statslink" href="stats">View statistics</A>
     <HR>
-    {% for story in stories %}
-        <DIV class="story_list_page_item">
-            {% with story=story, to_root=to_root, extended=False %}
-                {% include "storysummary.html.jinja" %}
-            {% endwith %}
-        </DIV>
-    {% endfor %}
+    <DIV id="storylistdiv">
+        {% for story in stories %}
+            <DIV class="story_list_page_item">
+                {% with story=story, to_root=to_root, extended=False %}
+                    {% include "storysummary.html.jinja" %}
+                {% endwith %}
+            </DIV>
+        {% endfor %}
+    </DIV>
     <HR>
     {% with num_pages=num_pages, cur_page=cur_page, to_root=to_root %}
         {% include "pagebuttons.html.jinja" %}

@@ -8,7 +8,7 @@ import htmlmin
 import mistune
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from ..util import format_size, format_number, format_date, normalize_tag
+from ..util import format_size, format_number, format_date, normalize_tag, get_resource_file_path
 from ..statistics import StoryListStatCreator
 from .buckets import BucketMaker
 from .search import SearchMetadataCreator
@@ -74,7 +74,7 @@ class JsonObject(RenderedObject):
     @ivar content: the serialized json object to store
     @type content: L{str}
     """
-    def __init__(self, path, title, content, is_front=True):
+    def __init__(self, path, title, content):
         """
         The default constructor.
 
@@ -90,6 +90,35 @@ class JsonObject(RenderedObject):
         self.path = path
         self.title = title
         self.content = json.dumps(content)
+
+
+class Script(RenderedObject):
+    """
+    This class holds a rendered js script.
+
+    @ivar path: absolute path the script should be stored at
+    @type path: L{str}
+    @ivar title: title of the object
+    @type title: L{str}
+    @ivar content: the script itself
+    @type content: L{str}
+    """
+    def __init__(self, path, title, content):
+        """
+        The default constructor.
+
+        @ivar path: absolute path the object should be stored at
+        @type path: L{str}
+        @ivar title: title of the script
+        @type title: L{str}
+        @ivar content: the script to store
+        @type content: L{str}
+        """
+        assert isinstance(path, str)
+        assert isinstance(title, str)
+        self.path = path
+        self.title = title
+        self.content = content
 
 
 class Redirect(RenderedObject):
@@ -602,6 +631,25 @@ class HtmlRenderer(object):
         )
         return result
 
+    def render_search_script(self):
+        """
+        Generate the search script.
+
+        @return: the rendered pages and redirects
+        @rtype: L{RenderResult}
+        """
+        result = RenderResult()
+        path = get_resource_file_path("search.js")
+        with open(path, "r", encoding="utf-8") as fin:
+            script = fin.read()
+        result.add(
+            Script(
+                path="scripts/search.js",
+                content=script,
+                title="Search script",
+            ),
+        )
+        return result
 
     # =========== filters ===============
 
