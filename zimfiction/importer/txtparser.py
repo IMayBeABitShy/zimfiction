@@ -234,6 +234,15 @@ def parse_txt_story(session, fin):
         meta["language"] = "(Unknown)"
     if "is_done" not in meta:
         meta["is_done"] = False
+    if "published" not in meta:
+        if "updated" in meta:
+            meta["published"] = meta["updated"]
+        else:
+            meta["published"] = datetime.datetime(year=1, month=1, day=1)
+    if "updated" not in meta:
+        meta["updated"] = meta["published"]
+    if "packaged" not in meta:
+        meta["packaged"] = datetime.datetime(year=1, month=1, day=1)
     meta["chapters"] = chapters
     if "author url" in meta:
         del meta["author url"]

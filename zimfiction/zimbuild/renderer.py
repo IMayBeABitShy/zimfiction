@@ -252,7 +252,7 @@ class HtmlRenderer(object):
         list_page_template = self.environment.get_template("storylistpage.html.jinja")
         pages = []
         stat_creator = StoryListStatCreator()
-        for story in tag.stories:
+        for story in sorted(tag.stories, key=lambda x: (x.score, x.total_words), reverse=True):
             stat_creator.feed(story)
             bucket = bucketmaker.feed(story)
             if bucket is not None:

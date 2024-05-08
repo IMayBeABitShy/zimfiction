@@ -43,6 +43,7 @@ def convert_html(html):
     title_h = soup.find("h1")
     title_a = title_h.find("a")
     title = title_a.string
+    story_link = title_a["href"]
     author_a = title_h.find(class_="authorlink")
     author = author_a.string
     header["Author URL"] = author_a["href"]
@@ -68,6 +69,8 @@ def convert_html(html):
         del header["Summary"]
     else:
         summary = "[No Summary]"
+    if "Story URL" not in header:
+        header["Story URL"] = story_link
     text = "\n\n\n{title}\n\nby {author}\n\n\n\n{meta}\nSummary: {summary}\n\n\n\n\n".format(
         title=title,
         author=author,
