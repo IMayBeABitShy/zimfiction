@@ -13,7 +13,7 @@ from ..exceptions import ParseError
 CHAPTER_TITLE_REGEX = re.compile(r"\t[0-9]+\. .+")
 
 
-def parse_txt_story(session, fin):
+def parse_txt_story(session, fin, force_publisher=None):
     """
     Parse a story in txt/markdown format.
 
@@ -21,6 +21,8 @@ def parse_txt_story(session, fin):
     @type session: L{sqlalchemy.orm.Session}
     @param fin: file-like object to read or text to parse
     @type fin: file-like or L{str}
+    @param force_publisher: if not None, force all stories imported to have this publisher
+    @type force_publisher: L{str} or L{None}
     @return: the story
     @rtype: L{zimfiction.db.models.Story}
     """
@@ -82,6 +84,8 @@ def parse_txt_story(session, fin):
             key, value = line.split(": ", 1)
             if key == "Publisher":
                 assert publisher is None
+                if force_publisher is not None:
+                    value = force_publisher
                 publisher = Publisher.as_unique(session, name=value.strip())
             elif key in (
                 "Category",

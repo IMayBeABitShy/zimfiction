@@ -152,7 +152,7 @@ def convert_epub(path):
     return text
 
 
-def parse_epub_story(session, fin):
+def parse_epub_story(session, fin, force_publisher=None):
     """
     Parse a story in epub format.
 
@@ -160,6 +160,8 @@ def parse_epub_story(session, fin):
     @type session: L{sqlalchemy.orm.Session}
     @param fin: file-like object to read
     @type fin: file-like
+    @param force_publisher: if not None, force all stories imported to have this publisher
+    @type force_publisher: L{str} or L{None}
     @return: the story
     @rtype: L{zimfiction.db.models.Story}
     """
@@ -177,7 +179,7 @@ def parse_epub_story(session, fin):
         os.remove(path)
         # import from txt
         storyfile = io.StringIO(txt)
-        return parse_txt_story(session, storyfile)
+        return parse_txt_story(session, storyfile, force_publisher=force_publisher)
 
 
 def main():

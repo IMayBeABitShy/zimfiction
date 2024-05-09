@@ -89,7 +89,7 @@ def convert_html(html):
     return text
 
 
-def parse_html_story(session, fin):
+def parse_html_story(session, fin, force_publisher=None):
     """
     Parse a html in epub format.
 
@@ -97,12 +97,14 @@ def parse_html_story(session, fin):
     @type session: L{sqlalchemy.orm.Session}
     @param fin: file-like object to read
     @type fin: file-like
+    @param force_publisher: if not None, force all stories imported to have this publisher
+    @type force_publisher: L{str} or L{None}
     @return: the story
     @rtype: L{zimfiction.db.models.Story}
     """
     html = fin.read()
     txt = convert_html(html)
-    return parse_txt_story(session, txt)
+    return parse_txt_story(session, txt, force_publisher=force_publisher)
 
 
 def main():

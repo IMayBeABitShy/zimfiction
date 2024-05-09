@@ -16,7 +16,7 @@ from ..db.models import Story, Chapter
 from ..db.unique import clear_unique_cache
 
 
-def import_from_fs(fs, session, ignore_errors=False, limit=None, verbose=False):
+def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher=None, verbose=False):
     """
     Import all stories from a filesystem.
 
@@ -28,6 +28,8 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, verbose=False):
     @type ignore_errors: L{bool}
     @param limit: if specified, import at most this many stories
     @type limit: L{int} or L{None}
+    @param force_publisher: if not None, force all stories imported to have this publisher
+    @type force_publisher: L{str} or L{None}
     @param verbose: if nonzero, be more verbose
     @type verbose: L{bool}
     """
@@ -49,11 +51,11 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, verbose=False):
         with fs.open(path, **open_kwargs) as fin:
             try:
                 if path.endswith(".txt"):
-                    story = parse_txt_story(session, fin)
+                    story = parse_txt_story(session, fin, force_publisher=force_publisher)
                 elif path.endswith(".html"):
-                    story = parse_html_story(session, fin)
+                    story = parse_html_story(session, fin, force_publisher=force_publisher)
                 elif path.endswith(".epub"):
-                    story = parse_epub_story(session, fin)
+                    story = parse_epub_story(session, fin, force_publisher=force_publisher)
                 else:
                     raise ValueError("Don't know how to parse '{}'!".format(path))
             except Exception as e:

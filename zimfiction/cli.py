@@ -83,6 +83,7 @@ def run_import(ns):
                 session,
                 ignore_errors=ns.ignore_errors,
                 limit=ns.limit,
+                force_publisher=ns.force_publisher,
                 verbose=ns.verbose,
             )
             session.flush()
@@ -147,6 +148,13 @@ def main():
         "database",
         action="store",
         help="database to store stories in, as sqlalchemy connection URL",
+    )
+    import_parser.add_argument(
+        "--force-publisher",
+        action="store",
+        dest="force_publisher",
+        default=None,
+        help="Import all stories under this publisher",
     )
     import_parser.add_argument(
         "directories",
