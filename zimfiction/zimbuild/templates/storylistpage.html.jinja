@@ -1,4 +1,4 @@
-{# This is a page for list of stories. Expects "to_root", "title", "stories", "num_pages" and "cur_page" as argument #}
+{# This is a page for list of stories. Expects "to_root", "title", "stories", "include_search", "num_pages" and "cur_page" as argument #}
 {% extends "base.html.jinja" %}
 
 {% block title %}
@@ -6,13 +6,18 @@
 {% endblock %}
 
 {% block scripts %}
-    <script src="scripts/search.js"></script>
+    <script src="{{ to_root }}/scripts/search.js"></script>
 {% endblock %}
 
 {% block content %}
     <H1>{{ title }}</H1>
     <A class="statslink" href="stats">View statistics</A>
     <HR>
+    {% if include_search %}
+        {% with to_root=to_root %}
+            {% include "searchinput.html.jinja" %}
+        {% endwith %}
+    {% endif %}
     <DIV id="storylistdiv">
         {% for story in stories %}
             <DIV class="story_list_page_item">

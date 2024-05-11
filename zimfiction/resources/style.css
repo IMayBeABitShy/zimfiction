@@ -121,6 +121,7 @@ HR {
 
 .page_button_link {
   text-decoration: none;
+  color: blue;
 }
 
 .cur_page_button_link {
@@ -283,4 +284,171 @@ HR {
   border-radius: 5px;
   padding: 8px;
   margin-left: 20px
+}
+
+/* search */
+
+#search_input_div {
+  background: lightgray;
+  border: 1px solid darkgray;
+  margin-bottom: 10px;
+}
+
+#toggle_search_input_button {
+  width: 100%;
+  background: darkgray;
+  padding: 4px;
+  font-weight: bold;
+  color: black;
+}
+
+.search_input_content {
+  display: none;
+}
+
+#search_button {
+  float: right;
+  margin: auto;
+  background: darkgray;
+  border: 1px solid gray;
+  height: 34px;
+  font-size: 110%;
+  padding: 4px;
+  padding-left: 40px;
+  padding-right: 40px;
+  margin: 4px;
+}
+
+#search_button:hover {
+  background: gray;
+}
+
+#statusdiv {
+  display: inline-block;
+  background: #bbbbbb;
+  width: 30%;
+  text-align: center;
+  margin: 4px;
+  padding: 4px;
+  padding-left: 40px;
+  padding-right: 40px;
+  margin: 4px;
+}
+
+#statusdiv P {
+  display: inline;
+  font-size: 110%;
+}
+
+.search_input_list {
+  display: block;
+  list-style: none;
+  columns: 2;
+  -webkit-columns: 2;
+  -moz-columns: 2;
+}
+
+.search_input_list LI {
+  width: 90%;
+  page-break-inside: avoid;
+}
+
+.search_field_div DIV:not(.autocomplete *) {
+  display: inline;
+}
+
+.search_field_div LABEL {
+  width: 100%;
+}
+
+.search_field_div INPUT {
+  width: 100%;
+}
+
+
+.search_criteria {
+  display: initial;
+  border: 1px solid black;
+  padding: 2px;
+  margin: 2px;
+  width: fit-content;
+}
+
+.search_field_list {
+  list-style: none;
+}
+
+.search_field_list LI {
+  display: block;
+  width: 100%;
+}
+
+.criteria_buttons {
+  text-align: right;
+  float: right;
+}
+
+#search_sort_select_label {
+  margin-left: 40px;
+  margin-right: 10px;
+}
+
+#search_sort_select {
+  width: 40%;
+}
+
+.criteria_buttons {
+  height: 100%;
+  width: fit-content;
+  margin: 0px;
+  padding: 0px;
+}
+
+.include_button, .remove_button {
+  border-radius: 0;
+  border: 1px solid black;
+  margin: 0px;
+  background-color:
+  height: 100%;
+  font-size: 100%;
+}
+
+.remove_button {
+  color: red;
+  font-weight: bolder;
+}
+
+/* css code for autocomplete from https://www.w3schools.com/howto/howto_js_autocomplete.asp */
+
+.autocomplete {
+  position: relative;
+  display: inline-block;
+}
+
+.autocomplete-items {
+  position: absolute;
+  border: 1px solid #d4d4d4;
+  border-bottom: none;
+  border-top: none;
+  z-index: 99;
+  /*position the autocomplete items to be the same width as the container:*/
+  top: 100%;
+  left: 0;
+  right: 0;
+}
+.autocomplete-items div {
+  padding: 10px;
+  cursor: pointer;
+  background-color: #fff;
+  border-bottom: 1px solid #d4d4d4;
+  /*! display: initial; */
+}
+.autocomplete-items div:hover {
+  /*when hovering an item:*/
+  background-color: #e9e9e9;
+}
+.autocomplete-active {
+  /*when navigating through the items using the arrow keys:*/
+  background-color: DodgerBlue !important;
+  color: #ffffff;
 }

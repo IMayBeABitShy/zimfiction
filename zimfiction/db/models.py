@@ -463,6 +463,7 @@ class Story(Base):
             "words": format_number(self.total_words),
             "chapters": len(self.chapters),
             "score": self.score,
+            "series": [(sa.series.publisher.name, sa.index) for sa in self.series_associations],
         }
         return data
 

@@ -1,0 +1,32 @@
+{# this file contains the search input #}
+
+<DIV id="search_input_div">
+    <BUTTON type="button" id="toggle_search_input_button">Search Options<NOSCRIPT> (Javascript required)</NOSCRIPT></BUTTON>
+    <DIV class="search_input_content">
+        <FORM id="search_form" autocmplete="off">
+            <UL class="search_input_list">
+                {% for fieldname in ["publisher", "language", "status", "categories", "warnings", "characters", "relationships", "tags"] %}
+                    <LI>
+                        <DIV class="search_field_div" id="search_field_div_{{ fieldname }}">
+                            <LABEL for="search_input_{{ fieldname }}">{{ fieldname|title }}</LABEL>
+                            <DIV class="autocomplete">
+                                <INPUT type="text" id="search_input_{{ fieldname }}" name="search_input_{{ fieldname }}">
+                            </DIV>
+                            <UL class="search_field_list" id="search_field_list_{{ fieldname }}">
+                            </UL>
+                        </DIV>
+                    </LI>
+                {% endfor %}
+            </UL>
+            <LABEL for="search_sort_select" id="search_sort_select_label">Sort by</LABEL>
+            <SELECT name="search_sort_select" id="search_sort_select">
+                {% for value in ["updated", "words", "chapters", "score"] %}
+                    <OPTION value="{{ value }}">{{ value|title }}</OPTION>
+                {% endfor %}
+            </SELECT>
+            <BR>
+            <DIV id="statusdiv"><P>Initializing...</P></DIV>
+            <BUTTON type="button" id="search_button" disabled>Search</BUTTON>
+        </FORM>
+    </DIV>
+</DIV>

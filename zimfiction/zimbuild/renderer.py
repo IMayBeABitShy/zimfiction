@@ -89,7 +89,7 @@ class JsonObject(RenderedObject):
         assert isinstance(title, str)
         self.path = path
         self.title = title
-        self.content = json.dumps(content)
+        self.content = json.dumps(content, separators=(",", ":"))
 
 
 class Script(RenderedObject):
@@ -332,11 +332,13 @@ class HtmlRenderer(object):
         bucket = bucketmaker.finish()
         if bucket is not None:
             pages.append(bucket)
+        include_search = (num_stories >= MIN_STORIES_FOR_SEARCH) and (num_stories <= MAX_STORIES_FOR_SEARCH);
         for i, stories in enumerate(pages, start=1):
             page = list_page_template.render(
                 to_root="../../..",
                 title="Stories tagged '{}' [{}]".format(tag.name, tag.type),
                 stories=stories,
+                include_search=include_search,
                 num_pages=len(pages),
                 cur_page=i,
             )
@@ -366,7 +368,7 @@ class HtmlRenderer(object):
             )
         )
         # add search
-        if (num_stories >= MIN_STORIES_FOR_SEARCH) and (num_stories <= MAX_STORIES_FOR_SEARCH):
+        if include_search:
             search_header_data = search_creator.get_search_header()
             result.add(
                 JsonObject(
@@ -470,11 +472,13 @@ class HtmlRenderer(object):
         bucket = bucketmaker.finish()
         if bucket is not None:
             pages.append(bucket)
+        include_search = (num_stories >= MIN_STORIES_FOR_SEARCH) and (num_stories <= MAX_STORIES_FOR_SEARCH)
         for i, stories in enumerate(pages, start=1):
             page = list_page_template.render(
                 to_root="../../..",
                 category=category,
                 stories=stories,
+                include_search=include_search,
                 num_pages=len(pages),
                 cur_page=i,
             )
@@ -504,7 +508,7 @@ class HtmlRenderer(object):
             )
         )
         # add search
-        if (num_stories >= MIN_STORIES_FOR_SEARCH) and (num_stories <= MAX_STORIES_FOR_SEARCH):
+        if include_search:
             search_header_data = search_creator.get_search_header()
             result.add(
                 JsonObject(

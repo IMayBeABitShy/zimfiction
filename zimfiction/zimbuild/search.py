@@ -86,6 +86,7 @@ class SearchMetadataCreator(object):
         cur_file_i = 0
         for item in self._raw_search_metadata:
             itemdata = {
+                "publisher": item["publisher"],
                 "id": item["id"],
                 "updated": item["updated"],
                 "words":  item["words"],
@@ -102,6 +103,7 @@ class SearchMetadataCreator(object):
                     # non-list tag
                     resolved_tag = self._tag_ids[field][item[field]]
                     itemdata["tags"].append(resolved_tag)
+            itemdata["tags"].sort()
             bucket = bucketmaker.feed(itemdata)
             if bucket is not None:
                 yield (cur_file_i, bucket)
@@ -109,3 +111,4 @@ class SearchMetadataCreator(object):
         bucket = bucketmaker.finish()
         if bucket is not None:
             yield (cur_file_i, bucket)
+
