@@ -6,7 +6,7 @@
         <FORM id="search_form" autocmplete="off">
             <UL class="search_input_list">
                 {# regular fields #}
-                {% for fieldname in ["publisher", "language", "status", "categories", "warnings", "characters", "relationships", "tags"] %}
+                {% for fieldname in ["publisher", "language", "rating", "status", "categories", "warnings", "characters", "relationships", "tags"] %}
                     <LI>
                         <DIV class="search_field_div" id="search_field_div_{{ fieldname }}">
                             <LABEL for="search_input_{{ fieldname }}">{{ fieldname|title }}</LABEL>

@@ -169,11 +169,11 @@ HR {
   padding-left: 16px;
   padding-right: 16px;
   padding-top: 1px;
+  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
 .publisher_statistics {
-  margin-bottom: 20px;
-  margin-top: 20px;
   padding-bottom: 20px;
 }
 
@@ -237,6 +237,7 @@ HR {
 .category_story_count {
   margin-left: 16px;
   margin-bottom: -10px;
+  display: inline;
 }
 
 /* index page */

@@ -13,15 +13,15 @@
         <A href="{{ to_root }}/publisher/{{ publisher.name }}/categories/1">All Categories</A>
         <A href="#publisher_statistics">Statistics</A>
     </DIV>
+    <DIV class="publisher_section publisher_categories" id="publisher_categories">
+        {% with to_root=to_root, title="Top Categories", categories=publisher.categories|sort(attribute="name")|sort(attribute="num_stories", reverse=True)|first_elements(n_categories) %}
+            {% include "category_long_list.html.jinja" %}
+        {% endwith %}
+    </DIV>
     <DIV class="publisher_section publisher_statistics" id="publisher_statistics">
         <H2>Statistics</H2>
         {% with stats=stats, to_root=to_root %}
             {% include "storyliststats.html.jinja" %}
-        {% endwith %}
-    </DIV>
-    <DIV class="publisher_section publisher_categories" id="publisher_categories">
-        {% with to_root=to_root, title="Top Categories", categories=publisher.categories|sort(attribute="name")|sort(attribute="num_stories", reverse=True)|first_elements(n_categories) %}
-            {% include "category_long_list.html.jinja" %}
         {% endwith %}
     </DIV>
 {% endblock %}

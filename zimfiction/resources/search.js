@@ -8,7 +8,7 @@ const ID_SEARCH_BUTTON = "search_button";
 const ID_SORT_SELECT = "search_sort_select";
 const ID_TOGGLE_SEARCH_INPUT_BUTTON = "toggle_search_input_button";
 const ID_PAGE_BUTTONS_DIV = "page_buttons";
-const FIELDS = ["publisher", "language", "status", "categories", "warnings", "characters", "relationships", "tags"];
+const FIELDS = ["publisher", "language", "status", "categories", "warnings", "characters", "relationships", "tags", "rating"];
 const RANGE_FIELDS = ["words", "chapters", "score"];
 const STORIES_PER_PAGE = 20;
 
@@ -33,7 +33,7 @@ const PREVIEW_TEMPLATE = `
     <DIV class="story_summary_footer">
         <P>
             {serieslist}
-            <B>Language:</B> {language} <B>Status:</B> {status} <B>Words:</B> {total_words} <B>Chapters:</B> {chapters} <B>Score:</B> {score}
+            <B>Language:</B> {language} <B>Status:</B> {status} <B>Rating: </B> {rating} <B>Words:</B> {total_words} <B>Chapters:</B> {chapters} <B>Score:</B> {score}
         </P>
     </DIV>
 </DIV>
@@ -207,6 +207,7 @@ class ZimfictionSearch {
             return;
         }
         this.apply_sort(sort_order);
+        this.set_status("" + this.results.length + " Results");
         this.display_result_page(1);
         // finish
         this.set_search_enabled(true);
@@ -631,6 +632,7 @@ class ZimfictionSearch {
             ["total_words", preview["words"]],
             ["chapters", preview["chapters"]],
             ["score", preview["score"]],
+            ["rating", preview["rating"]],
             ["categorylist", categorylist],
             ["taglist", taglist],
             ["serieslist", serieslist],

@@ -478,6 +478,7 @@ class Story(Base):
             "chapters": len(self.chapters),
             "score": self.score,
             "series": [(sa.series.publisher.name, sa.index) for sa in self.series_associations],
+            "rating": self.rating.title(),
         }
         return data
 
@@ -502,6 +503,7 @@ class Story(Base):
             "words": self.total_words,
             "chapters": len(self.chapters),
             "score": self.score,
+            "rating": self.rating.title(),
         }
         return data
 

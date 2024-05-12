@@ -12,7 +12,7 @@ class SearchMetadataCreator(object):
     This class is responsible for creating the search metadata.
     """
 
-    _SEARCH_FIELDS = ("publisher", "language", "status", "categories", "warnings", "tags", "relationships", "characters")
+    _SEARCH_FIELDS = ("publisher", "language", "status", "categories", "warnings", "tags", "relationships", "characters", "rating")
 
     def __init__(self, max_page_size=50000):
         """
@@ -92,7 +92,8 @@ class SearchMetadataCreator(object):
                 "words":  item["words"],
                 "chapters": item["chapters"],
                 "score": item["score"],
-                "tags": []
+                "tags": [],
+                "rating": item["rating"],
             }
             for field in self._SEARCH_FIELDS:
                 if isinstance(item[field], (list, tuple)):

@@ -6,7 +6,7 @@
 {% endblock %}
 
 {% block content %}
-    <H1>Stories written by {{ author.name }} [{{ author.publisher }}]</H1>
+    <H1>Stories written by {{ author.name }} [{{ author.publisher.name }}]</H1>
     <HR>
     {% with stats=stats, to_root=to_root %}
         {% include "storyliststats.html.jinja" %}
