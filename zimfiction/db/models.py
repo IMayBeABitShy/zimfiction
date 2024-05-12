@@ -10,6 +10,7 @@ from sqlalchemy import Integer, String, DateTime, Boolean, UnicodeText, Unicode
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.orderinglist import ordering_list
 
+from ..util import format_date, format_number
 from .unique import UniqueMixin
 
 
@@ -416,6 +417,16 @@ class Story(Base):
         return [tag for tag in self.tags if tag.type == "relationship"]
 
     @property
+    def characters(self):
+        """
+        A list of all character tags.
+
+        @return: a list of all character tags
+        @rtype: L{list} of L{Tag}
+        """
+        return [tag for tag in self.tags if tag.type == "character"]
+
+    @property
     def ordered_tags(self):
         """
         Return a list of all tags, ordered by type to match ao3.
@@ -423,7 +434,7 @@ class Story(Base):
         @return: an ordered list of all tags
         @rtype: L{list} of L{Tag}
         """
-        return self.warnings + self.relationships + self.genres
+        return self.warnings + self.relationships + self.characters + self.genres
 
     @property
     def total_words(self):
@@ -444,6 +455,55 @@ class Story(Base):
         @rtype: L{str}
         """
         return ("Complete" if self.is_done else "In-Progress")
+
+    def get_preview_data(self):
+        """
+        Return a dict containing all the data needed to show a short preview of this story.
+
+        @return: a dict containing said data
+        @rtype: L{dict}
+        """
+        data = {
+            "title": self.title,
+            "publisher": self.publisher.name,
+            "id": self.id,
+            "author": self.author.name,
+            "categories": [c.name for c in self.categories],
+            "tags": [(t.type, t.name) for t in self.ordered_tags],
+            "updated": format_date(self.updated),
+            "summary": self.summary,
+            "language": self.language,
+            "status": self.status,
+            "words": format_number(self.total_words),
+            "chapters": len(self.chapters),
+            "score": self.score,
+            "series": [(sa.series.publisher.name, sa.index) for sa in self.series_associations],
+        }
+        return data
+
+    def get_search_data(self):
+        """
+        Return a dict containing all the data needed to search this fic.
+
+        @return: a dict containing said data
+        @rtype: L{dict}
+        """
+        data = {
+            "publisher": self.publisher.name,
+            "id": self.id,
+            "categories": [c.name for c in self.categories],
+            "tags": [t.name for t in self.genres],
+            "warnings": [t.name for t in self.warnings],
+            "relationships": [t.name for t in self.relationships],
+            "characters": [t.name for t in self.characters],
+            "updated": format_date(self.updated),
+            "language": self.language,
+            "status": self.status,
+            "words": self.total_words,
+            "chapters": len(self.chapters),
+            "score": self.score,
+        }
+        return data
 
 
 class Chapter(Base):

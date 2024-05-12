@@ -1,5 +1,8 @@
 """
-This module builds the ZIM files.
+This module manages the build of the ZIM files.
+
+It handles the ZIM creator, add basic content, instantiates the workers,
+issues them their tasks and adds the result to the creator.
 
 @var MAX_OUTSTANDING_TASKS: max size of the task queue
 @type MAX_OUTSTANDING_TASKS: L{int}
@@ -26,7 +29,7 @@ from libzim.writer import Creator, Item, StringProvider, FileProvider, Hint
 from ..util import format_timedelta, format_size, get_resource_file_path
 from ..db.models import Story, Tag, Author, Category, Series, Publisher
 from ..reporter import StdoutReporter
-from .renderer import HtmlPage, Redirect
+from .renderer import HtmlPage, Redirect, JsonObject, Script
 from .worker import Worker, StopTask, StoryRenderTask, TagRenderTask
 from .worker import AuthorRenderTask, CategoryRenderTask, SeriesRenderTask
 from .worker import PublisherRenderTask, EtcRenderTask
@@ -98,6 +101,84 @@ class HtmlPageItem(Item):
     def get_hints(self):
         return {
             Hint.FRONT_ARTICLE: self._is_front,
+            Hint.COMPRESS: True,
+        }
+
+
+class JsonItem(Item):
+    """
+    A L{libzim.writer.Item} for json.
+    """
+    def __init__(self, path, title, content):
+        """
+        The default constructor.
+
+        @param path: path of to store item in ZIM file
+        @type path: L{str}
+        @param title: title of the json file
+        @type title: L{str}
+        @param content: the content of the json file
+        @type content: L{str}
+        """
+        super().__init__()
+        self._path = path
+        self._title = title
+        self._content = content
+
+    def get_path(self):
+        return self._path
+
+    def get_title(self):
+        return self._title
+
+    def get_mimetype(self):
+        return "application/json"
+
+    def get_contentprovider(self):
+        return StringProvider(self._content)
+
+    def get_hints(self):
+        return {
+            Hint.FRONT_ARTICLE: False,
+            Hint.COMPRESS: True,
+        }
+
+
+class ScriptItem(Item):
+    """
+    A L{libzim.writer.Item} for a js script.
+    """
+    def __init__(self, path, title, content):
+        """
+        The default constructor.
+
+        @param path: path of to store item in ZIM file
+        @type path: L{str}
+        @param title: title of the js file
+        @type title: L{str}
+        @param content: the content of the js file
+        @type content: L{str}
+        """
+        super().__init__()
+        self._path = path
+        self._title = title
+        self._content = content
+
+    def get_path(self):
+        return self._path
+
+    def get_title(self):
+        return self._title
+
+    def get_mimetype(self):
+        return "text/javascript"
+
+    def get_contentprovider(self):
+        return StringProvider(self._content)
+
+    def get_hints(self):
+        return {
+            Hint.FRONT_ARTICLE: False,
             Hint.COMPRESS: True,
         }
 
@@ -478,7 +559,7 @@ class ZimBuilder(object):
             self._send_publisher_tasks()
         # --- etc ---
         self.reporter.msg(" -> Adding miscelaneous pages...")
-        n_misc_pages = 2
+        n_misc_pages = 3
         with self._run_stage(
             creator=creator,
             options=options,
@@ -617,6 +698,14 @@ class ZimBuilder(object):
                                 is_front=rendered_object.is_front,
                             )
                             creator.add_item(item)
+                        elif isinstance(rendered_object, JsonObject):
+                            # add a json object
+                            item = JsonItem(
+                                path=rendered_object.path,
+                                title=rendered_object.title,
+                                content=rendered_object.content,
+                            )
+                            creator.add_item(item)
                         elif isinstance(rendered_object, Redirect):
                             # create a redirect
                             creator.add_redirection(
@@ -627,6 +716,14 @@ class ZimBuilder(object):
                                     Hint.FRONT_ARTICLE: rendered_object.is_front,
                                 }
                             )
+                        elif isinstance(rendered_object, Script):
+                            # add a script
+                            item = ScriptItem(
+                                path=rendered_object.path,
+                                title=rendered_object.title,
+                                content=rendered_object.content,
+                            )
+                            creator.add_item(item)
                         else:
                             # unknown result object
                             raise RuntimeError("Unknown render result: {}".format(type(rendered_object)))
@@ -734,3 +831,5 @@ class ZimBuilder(object):
         self.inqueue.put(indextask)
         statstask = EtcRenderTask("stats")
         self.inqueue.put(statstask)
+        searchtask = EtcRenderTask("search")
+        self.inqueue.put(searchtask)

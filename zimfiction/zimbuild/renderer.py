@@ -2,19 +2,24 @@
 The renderer generates HTML pages.
 """
 import urllib.parse
+import json
 
 import htmlmin
 import mistune
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from ..util import format_size, format_number, normalize_tag
+from ..util import format_size, format_number, format_date, normalize_tag, get_resource_file_path
 from ..statistics import StoryListStatCreator
 from .buckets import BucketMaker
+from .search import SearchMetadataCreator
 
 
 STORIES_PER_PAGE = 20
 CATEGORIES_PER_PAGE = 200
 CATEGORIES_ON_PUBLISHER_PAGE = 200
+SEARCH_ITEMS_PER_FILE = 50000
+MIN_STORIES_FOR_SEARCH = 5
+MAX_STORIES_FOR_SEARCH = float("inf")
 
 
 class RenderedObject(object):
@@ -58,6 +63,64 @@ class HtmlPage(RenderedObject):
         self.title = title
         self.content = content
         self.is_front = is_front
+
+
+class JsonObject(RenderedObject):
+    """
+    This class holds a rendered json object.
+
+    @ivar path: absolute path the object should be stored at
+    @type path: L{str}
+    @ivar title: title of the object
+    @type title: L{str}
+    @ivar content: the serialized json object to store
+    @type content: L{str}
+    """
+    def __init__(self, path, title, content):
+        """
+        The default constructor.
+
+        @ivar path: absolute path the object should be stored at
+        @type path: L{str}
+        @ivar title: title of the object
+        @type title: L{str}
+        @ivar content: the json object to store
+        @type content: json-serializable
+        """
+        assert isinstance(path, str)
+        assert isinstance(title, str)
+        self.path = path
+        self.title = title
+        self.content = json.dumps(content, separators=(",", ":"))
+
+
+class Script(RenderedObject):
+    """
+    This class holds a rendered js script.
+
+    @ivar path: absolute path the script should be stored at
+    @type path: L{str}
+    @ivar title: title of the object
+    @type title: L{str}
+    @ivar content: the script itself
+    @type content: L{str}
+    """
+    def __init__(self, path, title, content):
+        """
+        The default constructor.
+
+        @ivar path: absolute path the object should be stored at
+        @type path: L{str}
+        @ivar title: title of the script
+        @type title: L{str}
+        @ivar content: the script to store
+        @type content: L{str}
+        """
+        assert isinstance(path, str)
+        assert isinstance(title, str)
+        self.path = path
+        self.title = title
+        self.content = content
 
 
 class Redirect(RenderedObject):
@@ -228,6 +291,14 @@ class HtmlRenderer(object):
                 is_front=False,
             ),
         )
+        # add preview json
+        result.add(
+            JsonObject(
+                path="story/{}/{}/preview.json".format(story.publisher.name, story.id),
+                content=story.get_preview_data(),
+                title="",
+            ),
+        )
         return result
 
     def render_tag(self, tag):
@@ -251,20 +322,26 @@ class HtmlRenderer(object):
         )
         list_page_template = self.environment.get_template("storylistpage.html.jinja")
         pages = []
+        num_stories = 0
         stat_creator = StoryListStatCreator()
+        search_creator = SearchMetadataCreator(max_page_size=SEARCH_ITEMS_PER_FILE)
         for story in sorted(tag.stories, key=lambda x: (x.score, x.total_words), reverse=True):
+            num_stories += 1
             stat_creator.feed(story)
+            search_creator.feed(story)
             bucket = bucketmaker.feed(story)
             if bucket is not None:
                 pages.append(bucket)
         bucket = bucketmaker.finish()
         if bucket is not None:
             pages.append(bucket)
+        include_search = (num_stories >= MIN_STORIES_FOR_SEARCH) and (num_stories <= MAX_STORIES_FOR_SEARCH);
         for i, stories in enumerate(pages, start=1):
             page = list_page_template.render(
                 to_root="../../..",
                 title="Stories tagged '{}' [{}]".format(tag.name, tag.type),
                 stories=stories,
+                include_search=include_search,
                 num_pages=len(pages),
                 cur_page=i,
             )
@@ -276,6 +353,7 @@ class HtmlRenderer(object):
                     is_front=False,
                 ),
             )
+        # add statistics
         stats = stat_creator.get_stats()
         stats_page_template = self.environment.get_template("storyliststatspage.html.jinja")
         page = stats_page_template.render(
@@ -292,6 +370,24 @@ class HtmlRenderer(object):
                 is_front=False
             )
         )
+        # add search
+        if include_search:
+            search_header_data = search_creator.get_search_header()
+            result.add(
+                JsonObject(
+                    path="tag/{}/{}/search_header.json".format(tag.type, normalize_tag(tag.name)),
+                    title="",
+                    content=search_header_data,
+                ),
+            )
+            for i, search_data in search_creator.iter_search_pages():
+                result.add(
+                    JsonObject(
+                        path="tag/{}/{}/search_content_{}.json".format(tag.type, normalize_tag(tag.name), i),
+                        title="",
+                        content=search_data,
+                    ),
+                )
         return result
 
     def render_author(self, author):
@@ -366,8 +462,12 @@ class HtmlRenderer(object):
         )
         list_page_template = self.environment.get_template("category.html.jinja")
         pages = []
+        num_stories = 0
         stat_creator = StoryListStatCreator()
+        search_creator = SearchMetadataCreator(max_page_size=SEARCH_ITEMS_PER_FILE)
         for story in sorted(category.stories, key=lambda x: (x.score, x.total_words), reverse=True):
+            num_stories += 1
+            search_creator.feed(story)
             stat_creator.feed(story)
             bucket = bucketmaker.feed(story)
             if bucket is not None:
@@ -375,11 +475,13 @@ class HtmlRenderer(object):
         bucket = bucketmaker.finish()
         if bucket is not None:
             pages.append(bucket)
+        include_search = (num_stories >= MIN_STORIES_FOR_SEARCH) and (num_stories <= MAX_STORIES_FOR_SEARCH)
         for i, stories in enumerate(pages, start=1):
             page = list_page_template.render(
                 to_root="../../..",
                 category=category,
                 stories=stories,
+                include_search=include_search,
                 num_pages=len(pages),
                 cur_page=i,
             )
@@ -391,6 +493,7 @@ class HtmlRenderer(object):
                     is_front=False,
                 ),
             )
+        # add statistics
         stats = stat_creator.get_stats()
         stats_page_template = self.environment.get_template("storyliststatspage.html.jinja")
         page = stats_page_template.render(
@@ -407,6 +510,24 @@ class HtmlRenderer(object):
                 is_front=False
             )
         )
+        # add search
+        if include_search:
+            search_header_data = search_creator.get_search_header()
+            result.add(
+                JsonObject(
+                    path="category/{}/{}/search_header.json".format(category.publisher.name, normalize_tag(category.name)),
+                    title="",
+                    content=search_header_data,
+                ),
+            )
+            for i, search_data in search_creator.iter_search_pages():
+                result.add(
+                    JsonObject(
+                        path="category/{}/{}/search_content_{}.json".format(category.publisher.name, normalize_tag(category.name), i),
+                        title="",
+                        content=search_data,
+                    ),
+                )
         return result
 
 
@@ -546,6 +667,25 @@ class HtmlRenderer(object):
         )
         return result
 
+    def render_search_script(self):
+        """
+        Generate the search script.
+
+        @return: the rendered pages and redirects
+        @rtype: L{RenderResult}
+        """
+        result = RenderResult()
+        path = get_resource_file_path("search.js")
+        with open(path, "r", encoding="utf-8") as fin:
+            script = fin.read()
+        result.add(
+            Script(
+                path="scripts/search.js",
+                content=script,
+                title="Search script",
+            ),
+        )
+        return result
 
     # =========== filters ===============
 
@@ -594,3 +734,4 @@ class HtmlRenderer(object):
         @rtype: L{list}
         """
         return list(value)[:n]
+

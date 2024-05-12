@@ -172,6 +172,18 @@ def format_size(nbytes):
     return "{:.2f} PiB".format(round(nbytes, 2))
 
 
+def format_date(date):
+    """
+    Format a date.
+
+    @param date: date to format
+    @type date: L{datetime.datetime}
+    @return: the formated date
+    @rtype: L{str}
+    """
+    return date.strftime("%Y-%m-%d")
+
+
 def normalize_tag(tag):
     """
     Normalize a tag so it works in URLs.

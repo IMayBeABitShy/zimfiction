@@ -1,8 +1,12 @@
-{# This is a page for list of stories in a category. Expects "to_root", "category", "stories", "num_pages" and "cur_page" as argument #}
+{# This is a page for list of stories in a category. Expects "to_root", "category", "stories", "include_search", "num_pages" and "cur_page" as argument #}
 {% extends "base.html.jinja" %}
 
 {% block title %}
     <TITLE>ZimFiction - {{ category.name }} on {{ category.publisher.name }}</TITLE>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ to_root }}/scripts/search.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -10,13 +14,20 @@
     <A class="statslink" href="stats">View statistics</A>
     <P class="category_story_count">{{ category.num_stories }} stories in this category</P>
     <HR>
-    {% for story in stories %}
-        <DIV class="story_list_page_item">
-            {% with story=story, to_root=to_root, extended=False %}
-                {% include "storysummary.html.jinja" %}
-            {% endwith %}
-        </DIV>
-    {% endfor %}
+    {% if include_search %}
+        {% with to_root=to_root %}
+            {% include "searchinput.html.jinja" %}
+        {% endwith %}
+    {% endif %}
+    <DIV id="storylistdiv">
+        {% for story in stories %}
+            <DIV class="story_list_page_item">
+                {% with story=story, to_root=to_root, extended=False %}
+                    {% include "storysummary.html.jinja" %}
+                {% endwith %}
+            </DIV>
+        {% endfor %}
+    </DIV>
     <HR>
     {% with num_pages=num_pages, cur_page=cur_page, to_root=to_root %}
         {% include "pagebuttons.html.jinja" %}
