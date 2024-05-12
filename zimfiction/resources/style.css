@@ -4,16 +4,16 @@
 
 body {
   width: 100%;
-  margin: 0px;
+  margin: 0em;
 }
 
 .content-container {
-  margin: 10px;
+  margin: 0.625em;
 }
 
 HR {
-  margin: 20px;
-  margin-bottom: 28px;
+  margin: 1.25em;
+  margin-bottom: 1.75em;
 }
 
 .navigation {
@@ -21,7 +21,7 @@ HR {
   display: flex;
   width: 100%;
   color: #ffffff;
-  padding: 4px;
+  padding: 0.25em;
 }
 
 .navigation * {
@@ -36,7 +36,7 @@ HR {
 
 .story_summary_meta TH {
   text-align: left;
-  padding-right: 40px;
+  padding-right: 2.5em;
 }
 
 .taglink {
@@ -54,7 +54,7 @@ HR {
 }
 
 .story_summary_title {
-  margin-bottom: 10px;
+  margin-bottom: 0.625em;
   font-weight: bolder;
   font-size: 132%
 }
@@ -69,12 +69,12 @@ HR {
 .story_short_categories {
   font-size: initial;
   font-weight: initial;
-  margin-bottom: 16px;
-  margin-left: 16px;
+  margin-bottom: 1em;
+  margin-left: 1em;
 }
 
 .story_short_tags {
-    margin-left: 16px;
+    margin-left: 1em;
 }
 
 .categorylink {
@@ -92,7 +92,7 @@ HR {
 /* story list page */
 .story_list_page_item {
   background-color: lightgray;
-  padding: 10px;
+  padding: 0.625em;
   border: 1px solid gray;
 }
 
@@ -101,8 +101,8 @@ HR {
   text-decoration: none;
   background: darkgray;
   border: 1px solid gray;
-  border-radius: 5px;
-  padding: 8px;
+  border-radius: 0.3125em;
+  padding: 0.5em;
   margin: auto;
 }
 
@@ -112,9 +112,9 @@ HR {
   display: inline;
   background: darkgray;
   border: 1px solid gray;
-  border-radius: 5px;
-  padding: 8px;
-  margin: 5px;
+  border-radius: 0.3125em;
+  padding: 0.5em;
+  margin: 0.3125em;
 }
 
 .page_button P  {
@@ -146,7 +146,7 @@ HR {
   text-align: left;
   padding-top: 6px;
   padding-bottom: 6px;
-  padding-left: 16px;
+  padding-left: 1em;
   border: 1px solid black;
 }
 
@@ -166,15 +166,15 @@ HR {
 .publisher_section {
   background: lightgray;
   border: 1px solid gray;
-  padding-left: 16px;
-  padding-right: 16px;
+  padding-left: 1em;
+  padding-right: 1em;
   padding-top: 1px;
-  margin-top: 20px;
-  margin-bottom: 20px;
+  margin-top: 1.25em;
+  margin-bottom: 1.25em;
 }
 
 .publisher_statistics {
-  padding-bottom: 20px;
+  padding-bottom: 1.25em;
 }
 
 .publisher_quicklinks {
@@ -187,7 +187,7 @@ HR {
   color: black;
   background: darkgray;
   border: 1px solid gray;
-  border-radius: 5px;
+  border-radius: 0.3125em;
   margin-right: 15px;
   padding: 6px;
 }
@@ -235,8 +235,8 @@ HR {
 /* category page */
 
 .category_story_count {
-  margin-left: 16px;
-  margin-bottom: -10px;
+  margin-left: 1em;
+  margin-bottom: -0.625em;
   display: inline;
 }
 
@@ -257,12 +257,12 @@ HR {
 .publisher {
   display: inline-block;
   background: lightgray;
-  padding-left: 20px;
-  padding-bottom: 20px;
+  padding-left: 1.25em;
+  padding-bottom: 1.25em;
   border: 1px solid gray;
-  border-radius: 10px;
+  border-radius: 0.625em;
   width: 90%;
-  margin: 10px;
+  margin: 0.625em;
 }
 
 .publisher_div_link {
@@ -279,7 +279,7 @@ HR {
 
 .publisher_num_categories, .publisher_num_stories {
   display: inline;
-  margin: 10px;
+  margin: 0.625em;
   color: #353535;
 }
 
@@ -313,9 +313,9 @@ HR {
   color: black;
   background: darkgray;
   border: 1px solid gray;
-  border-radius: 5px;
-  padding: 8px;
-  margin-left: 20px
+  border-radius: 0.3125em;
+  padding: 0.5em;
+  margin-left: 1.25em
 }
 
 /* search */
@@ -323,13 +323,13 @@ HR {
 #search_input_div {
   background: lightgray;
   border: 1px solid darkgray;
-  margin-bottom: 10px;
+  margin-bottom: 0.625em;
 }
 
 #toggle_search_input_button {
   width: 100%;
   background: darkgray;
-  padding: 4px;
+  padding: 0.25em;
   font-weight: bold;
   color: black;
 }
@@ -343,12 +343,12 @@ HR {
   margin: auto;
   background: darkgray;
   border: 1px solid gray;
-  height: 34px;
+  height: 2.125em;
   font-size: 110%;
-  padding: 4px;
-  padding-left: 40px;
-  padding-right: 40px;
-  margin: 4px;
+  padding: 0.25em;
+  padding-left: 2.5em;
+  padding-right: 2.5em;
+  margin: 0.25em;
 }
 
 #search_button:hover {
@@ -360,11 +360,11 @@ HR {
   background: #bbbbbb;
   width: 30%;
   text-align: center;
-  margin: 4px;
-  padding: 4px;
-  padding-left: 40px;
-  padding-right: 40px;
-  margin: 4px;
+  margin: 0.25em;
+  padding: 0.25em;
+  padding-left: 2.5em;
+  padding-right: 2.5em;
+  margin: 0.25em;
 }
 
 #statusdiv P {
@@ -401,8 +401,8 @@ HR {
 .search_criteria {
   display: initial;
   border: 1px solid black;
-  padding: 2px;
-  margin: 2px;
+  padding: 0.125em;
+  margin: 0.125em;
   width: fit-content;
 }
 
@@ -421,8 +421,8 @@ HR {
 }
 
 #search_sort_select_label {
-  margin-left: 40px;
-  margin-right: 10px;
+  margin-left: 2.5em;
+  margin-right: 0.625em;
 }
 
 #search_sort_select {
@@ -469,7 +469,7 @@ HR {
   right: 0;
 }
 .autocomplete-items div {
-  padding: 10px;
+  padding: 0.625em;
   cursor: pointer;
   background-color: #fff;
   border-bottom: 1px solid #d4d4d4;
@@ -483,4 +483,35 @@ HR {
   /*when navigating through the items using the arrow keys:*/
   background-color: DodgerBlue !important;
   color: #ffffff;
+}
+
+/* mobile */
+
+@media only screen and (max-width: 600px) {
+  .category_long_list {
+    columns: 1;
+    -webkit-columns: 1;
+    -moz-columns: 1;
+  }
+
+  .search_input_list {
+    columns: 1;
+    -webkit-columns: 1;
+    -moz-columns: 1;
+  }
+
+  .publisher_list UL {
+    columns: 1;
+    -webkit-columns: 1;
+    -moz-columns: 1;
+  }
+
+  .publisher_quicklinks A {
+    display: block;
+    margin-top: 0.5em;
+  }
+
+  .storytext {
+    font-size: 120%;
+  }
 }

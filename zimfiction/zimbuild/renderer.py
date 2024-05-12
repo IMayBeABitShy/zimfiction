@@ -498,7 +498,7 @@ class HtmlRenderer(object):
         stats_page_template = self.environment.get_template("storyliststatspage.html.jinja")
         page = stats_page_template.render(
             to_root="../../..",
-            title="{} fanfiction on {} - Statistics".format(category.name, category.publisher),
+            title="{} fanfiction on {} - Statistics".format(category.name, category.publisher.name),
             stats=stats,
             backref="1",
         )
@@ -506,7 +506,7 @@ class HtmlRenderer(object):
             HtmlPage(
                 path="category/{}/{}/stats".format(category.publisher.name, normalize_tag(category.name)),
                 content=self.minify_html(page),
-                title="{} fanfiction on {} - Statistics".format(category.publisher.name, category.publisher),
+                title="{} fanfiction on {} - Statistics".format(category.name, category.publisher.name),
                 is_front=False
             )
         )
