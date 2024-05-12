@@ -9,6 +9,7 @@ const ID_SORT_SELECT = "search_sort_select";
 const ID_TOGGLE_SEARCH_INPUT_BUTTON = "toggle_search_input_button";
 const ID_PAGE_BUTTONS_DIV = "page_buttons";
 const FIELDS = ["publisher", "language", "status", "categories", "warnings", "characters", "relationships", "tags"];
+const RANGE_FIELDS = ["words", "chapters", "score"];
 const STORIES_PER_PAGE = 20;
 
 
@@ -181,6 +182,13 @@ class ZimfictionSearch {
         // get input parameters
         var criterias = this.get_search_criterias();
         var sort_order = this.get_sort();
+        var range_criterias = this.get_range_criterias();
+        // check if range criterias is invalid
+        if (range_criterias === null) {
+            this.set_status("Invalid range values!");
+            this.set_search_enabled(true);
+            return;
+        }
         // resolve
         var resolved = this.resolve_criterias(criterias);
         if (resolved === null) {
@@ -193,8 +201,8 @@ class ZimfictionSearch {
         this.results = [];
         this.clear_results();
         // find matches
-        this.results = await this.find_all_matches(resolved);
-        if (this.results == null) {
+        this.results = await this.find_all_matches(resolved, range_criterias);
+        if (this.results === null) {
             // search failed
             return;
         }
@@ -225,7 +233,27 @@ class ZimfictionSearch {
                 }
             }
         );
-        // 2. the search button
+        // 2. the range fields
+        for (const fieldname of RANGE_FIELDS) {
+            for (const limiter of ["min", "max"]) {
+                var element_id = `search_input_${fieldname }_${ limiter }`;
+                var element = document.getElementById(element_id);
+                element.addEventListener(
+                    "input",
+                    function(event) {
+                        var inp = event.target;
+                        var value = inp.value;
+                        if (value.length > 0 && isNaN(value)) {
+                            // not a valid number
+                            inp.style.border = "thick solid red";
+                        } else {
+                            inp.style.border = "";
+                        }
+                    }
+                );
+            }
+        }
+        // 3. the search button
         var search_button = document.getElementById(ID_SEARCH_BUTTON);
         search_button.search_object = this;
         search_button.addEventListener(
@@ -311,6 +339,40 @@ class ZimfictionSearch {
         return criterias;
     }
 
+    get_range_criterias() {
+        // return a list of tuples of (field, min, max) of all range criterias
+        // returns none on invalid input
+        var criterias = [];
+        for (const fieldname of RANGE_FIELDS) {
+            var cur = [fieldname];
+            var has_any = false;
+            for (const limiter of ["min", "max"]) {
+                var element_id = `search_input_${fieldname }_${ limiter }`;
+                var element = document.getElementById(element_id);
+                var value = element.value;
+                if (value.length == 0) {
+                    // no limit
+                    if (limiter == "min") {
+                        cur.push(Number.NEGATIVE_INFINITY);
+                    } else {
+                        cur.push(Number.POSITIVE_INFINITY);
+                    }
+                } else if (isNaN(value)) {
+                    // invalid input
+                    return null;
+                } else {
+                    cur.push(parseInt(value));
+                    has_any = true;
+                }
+            }
+            // only add range criteria if at least on limit was specified
+            if (has_any) {
+                criterias.push(cur);
+            }
+        }
+        return criterias;
+    }
+
     get_sort() {
         // return the currently selected sort
         var select = document.getElementById(ID_SORT_SELECT);
@@ -346,7 +408,7 @@ class ZimfictionSearch {
         return resolved;
     }
 
-    async find_all_matches(resolved_criterias) {
+    async find_all_matches(resolved_criterias, range_criterias) {
         // return a list of all stories that match the specified criterias
         // expects the result of resolve_criterias() as an argument
         var results = [];
@@ -376,7 +438,7 @@ class ZimfictionSearch {
 
             // search through all stories in this body file
             for (const story of body) {
-                if (this.does_story_match_criterias(story, resolved_criterias)) {
+                if (this.does_story_match_criterias(story, resolved_criterias, range_criterias)) {
                     results.push(story);
                 }
             }
@@ -386,8 +448,10 @@ class ZimfictionSearch {
         return results;
     }
 
-    does_story_match_criterias(story, resolved_criterias) {
+    does_story_match_criterias(story, resolved_criterias, range_criterias) {
         // check if a story matches the resolved criterias
+
+        // tag checks
         // we could use indexes and sort order to check this more efficiently
         // but for now, lets just use a simple loop
         var tag_ids = story["tags"]
@@ -402,6 +466,16 @@ class ZimfictionSearch {
                 return false;
             }
         }
+        // range criteria checks
+        for (const range_criteria of range_criterias) {
+            var field = range_criteria[0];
+            var value = story[field];
+            if (value < range_criteria[1] || value > range_criteria[2]) {
+                // outside range
+                return false;
+            }
+        }
+        // all criterias fulfilled, story matches
         return true;
     }
 
