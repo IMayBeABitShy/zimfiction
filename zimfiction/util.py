@@ -242,6 +242,25 @@ def count_words(text):
     return len(ALLOWED_WORD_LETTERS.sub(" ", text).split())
 
 
+def set_or_increment(d, k, v=1):
+    """
+    Set or increment a key in a dict to/by a value.
+
+    Basically, if k in d set d[k] += v, else d[k] = v.
+
+    @param d: dictionary to modify
+    @type d: L{dict}
+    @param k: key in dict to use
+    @type k: hashable
+    @type v: value to set to or increment by
+    @type v: L{int} or L{float}
+    """
+    if k in d:
+        d[k]+= v
+    else:
+        d[k] = v
+
+
 if __name__ == "__main__":
     # test code
     val = int(input("n: "))

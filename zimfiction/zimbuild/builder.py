@@ -26,7 +26,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from libzim.writer import Creator, Item, StringProvider, FileProvider, Hint
 
-from ..util import format_timedelta, format_size, get_resource_file_path
+from ..util import format_timedelta, format_size, get_resource_file_path, format_number, set_or_increment
 from ..db.models import Story, Tag, Author, Category, Series, Publisher
 from ..reporter import StdoutReporter
 from .renderer import HtmlPage, Redirect, JsonObject, Script
@@ -333,6 +333,8 @@ class ZimBuilder(object):
     @type session: L{sqlalchemy.orm.Session}
     @ivar reporter: reporter used for status reports
     @type reporter: L{zimfiction.reporter.BaseReporter}
+    @ivar num_files_added: a dict mapping a filetype to the number of files of that type
+    @type num_files_added: L{dict} of L{str} -> L{int}
     """
     def __init__(self, engine):
         """
@@ -345,6 +347,7 @@ class ZimBuilder(object):
 
         self.inqueue = None
         self.outqueue = None
+        self.num_files_added = {}
 
         self.session = Session(engine)
         self.reporter = StdoutReporter();
@@ -452,6 +455,9 @@ class ZimBuilder(object):
         time_elapsed = end - start
         self.reporter.msg("Finished ZIM creation in {}.".format(format_timedelta(time_elapsed)))
         self.reporter.msg("Final size: {}".format(format_size(final_size)))
+        self.reporter.msg("Added files: ")
+        for filetype, amount in self.num_files_added.items():
+            self.reporter.msg("    {}: {} ({})".format(filetype, amount, format_number(amount)))
 
 
     def _add_content(self, creator, options):
@@ -698,6 +704,7 @@ class ZimBuilder(object):
                                 is_front=rendered_object.is_front,
                             )
                             creator.add_item(item)
+                            set_or_increment(self.num_files_added, "html")
                         elif isinstance(rendered_object, JsonObject):
                             # add a json object
                             item = JsonItem(
@@ -706,6 +713,7 @@ class ZimBuilder(object):
                                 content=rendered_object.content,
                             )
                             creator.add_item(item)
+                            set_or_increment(self.num_files_added, "json")
                         elif isinstance(rendered_object, Redirect):
                             # create a redirect
                             creator.add_redirection(
@@ -716,6 +724,7 @@ class ZimBuilder(object):
                                     Hint.FRONT_ARTICLE: rendered_object.is_front,
                                 }
                             )
+                            set_or_increment(self.num_files_added, "redirect")
                         elif isinstance(rendered_object, Script):
                             # add a script
                             item = ScriptItem(
@@ -724,6 +733,7 @@ class ZimBuilder(object):
                                 content=rendered_object.content,
                             )
                             creator.add_item(item)
+                            set_or_increment(self.num_files_added, "js")
                         else:
                             # unknown result object
                             raise RuntimeError("Unknown render result: {}".format(type(rendered_object)))
