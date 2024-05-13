@@ -42,6 +42,11 @@ setup(
         "html2text",
         "beautifulsoup4",
         ],
+    extras_require={
+        "optimize": [
+            "minify-html",
+        ],
+    },
     entry_points={
         "console_scripts": [
             "zimfiction=zimfiction.cli:main",

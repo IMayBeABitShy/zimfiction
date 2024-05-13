@@ -8,6 +8,12 @@ import htmlmin
 import mistune
 from jinja2 import Environment, PackageLoader, select_autoescape
 
+# optional optimization dependencies
+try:
+    import minify_html
+except ImportError:
+    minify_html = None
+
 from ..util import format_size, format_number, format_date, normalize_tag, get_resource_file_path
 from ..statistics import StoryListStatCreator
 from .buckets import BucketMaker
@@ -232,13 +238,17 @@ class HtmlRenderer(object):
         @return: the minified html
         @rtype: L{str}
         """
-        return htmlmin.minify(
-            s,
-            remove_comments=True,
-            remove_empty_space=True,
-            reduce_boolean_attributes=True,
-            remove_optional_attribute_quotes=True,
-        )
+        if minify_html is None:
+            # fall back to htmlmin
+            return htmlmin.minify(
+                s,
+                remove_comments=True,
+                remove_empty_space=True,
+                reduce_boolean_attributes=True,
+                remove_optional_attribute_quotes=True,
+            )
+        else:
+            return minify_html.minify(s)
 
     def render_story(self, story):
         """
