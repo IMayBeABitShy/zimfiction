@@ -1,4 +1,4 @@
-{# This is a page for a chapter of a story. Expects "chapter" and "to_root" argument. NOTE: stories don't have their own page #}
+{# This is a page for a chapter of a story. Expects "chapter", "is_first" and "to_root" argument. NOTE: stories don't have their own page #}
 {% extends "base.html.jinja" %}
 
 {% block title %}
@@ -6,9 +6,13 @@
 {% endblock %}
 
 {% block content %}
-    {% with story=chapter.story, to_root=to_root, extended=True %}
-        {% include "storysummary.html.jinja" %}
-    {% endwith %}
+    {% if is_first %}
+        {% with story=chapter.story, to_root=to_root, extended=True %}
+            {% include "storysummary.html.jinja" %}
+        {% endwith %}
+    {% else %}
+        <A class="storysummarylink" href="">Go to summary</A>
+    {% endif %}
     <HR>
     {% block storytext %}
         <CENTER>
@@ -18,10 +22,8 @@
         <DIV class="storytext" id="storytext">
             {{ chapter.text|render_storytext }}
         </DIV>
-        <DIV class="chapternavigation">
-            {% with to_root=to_root, num_pages=chapter.story.chapters|length, cur_page=chapter.index %}
-                {% include "pagebuttons.html.jinja" %}
-            {% endwith %}
-        </DIV>
+        {% with to_root=to_root, num_pages=chapter.story.chapters|length, cur_page=chapter.index, fragment="#storytext" %}
+            {% include "pagebuttons.html.jinja" %}
+        {% endwith %}
     {% endblock %}
 {% endblock %}

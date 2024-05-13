@@ -26,6 +26,7 @@ CATEGORIES_ON_PUBLISHER_PAGE = 200
 SEARCH_ITEMS_PER_FILE = 50000
 MIN_STORIES_FOR_SEARCH = 5
 MAX_STORIES_FOR_SEARCH = float("inf")
+SEARCH_ONLY_ON_FIRST_PAGE = True
 
 
 class RenderedObject(object):
@@ -248,7 +249,10 @@ class HtmlRenderer(object):
                 remove_optional_attribute_quotes=True,
             )
         else:
-            return minify_html.minify(s)
+            return minify_html.minify(
+                s,
+                keep_closing_tags=True,  # avoid issues with kiwix-serve
+            )
 
     def render_story(self, story):
         """
@@ -265,6 +269,7 @@ class HtmlRenderer(object):
         for chapter in story.chapters:
             chapter_page = chapter_template.render(
                 chapter=chapter,
+                is_first=True,  # currently, the add order is not guaranted
                 to_root="../../..",
             )
             result.add(
@@ -351,7 +356,7 @@ class HtmlRenderer(object):
                 to_root="../../..",
                 title="Stories tagged '{}' [{}]".format(tag.name, tag.type),
                 stories=stories,
-                include_search=include_search,
+                include_search=(include_search and (i == 1 or not SEARCH_ONLY_ON_FIRST_PAGE)),
                 num_pages=len(pages),
                 cur_page=i,
             )
@@ -491,7 +496,7 @@ class HtmlRenderer(object):
                 to_root="../../..",
                 category=category,
                 stories=stories,
-                include_search=include_search,
+                include_search=(include_search and (i == 1 or not SEARCH_ONLY_ON_FIRST_PAGE)),
                 num_pages=len(pages),
                 cur_page=i,
             )
