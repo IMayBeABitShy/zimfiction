@@ -13,6 +13,24 @@ from ..exceptions import ParseError
 CHAPTER_TITLE_REGEX = re.compile(r"\t[0-9]+\. .+")
 
 
+def _split_tags(s):
+    """
+    Split all tags from a string.
+
+    @param s: comma separated list of tags to split
+    @type s: L{str}
+    @return:: the list of tags
+    @rtype: L{list} of L{str}
+    """
+    tags = set()
+    splitted = s.split(",")
+    for e in splitted:
+        e = e.strip()
+        if e:
+            tags.add(e)
+    return list(tags)
+
+
 def parse_txt_story(session, fin, force_publisher=None):
     """
     Parse a story in txt/markdown format.
@@ -120,16 +138,16 @@ def parse_txt_story(session, fin, force_publisher=None):
             elif key == "Status":
                 meta["is_done"] = is_done_from_status(value)
             elif key in ("Genre", "Erotica Tags"):
-                for tag in value.split(", "):
+                for tag in _split_tags(value):
                     add_to_dict_list(tags, "genre", tag)
             elif key == "Warnings":
-                for tag in value.split(", "):
+                for tag in _split_tags(value):
                     add_to_dict_list(tags, "warning", tag)
             elif key == "Characters":
-                for tag in value.split(", "):
+                for tag in _split_tags(value):
                     add_to_dict_list(tags, "character", tag)
             elif key == "Relationships":
-                for tag in value.split(", "):
+                for tag in _split_tags(value):
                     add_to_dict_list(tags, "relationship", tag)
             elif key == "Series":
                 series_index = int(value[value.rfind("[")+1: value.rfind("]")])
@@ -221,7 +239,7 @@ def parse_txt_story(session, fin, force_publisher=None):
         # We instead put it in a special one
         meta["category"] = "No Category"
     # split categories
-    categories = [c.strip() for c in meta["category"].split(",")]
+    categories = _split_tags(meta["category"])
     del meta["category"]
     # convert categories into objects
     meta["categories"] = [

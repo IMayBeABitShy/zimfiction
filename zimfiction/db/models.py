@@ -318,7 +318,7 @@ class Story(Base):
     author = relationship(
         "Author",
         back_populates="stories",
-        foreign_keys="Story.author_name",
+        overlaps="publisher, stories",
     )
     chapters = relationship(
         "Chapter",
@@ -478,7 +478,7 @@ class Story(Base):
             "chapters": len(self.chapters),
             "score": self.score,
             "series": [(sa.series.publisher.name, sa.index) for sa in self.series_associations],
-            "rating": self.rating.title(),
+            "rating": (self.rating.title() if self.rating is not None else "Unknown"),
         }
         return data
 
@@ -503,7 +503,7 @@ class Story(Base):
             "words": self.total_words,
             "chapters": len(self.chapters),
             "score": self.score,
-            "rating": self.rating.title(),
+            "rating": (self.rating.title() if self.rating is not None else "Unknown"),
         }
         return data
 
@@ -520,7 +520,7 @@ class Chapter(Base):
     story = relationship(
         "Story",
         back_populates="chapters",
-        foreign_keys="Chapter.story_id",
+        overlaps="chapters, publisher",
         cascade="all",
     )
     index = Column(Integer, primary_key=True, nullable=False, autoincrement=False)

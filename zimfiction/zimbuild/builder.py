@@ -559,7 +559,7 @@ class ZimBuilder(object):
             creator=creator,
             options=options,
             task_name="Adding publishers...",
-            n_tasks=n_series,
+            n_tasks=n_publishers,
             task_unit="publishers",
         ):
             self._send_publisher_tasks()

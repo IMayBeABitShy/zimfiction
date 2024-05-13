@@ -44,7 +44,7 @@
             </TR>
             <TR>
                 <TH>Rating</TH>
-                <TD>{{ story.rating|title }}</TD>
+                <TD>{{ story.rating|title if p is not none else "Unknown"}}</TD>
             </TR>
             <TR>
                 <TH>Published</TH>
@@ -118,7 +118,7 @@
                 {% for series_association in story.series_associations  %}
                     <B>Part</B> {{ series_association.index }} <B>of</B> <A class="serieslink" href="{{to_root}}/series/{{ series_association.series.publisher.name }}/{{ series_association.series.name|normalize_tag }}">{{ series_association.series.name }} </A>
                 {% endfor %}
-                <B>Language:</B> {{ story.language }} <B>Status:</B> {{ story.status }} <B>Rating: </B> {{ story.rating|title }} <B>Words:</B> {{ story.total_words|format_number }} <B>Chapters:</B> {{ story.chapters|length }} <B>Score:</B> {{ story.score|format_number }}
+                <B>Language:</B> {{ story.language }} <B>Status:</B> {{ story.status }} <B>Rating: </B> {{ story.rating|title if p is not none else "Unknown"}} <B>Words:</B> {{ story.total_words|format_number }} <B>Chapters:</B> {{ story.chapters|length }} <B>Score:</B> {{ story.score|format_number }}
             </P>
         </DIV>
     {% endif %}
