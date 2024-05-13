@@ -251,7 +251,6 @@ class HtmlRenderer(object):
         else:
             return minify_html.minify(
                 s,
-                keep_closing_tags=True,  # avoid issues with kiwix-serve
             )
 
     def render_story(self, story):
