@@ -40,7 +40,7 @@ def parse_txt_story(session, fin, force_publisher=None):
     cur_chapter_title = None
     publisher = None
 
-    for line in (fin if not isinstance(fin, str) else fin.splitlines(keepends="")):
+    for line in (fin if not isinstance(fin, str) else fin.splitlines(keepends=True)):
         if not in_body:
             # process header
             line = line.strip()
