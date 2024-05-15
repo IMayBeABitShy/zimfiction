@@ -19,6 +19,8 @@ import time
 import os
 import contextlib
 import math
+import pdb
+import signal
 
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
@@ -35,6 +37,7 @@ except ImportError:
 
 from ..util import format_timedelta, format_size, get_resource_file_path, format_number, set_or_increment
 from ..db.models import Story, Tag, Author, Category, Series, Publisher
+from ..db.unique import set_unique_enabled
 from ..reporter import StdoutReporter
 from .renderer import HtmlPage, Redirect, JsonObject, Script
 from .worker import Worker, StopTask, StoryRenderTask, TagRenderTask
@@ -116,6 +119,22 @@ def config_thread(name):
     """
     if setproctitle is not None:
         setproctitle.setthreadtitle(name)
+
+
+# ================ DEBUG HELPER ============
+
+
+def on_pdb_interrupt(sig, frame):
+    """
+    Called on an SIGUSR1 interrupt to start pdb debugging.
+    """
+    pdb.Pdb().set_trace(frame)
+
+
+try:
+    signal.signal(signal.SIGUSR1, on_pdb_interrupt)
+except Exception:
+    pass
 
 
 # =============== ITEM DEFINITIONS ================
@@ -444,10 +463,12 @@ class ZimBuilder(object):
         self.reporter.msg("Preparing build...")
 
         start = time.time()
+        set_unique_enabled(False)
 
         self.reporter.msg(" -> Generating ZIM creation config...")
         compression = "zstd"
-        clustersize = 8 * 1024 * 1024  # 8 MiB
+        # clustersize = 8 * 1024 * 1024  # 8 MiB
+        clustersize = 2 * 1024 * 1024  # 2 MiB
         verbose = True
         n_creator_workers = get_n_cores()
         n_render_workers = options.num_workers

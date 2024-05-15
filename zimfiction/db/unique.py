@@ -1,12 +1,32 @@
 """
 Unique-logic, based on the sqlalchemy unique object recipe.
+
+@var UNIQUE_ENABLED: whether the unique system is enabled. This should be the case when importing stories.
+@type UNIQUE_ENABLED: L{bool}
 """
+
+
+UNIQUE_ENABLED = True
+
+
+def set_unique_enabled(flag):
+    """
+    Set wether the unique system is enabled or not.
+
+    @param flag: new value
+    @type flag: L{bool}
+    """
+    global UNIQUE_ENABLED
+    UNIQUE_ENABLED = flag
 
 
 def _unique(session, cls, hashfunc, queryfunc, constructor, arg, kw):
     cache = getattr(session, '_unique_cache', None)
     if cache is None:
         session._unique_cache = cache = {}
+
+    if not UNIQUE_ENABLED:
+        return constructor(*arg, **kw)
 
     key = (cls, hashfunc(*arg, **kw))
     if key in cache:
