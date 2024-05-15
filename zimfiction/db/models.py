@@ -504,6 +504,7 @@ class Story(Base):
             "chapters": len(self.chapters),
             "score": self.score,
             "rating": (self.rating.title() if self.rating is not None else "Unknown"),
+            "category_count": len(self.categories),
         }
         return data
 

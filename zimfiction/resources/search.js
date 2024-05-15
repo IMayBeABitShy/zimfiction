@@ -9,7 +9,7 @@ const ID_SORT_SELECT = "search_sort_select";
 const ID_TOGGLE_SEARCH_INPUT_BUTTON = "toggle_search_input_button";
 const ID_PAGE_BUTTONS_DIV = "page_buttons";
 const FIELDS = ["publisher", "language", "status", "categories", "warnings", "characters", "relationships", "tags", "rating"];
-const RANGE_FIELDS = ["words", "chapters", "score"];
+const RANGE_FIELDS = ["words", "chapters", "score", "category_count"];
 const STORIES_PER_PAGE = 20;
 
 
@@ -65,7 +65,7 @@ function escapeHtml(unsafe) {
 function normalize_tag(tag) {
     // normalize a tag for usage in urls
     // IMPORTANT: be sure this matches the behavior of the python function
-    return tag.replace(/ /, "+").replace(/\//, "_");
+    return tag.replaceAll(" ", "+").replaceAll("/", "_");
 }
 
 
@@ -597,7 +597,8 @@ class ZimfictionSearch {
                 first = false;
             }
             var normalized_category = normalize_tag(category);
-            categorylist += `<A class="categorylink" href="${TO_ROOT}/category/${publisher}/${normalized_category}/">${category}</A>`
+            var escaped_category = escapeHtml(category);
+            categorylist += `<A class="categorylink" href="${TO_ROOT}/category/${publisher}/${normalized_category}/">${escaped_category}</A>`
         }
         var taglist = "";
         first = true;
@@ -610,14 +611,16 @@ class ZimfictionSearch {
                 first = false;
             }
             var normalized_tag = normalize_tag(tagname);
-            taglist += `<A class="taglink taglink-${tagtype}" href="${TO_ROOT}/tag/${tagtype}/${normalized_tag}/">${tagname}</A>`
+            var escaped_tag = escapeHtml(tagname);
+            taglist += `<A class="taglink taglink-${tagtype}" href="${TO_ROOT}/tag/${tagtype}/${normalized_tag}/">${escaped_tag}</A>`
         }
         var serieslist = "";
         for (const series of preview["series"]) {
             var seriesname = series[0];
             var normalized_seriesname = normalize_tag(seriesname);
+            var escaped_seriesname = escapeHtml(seriesname);
             var seriesindex = series[1];
-            serieslist += `<B>Part</B> ${seriesindex} <B>of</B> <A class="serieslink" href="${TO_ROOT}/series/${publisher}/${normalized_seriesname}">${seriesname} </A>`;
+            serieslist += `<B>Part</B> ${seriesindex} <B>of</B> <A class="serieslink" href="${TO_ROOT}/series/${publisher}/${normalized_seriesname}">${escaped_seriesname} </A>`;
         }
         var args = [
             ["publisher", preview["publisher"]],

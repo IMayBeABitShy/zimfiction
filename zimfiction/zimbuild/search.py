@@ -94,6 +94,7 @@ class SearchMetadataCreator(object):
                 "score": item["score"],
                 "tags": [],
                 "rating": item["rating"],
+                "category_count": item["category_count"],
             }
             for field in self._SEARCH_FIELDS:
                 if isinstance(item[field], (list, tuple)):

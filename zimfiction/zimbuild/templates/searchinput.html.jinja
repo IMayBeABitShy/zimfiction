@@ -19,7 +19,7 @@
                     </LI>
                 {% endfor %}
                 {# range fields #}
-                {% for fieldname in ["words", "chapters", "score"] %}
+                {% for fieldname in ["words", "chapters", "score", "category_count"] %}
                     {% for limiter in ["min", "max"] %}
                         <LI>
                             <DIV class="search_field_div" id="search_field_div_{{ fieldname }}_{{ limiter }}">
