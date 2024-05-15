@@ -20,11 +20,18 @@ import os
 import contextlib
 import math
 
-import psutil
-
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from libzim.writer import Creator, Item, StringProvider, FileProvider, Hint
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
+try:
+    import setproctitle
+except ImportError:
+    setproctitle = None
 
 from ..util import format_timedelta, format_size, get_resource_file_path, format_number, set_or_increment
 from ..db.models import Story, Tag, Author, Category, Series, Publisher
@@ -58,6 +65,57 @@ def get_n_cores():
         return multiprocessing.cpu_count()
     else:
         return 1
+
+
+def config_process(name, nice=0, ionice=0):
+    """
+    Configure the current OS process.
+
+    This function expects the linux values and will try to guess the
+    approximate windows values.
+
+    @param name: name for the current process
+    @type name: L{str}
+    @param nice: new nice value for current process (-21->19 (lowest))
+    @type nice: L{int}
+    @param ionice: new io nice value for the process (0->17 (lowest))
+    @type ionice: L{int}
+    """
+    # name
+    if setproctitle is not None:
+        setproctitle.setproctitle(name)
+    # nice and ionice
+    if psutil is not None:
+        p = psutil.Process()
+        if psutil.LINUX:
+            p.nice(nice)
+            p.ionice(psutil.IOPRIO_CLASS_BE, ionice)
+        else:
+            if nice > 0:
+                nv = psutil.ABOVE_NORMAL_PRIORITY_CLASS
+            elif nice < 0:
+                nv = psutil.BELOW_NORMAL_PRIORITY_CLASS
+            else:
+                nv = psutil.NORMAL_PRIORITY_CLASS
+            p.nice(nv)
+            if ionice < 4:
+                iv = psutil.IOPRIO_HIGH
+            elif ionice > 4:
+                iv = psutil.IOPRIO_LOW
+            else:
+                iv = psutil.IOPRIO_NORMAL
+            p.ionice(iv)
+
+
+def config_thread(name):
+    """
+    Configure the current OS thread.
+
+    @param name: new name of the thread
+    @type name: L{str}
+    """
+    if setproctitle is not None:
+        setproctitle.setthreadtitle(name)
 
 
 # =============== ITEM DEFINITIONS ================
@@ -669,13 +727,8 @@ class ZimBuilder(object):
         """
         if not options.use_threads:
             # setup priority first
-            p = psutil.Process()
-            if psutil.LINUX:
-                p.nice(2)
-                p.ionice(psutil.IOPRIO_CLASS_BE, 7)
-            else:
-                p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)
-                p.ionice(psutil.IOPRIO_NORMAL)
+            config_process(name="ZF creator", nice=2, ionice=7)
+        config_thread(name="Creator thread")
         # main loop - get results from queue and add them to ZIM
         running = True
         n_finished = 0
@@ -748,13 +801,7 @@ class ZimBuilder(object):
         # before starting the worker, clean up engine connections
         self.engine.dispose(close=False)
         # also, prepare the process priority
-        p = psutil.Process()
-        if psutil.LINUX:
-            p.nice(10)
-            p.ionice(psutil.IOPRIO_CLASS_BE, 5)
-        else:
-            p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
-            p.ionice(psutil.IOPRIO_LOW)
+        config_process(name="ZF worker", nice=10, ionice=5)
         # start the worker
         worker = Worker(
             inqueue=self.inqueue,

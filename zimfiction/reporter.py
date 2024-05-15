@@ -230,10 +230,11 @@ class StdoutProgressReporter(BaseProgressReporter):
             bar = self._get_bar(progress, error=True)
         else:
             bar = self._get_bar(1.0, error=False)
+        time_str = format_timedelta(time.time() - self.start_time)
         unit_str = self._get_rate()
         if unit_str:
             unit_str = "({})".format(unit_str)
-        print("\33[2K{} {} {} ".format(self.description, bar, unit_str))
+        print("\33[2K{} {} {} {} ".format(self.description, bar, time_str, unit_str))
 
 
 if __name__ == "__main__":

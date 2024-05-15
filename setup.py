@@ -37,7 +37,6 @@ setup(
         "htmlmin",
         "jinja2",
         "mistune",
-        "psutil",
         "EBookLib",
         "html2text",
         "beautifulsoup4",
@@ -45,6 +44,10 @@ setup(
     extras_require={
         "optimize": [
             "minify-html",
+        ],
+        "integration": [
+            "psutil",
+            "setproctitle",
         ],
     },
     entry_points={
