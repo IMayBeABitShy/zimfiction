@@ -10,7 +10,7 @@ from sqlalchemy import Integer, String, DateTime, Boolean, UnicodeText, Unicode
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.orderinglist import ordering_list
 
-from ..util import format_date, format_number
+from ..util import format_date, format_number, normalize_relationship
 from .unique import UniqueMixin
 
 
@@ -493,9 +493,9 @@ class Story(Base):
             "publisher": self.publisher.name,
             "id": self.id,
             "categories": [c.name for c in self.categories],
-            "tags": [t.name for t in self.genres],
+            "tags": [t.name.lower() for t in self.genres],
             "warnings": [t.name for t in self.warnings],
-            "relationships": [t.name for t in self.relationships],
+            "relationships": [normalize_relationship(t.name) for t in self.relationships],
             "characters": [t.name for t in self.characters],
             "updated": format_date(self.updated),
             "language": self.language,

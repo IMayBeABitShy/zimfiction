@@ -198,6 +198,21 @@ def normalize_tag(tag):
     return tag.replace(" ", "+").replace("/", "_")
 
 
+def normalize_relationship(tag):
+    """
+    Normalize a relationship such that "a/b", "b/a" and "a / b" reference
+    the same relationship.
+
+    @param tag: relationship to normalize
+    @type tag: L{str}
+    @return: the normalized relationship
+    @rtype: L{str}
+    """
+    tag = tag.replace(" / ", "/")
+    splitted = tag.split("/")
+    return " / ".join(sorted(splitted))
+
+
 def get_resource_file_path(name):
     """
     Return the path to the specified resource file.
