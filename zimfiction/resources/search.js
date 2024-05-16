@@ -668,6 +668,18 @@ class ZimfictionSearch {
             this.results.sort((a, b) => (b["chapters"] - a["chapters"]));
         } else if (sort_order == "score") {
             this.results.sort((a, b) => (b["score"] - a["score"]));
+        } else if (sort_order == "random") {
+            this.random_shuffle(this.results);
+        }
+    }
+
+    random_shuffle(a) {
+        // randomly shuffles an array using the fisher-yates algorithm
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const t = a[i];
+            a[i] = a[j];
+            a[j] = t;
         }
     }
 }
