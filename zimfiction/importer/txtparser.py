@@ -31,6 +31,27 @@ def _split_tags(s):
     return list(tags)
 
 
+def _split_categories(s):
+    """
+    Split all categories from a string.
+
+    @param s: string of categories to split
+    @type s: L{str}
+    @return:: the list of categories
+    @rtype: L{list} of L{str}
+    """
+    categories = set()
+    splitted = s.split(",")
+    for e in splitted:
+        e = e.strip()
+        subsplit = e.split(" > ")  # some sites use a hierarchy
+        for i in range(len(subsplit)):
+            c = " > ".join(subsplit[:i+1])
+            if c:
+                categories.add(c)
+    return list(categories)
+
+
 def parse_txt_story(session, fin, force_publisher=None):
     """
     Parse a story in txt/markdown format.
@@ -239,7 +260,7 @@ def parse_txt_story(session, fin, force_publisher=None):
         # We instead put it in a special one
         meta["category"] = "No Category"
     # split categories
-    categories = _split_tags(meta["category"])
+    categories = _split_categories(meta["category"])
     del meta["category"]
     # convert categories into objects
     meta["categories"] = [
