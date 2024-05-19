@@ -265,10 +265,11 @@ class HtmlRenderer(object):
         result = RenderResult()
         chapter_template = self.environment.get_template("chapter.html.jinja")
         min_chapter_i = None
+        is_first = True
         for chapter in story.chapters:
             chapter_page = chapter_template.render(
                 chapter=chapter,
-                is_first=True,  # currently, the add order is not guaranted
+                is_first=is_first,
                 to_root="../../..",
             )
             result.add(
@@ -282,6 +283,7 @@ class HtmlRenderer(object):
             # keep track of lowest chapter index so we can redirect to it
             if (min_chapter_i is None) or (chapter.index < min_chapter_i):
                 min_chapter_i = chapter.index
+            is_first = False
         # add redirect from story -> page 1
         result.add(
             Redirect(

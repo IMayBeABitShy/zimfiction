@@ -333,6 +333,7 @@ class Story(Base):
     chapters = relationship(
         "Chapter",
         back_populates="story",
+        order_by="Chapter.index",
         cascade="all, delete, delete-orphan",
         passive_deletes=True,
     )
