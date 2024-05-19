@@ -14,7 +14,7 @@ take the results and add them to the creator.
 import time
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload, subqueryload
+from sqlalchemy.orm import Session, joinedload, subqueryload, raiseload
 
 from .renderer import HtmlRenderer
 from ..statistics import StoryListStatCreator
@@ -478,7 +478,8 @@ class Worker(object):
                 .options(
                     # eager loading options
                     subqueryload(Publisher.categories),
-                    joinedload(Publisher.categories, Category.stories),
+                    # joinedload(Publisher.categories, Category.stories),
+                    raiseload(Publisher.categories, Category.stories),
                 )
             ).all()
             result = self.renderer.render_index(publishers=publishers)

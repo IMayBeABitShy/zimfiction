@@ -79,6 +79,16 @@ class Publisher(UniqueMixin, Base):
             Publisher.name == name,
         )
 
+    @property
+    def num_stories(self):
+        """
+        Return the number of stories by this publisher.
+
+        @return: the number of stories by this publisher
+        @rtype: L{int}
+        """
+        return len(self.stories)
+
 
 class Author(UniqueMixin, Base):
     """
