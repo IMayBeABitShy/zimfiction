@@ -147,12 +147,12 @@ def format_number(n):
     """
     if n < 1000 and isinstance(n, int):
         return str(n)
-    for fmt in ("", "K", "M", "B"):
+    for fmt in ("", "K", "M", "B", "T", "Qa"):
         if n < 1000.0:
             return "{:.1f}{}".format(round(n, 3), fmt)
         else:
             n /= 1000.0
-    return "{:.1f}T".format(round(n, 2))
+    return "{:.1f}Qi".format(round(n, 2))
 
 
 def format_size(nbytes):
@@ -164,12 +164,12 @@ def format_size(nbytes):
     @return: a human readable string describing the size
     @rtype: L{str}
     """
-    for fmt in ("B", "KiB", "MiB", "GiB", "TiB"):
+    for fmt in ("B", "KiB", "MiB", "GiB", "TiB", "PiB"):
         if nbytes < 1024.0:
             return "{:.2f} {}".format(round(nbytes, 2), fmt)
         else:
             nbytes /= 1024.0
-    return "{:.2f} PiB".format(round(nbytes, 2))
+    return "{:.2f} EiB".format(round(nbytes, 2))
 
 
 def format_date(date):
