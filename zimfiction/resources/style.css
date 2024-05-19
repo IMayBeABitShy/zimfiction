@@ -263,6 +263,7 @@ HR {
   border-radius: 0.625em;
   width: 90%;
   margin: 0.625em;
+  overflow-wrap: anywhere;
 }
 
 .publisher_div_link {
