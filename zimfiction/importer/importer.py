@@ -138,7 +138,7 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher
             current_story_ids_to_stories[full_story_id] = story
             if verbose:
                 print("Added story: ", story.title, end="   \r")
-            if i % 1000 == 0 and i > 0 and stories:
+            if i % 1000 == 0 and i > 0:
             # if i % 5 == 1 and i > 0 and stories:
             #  if i % 1 == 0 and i > 0 and stories:
                 if verbose:
