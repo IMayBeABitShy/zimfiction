@@ -16,7 +16,7 @@ from ..db.models import Story, Chapter
 from ..db.unique import clear_unique_cache
 
 
-def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher=None, verbose=False):
+def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher=None, remove=False, verbose=False):
     """
     Import all stories from a filesystem.
 
@@ -30,6 +30,8 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher
     @type limit: L{int} or L{None}
     @param force_publisher: if not None, force all stories imported to have this publisher
     @type force_publisher: L{str} or L{None}
+    @param remove: if nonzero, remove imported fics
+    @type remove: L{bool}
     @param verbose: if nonzero, be more verbose
     @type verbose: L{bool}
     """
@@ -65,6 +67,8 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher
                 if ignore_errors:
                     continue
                 raise ParseError("Error parsing: {}".format(path)) from e
+        if remove:
+            fs.remove(path)
 
         full_story_id = (story.publisher.name, story.id)
 

@@ -84,6 +84,7 @@ def run_import(ns):
                 ignore_errors=ns.ignore_errors,
                 limit=ns.limit,
                 force_publisher=ns.force_publisher,
+                remove=ns.remove,
                 verbose=ns.verbose,
             )
             session.flush()
@@ -155,6 +156,12 @@ def main():
         dest="force_publisher",
         default=None,
         help="Import all stories under this publisher",
+    )
+    import_parser.add_argument(
+        "--remove",
+        action="store_true",
+        dest="remove",
+        help="Remove imported fics",
     )
     import_parser.add_argument(
         "directories",
