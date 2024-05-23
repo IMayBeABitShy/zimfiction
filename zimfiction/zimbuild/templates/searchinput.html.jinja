@@ -31,13 +31,17 @@
                         </LI>
                     {% endfor %}
                 {% endfor %}
+                <LI>
+                    <DIV class="search_field_div">
+                        <LABEL for="search_sort_select" id="search_sort_select_label">Sort by</LABEL>
+                        <SELECT name="search_sort_select" id="search_sort_select">
+                            {% for value in ["updated", "words", "chapters", "score", "random"] %}
+                                <OPTION value="{{ value }}">{{ value|title }}</OPTION>
+                            {% endfor %}
+                        </SELECT>
+                    </DIV>
+                </LI>
             </UL>
-            <LABEL for="search_sort_select" id="search_sort_select_label">Sort by</LABEL>
-            <SELECT name="search_sort_select" id="search_sort_select">
-                {% for value in ["updated", "words", "chapters", "score", "random"] %}
-                    <OPTION value="{{ value }}">{{ value|title }}</OPTION>
-                {% endfor %}
-            </SELECT>
             <BR>
             <DIV id="statusdiv"><P>Initializing...</P></DIV>
             <BUTTON type="button" id="search_button" disabled>Search</BUTTON>

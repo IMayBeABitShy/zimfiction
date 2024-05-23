@@ -11,6 +11,7 @@ const ID_PAGE_BUTTONS_DIV = "page_buttons";
 const FIELDS = ["publisher", "language", "status", "categories", "warnings", "characters", "relationships", "tags", "rating"];
 const RANGE_FIELDS = ["words", "chapters", "score", "category_count"];
 const STORIES_PER_PAGE = 20;
+const MAX_AUTOCOMPLETE = 10;
 
 
 // preview template
@@ -59,6 +60,7 @@ function escapeHtml(unsafe) {
          .replace(/>/g, "&gt;")
          .replace(/"/g, "&quot;")
          .replace(/'/g, "&#039;");
+         // .replace(/'/g, "_");
  }
 
 
@@ -270,6 +272,7 @@ class ZimfictionSearch {
             var element = document.getElementById(elementid);
             element.search_object = this;  // so we can handle events here
             var values = this.get_possible_values_for(field);
+            values.sort();
             autocomplete(element, values);
         }
     }
@@ -284,25 +287,28 @@ class ZimfictionSearch {
         var ul_id = `search_field_list_${field}`;
         var ul = document.getElementById(ul_id);
         var li_id = `search_criteria_${field}_${sanitized}`;
+        var unescaped_li_id = `search_criteria_${field}_${value}`;
         if (!(document.getElementById(li_id) === null)) {
             // this value has already been registered, do nothing
             return;
         }
         var inc_button_id = `search_include_button_${field}_${sanitized}`;
+        var unescaped_inc_button_id = `search_include_button_${field}_${value}`;
         var remove_button_id = `search_remove_button_${field}_${sanitized}`;
+        var unescaped_remove_button_id = `search_remove_button_${field}_${value}`;
         var li_html = `<LI class="search_criteria" id="${li_id}">${sanitized}<DIV class="criteria_buttons"><BUTTON id="${inc_button_id}" class="include_button">Include</BUTTON><BUTTON id="${remove_button_id}" class="remove_button">X</BUTTON></DIV></LI>`;
         ul.insertAdjacentHTML("beforeend", li_html);
         // wire up the elements
-        var li = document.getElementById(li_id);
-        var inc_button = document.getElementById(inc_button_id);
-        var remove_button = document.getElementById(remove_button_id);
+        var li = document.getElementById(unescaped_li_id);
+        var inc_button = document.getElementById(unescaped_inc_button_id);
+        var remove_button = document.getElementById(unescaped_remove_button_id);
         li.criteria_field = field;
         li.criteria_value = value;
         li.criteria_include = true;
         inc_button.addEventListener("click", this.on_include_button_click);
-        inc_button.target_id = li_id;
+        inc_button.target_id = unescaped_li_id;
         remove_button.addEventListener("click", this.on_remove_button_click);
-        remove_button.target_id = li_id;
+        remove_button.target_id = unescaped_li_id;
     }
 
     on_include_button_click(event) {
@@ -395,9 +401,11 @@ class ZimfictionSearch {
             var include = criteria[2];
             // check if criteria is valid
             if (!obj_has_key(all_tag_ids, field)) {
+                console.log("Error: No such field: '" + field + "'!");
                 return null;
             }
             if (!obj_has_key(all_tag_ids[field], value)) {
+                console.log("Error: No such value '" + value + "' for field '" + field + "'!");
                 return null;
             }
             // resolve
@@ -704,21 +712,24 @@ function autocomplete(inp, arr) {
         a.setAttribute("class", "autocomplete-items");
         /*append the DIV element as a child of the autocomplete container:*/
         this.parentNode.appendChild(a);
+        var previews_created = 0;
         /*for each item in the array...*/
         for (i = 0; i < arr.length; i++) {
             /*check if the item starts with the same letters as the text field value:*/
-            if (arr[i].substr(0, val.length).toUpperCase() == val.toUpperCase()) {
+            if (arr[i].substr(0, val.length).toUpperCase() == val.toUpperCase() && (previews_created < MAX_AUTOCOMPLETE)) {
                 /*create a DIV element for each matching element:*/
                 b = document.createElement("DIV");
                /*make the matching letters bold:*/
                b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
                b.innerHTML += arr[i].substr(val.length);
                /*insert a input field that will hold the current array item's value:*/
-               b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
+               // b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
+               b.autocomplete_value = arr[i];
                /*execute a function when someone clicks on the item value (DIV element):*/
                b.addEventListener("click", function(e) {
                    /*insert the value for the autocomplete text field:*/
-                   var value = this.getElementsByTagName("input")[0].value;
+                   // var value = this.getElementsByTagName("input")[0].value;
+                   var value = this.autocomplete_value;
                    inp.value = "";
                    inp.search_object.on_autocomplete(inp, value);
                    /*close the list of autocompleted values,
@@ -726,6 +737,7 @@ function autocomplete(inp, arr) {
                    closeAllLists();
                });
                a.appendChild(b);
+               previews_created += 1;
             }
         }
     });
