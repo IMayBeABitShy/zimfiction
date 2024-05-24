@@ -289,6 +289,35 @@ class StylesheetItem(Item):
         }
 
 
+class FaviconItem(Item):
+    """
+    A L{libzim.writer.Item} for the favicon.
+    """
+    def __init__(self):
+        """
+        The default constructor.
+        """
+        super().__init__()
+
+    def get_path(self):
+        return "favicon.png"
+
+    def get_title(self):
+        return "Favicon (PNG)"
+
+    def get_mimetype(self):
+        return "image/png"
+
+    def get_contentprovider(self):
+        return FileProvider(get_resource_file_path("icon_highres.png"))
+
+    def get_hints(self):
+        return {
+            Hint.FRONT_ARTICLE: False,
+            Hint.COMPRESS: True,
+        }
+
+
 # =============== BUILD LOGIC =================
 
 
@@ -514,9 +543,12 @@ class ZimBuilder(object):
                 creator.add_metadata(key, value)
             self.reporter.msg("Done.")
 
-            # add general pages
+            # add general items
             self.reporter.msg("Adding stylesheet... ", end="")
             creator.add_item(StylesheetItem())
+            self.reporter.msg("Done.")
+            self.reporter.msg("Adding favicon... ", end="")
+            creator.add_item(FaviconItem())
             self.reporter.msg("Done.")
 
             # add content

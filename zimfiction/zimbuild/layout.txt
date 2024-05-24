@@ -10,6 +10,9 @@ This file describes the ZIM layout.
 +---statistics.html
 |   Global content statistics
 |
++---favicon.png
+|   The favicon
+|
 +-+-story/
 | | Contains the stories
 | |
