@@ -3,6 +3,22 @@ Module for evaluating statistics.
 """
 
 
+def zerodiv(a, b):
+    """
+    Calculate a/b if b != 0 else return 0.
+
+    @param a: number to divide
+    @type a: L{int} or L{float}
+    @param b: number to divide by
+    @type b: L{int} or L{float}
+    @return: a/b or 0
+    @rtype: L{int} or L{float}
+    """
+    if b == 0:
+        return 0
+    return a/b
+
+
 class Counter(object):
     """
     A simple class for incrementally counting the number of objects seen.
@@ -65,7 +81,7 @@ class IntCounter(Counter):
         @return: the average value of the elements (sum/count)
         @rtype: L{float}
         """
-        return (self.sum / self.count)
+        return zerodiv(self.sum, self.count)
 
 
 class UniqueCounter(Counter):
@@ -289,29 +305,29 @@ class StoryListStats(_Stats):
         self.total_words = total_words
         self.min_story_words = min_story_words
         self.max_story_words = max_story_words
-        self.average_story_words = self.total_words / self.story_count
+        self.average_story_words = zerodiv(self.total_words, self.story_count)
 
         self.chapter_count = chapter_count
         self.min_chapter_count = min_chapter_count
         self.max_chapter_count = max_chapter_count
-        self.average_chapter_count = self.chapter_count / self.story_count
+        self.average_chapter_count = zerodiv(self.chapter_count, self.story_count)
 
         self.min_chapter_words = min_chapter_words
         self.max_chapter_words = max_chapter_words
-        self.average_chapter_words = self.total_words / self.chapter_count
+        self.average_chapter_words = zerodiv(self.total_words, self.chapter_count)
 
         self.category_count = category_count
         self.total_category_count = total_category_count
-        self.average_category_count = self.total_category_count / self.story_count
+        self.average_category_count = zerodiv(self.total_category_count, self.story_count)
 
         self.tag_count = tag_count
         self.total_tag_count = total_tag_count
-        self.average_tag_count = self.total_tag_count / self.story_count
+        self.average_tag_count = zerodiv(self.total_tag_count, self.story_count)
 
         self.author_count = author_count
         self.total_author_count = total_author_count
-        self.average_author_count = self.total_author_count / self.story_count
-        self.average_stories_per_author = self.story_count / self.author_count
+        self.average_author_count = zerodiv(self.total_author_count, self.story_count)
+        self.average_stories_per_author = zerodiv(self.story_count, self.author_count)
 
         self.series_count = series_count
         self.total_series_count = total_series_count
