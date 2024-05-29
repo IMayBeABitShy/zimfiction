@@ -38,7 +38,11 @@
         %}
             <TR>
                 <TH> {{ name }}</TH>
-                <TD>{{ stats|attr(key)|format_number }}</TD>
+                {% if not (stats|attr(key) is none) %}
+                    <TD>{{ stats|attr(key)|format_number }}</TD>
+                {% else %}
+                    <TD>N/A</TD>
+                {% endif %}
             </TR>
         {% endfor %}
     </TABLE>
