@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session, joinedload, subqueryload, raiseload
 from .renderer import HtmlRenderer
 from ..statistics import StoryListStatCreator
 from ..db.models import Story, Chapter, Tag, Author, Category, Publisher
-from ..db.models import StoryTagAssociation, StorySeriesAssociation, Series
+from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation, Series
 
 
 DEBUG_PERFOMANCE = False
@@ -323,7 +323,8 @@ class Worker(object):
                     joinedload(Story.author),
                     joinedload(Story.series_associations),
                     joinedload(Story.series_associations, StorySeriesAssociation.series),
-                    subqueryload(Story.categories),
+                    subqueryload(Story.category_associations),
+                    subqueryload(Story.category_associations, StoryCategoryAssociation.category),
                 )
             ).first()
             t1 = time.time()
@@ -399,7 +400,8 @@ class Worker(object):
             .where(Category.publisher_name == task.publisher, Category.name == task.name)
             .options(
                 # eager loading options
-                joinedload(Category.stories),
+                joinedload(Category.story_associations),
+                joinedload(Category.story_associations, StoryCategoryAssociation.story),
             )
         ).first()
         t1 = time.time()
@@ -451,7 +453,8 @@ class Worker(object):
             .options(
                 # eager loading options
                 joinedload(Publisher.categories),
-                joinedload(Publisher.categories, Category.stories),
+                joinedload(Publisher.categories, Category.story_associations),
+                joinedload(Publisher.categories, Category.story_associations, StoryCategoryAssociation.story),
             )
         ).first()
         t1 = time.time()
@@ -479,7 +482,7 @@ class Worker(object):
                     # eager loading options
                     subqueryload(Publisher.categories),
                     # joinedload(Publisher.categories, Category.stories),
-                    raiseload(Publisher.categories, Category.stories),
+                    raiseload(Publisher.categories, Category.story_associations),
                 )
             ).all()
             result = self.renderer.render_index(publishers=publishers)
@@ -495,7 +498,8 @@ class Worker(object):
                     # joinedload(Story.author),
                     # joinedload(Story.series_associations),
                     # joinedload(Story.series_associations, StorySeriesAssociation.series),
-                    subqueryload(Story.categories),
+                    subqueryload(Story.category_associations),
+                    subqueryload(Story.category_associations, StoryCategoryAssociation.category),
                 )
             ).all()
             stats = StoryListStatCreator.get_stats_from_iterable(stories)

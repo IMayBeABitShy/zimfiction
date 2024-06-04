@@ -109,7 +109,7 @@ SEARCH METADATA LAYOUT
 
 files:
 - search_header.json - header data
-- search_content_I.json - searh metadata of stories, I is index >= 0
+- search_content_I.json - search metadata of stories, I is index >= 0
 
 header:
 {
@@ -121,3 +121,20 @@ header:
     }
 }
 
+
+content:
+
+[
+    {
+        "publisher": ...,
+        "id": ...,
+        "updated": ...,
+        "words": ...,
+        "chapters": ...,
+        "score": ...,
+        "tags":  ...,
+        "implied_tags": ...,
+        "category_count": ...,
+    },
+    ...
+]
