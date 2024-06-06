@@ -78,6 +78,16 @@
                     </TD>
                 </TR>
             {% endif %}
+            {% if story.characters|length > 0 %}
+                <TR>
+                    <TH>Characters</TH>
+                    <TD>
+                        {% with to_root=to_root, tags=story.characters %}
+                            {% include "taglist.html.jinja" %}
+                        {% endwith %}
+                    </TD>
+                </TR>
+            {% endif %}
             {% if story.genres|length > 0 %}
                 <TR>
                     <TH>Tags</TH>

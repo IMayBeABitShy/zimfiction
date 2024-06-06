@@ -208,9 +208,12 @@ def normalize_relationship(tag):
     @return: the normalized relationship
     @rtype: L{str}
     """
-    tag = tag.replace(" / ", "/")
-    splitted = tag.split("/")
-    return " / ".join(sorted(splitted))
+    for sep in ("/", "&"):
+        if sep in tag:
+            tag = tag.replace(" {} ".format(sep), sep)
+        splitted = tag.split(sep)
+        tag = " {} ".format(sep).join(sorted(splitted))
+    return tag
 
 
 def get_resource_file_path(name):
