@@ -49,7 +49,8 @@ def convert_epub(path):
             got_title = False
             in_summary = False
             summary = ""
-            for rawline in html.splitlines():
+            all_lines = html.splitlines()
+            for line_i, rawline in enumerate(all_lines):
                 # clean line by removing some html
                 if not rawline.endswith("\n"):
                     # always have a trailing newline
@@ -61,6 +62,12 @@ def convert_epub(path):
                 line = line.replace("<div>", "").replace("<DIV>", "")  # note: do not replace <DIV class="...">
                 line = line.replace("</div>", "").replace("</DIV>", "")
                 line = line.replace("<br/>", "").replace("<BR/>", "").strip()
+
+                next_nonempty_rawline = ""
+                for next_rawline in all_lines[line_i + 1:]:
+                    if next_rawline.strip():
+                        next_nonempty_rawline = next_rawline
+                        break
 
                 if (not line) and (not in_summary):
                     continue
@@ -98,7 +105,7 @@ def convert_epub(path):
                 else:
                     # summary - ends with </body> or <br />
                     line_contains_br_end = (("<br/ >" in rawline.lower()[-10:]) or ("<br/>" in rawline.lower()[-10:]))
-                    if (line.lower() == "</body>") or line_contains_br_end:
+                    if (line.lower() == "</body>") or (line_contains_br_end and "<b>" in next_nonempty_rawline.lower()):
                         in_summary = False
                         if line_contains_br_end:
                             summary += rawline
