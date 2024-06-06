@@ -298,7 +298,7 @@ class ZimfictionSearch {
         var unescaped_impl_button_id = `search_implied_button_${field}_${value}`;
         var remove_button_id = `search_remove_button_${field}_${sanitized}`;
         var unescaped_remove_button_id = `search_remove_button_${field}_${value}`;
-        var li_html = `<LI class="search_criteria" id="${li_id}">${sanitized}<DIV class="criteria_buttons"><BUTTON id="${inc_button_id}" class="include_button">Include</BUTTON><BUTTON id="${impl_button_id}" class="implied_button">I</BUTTON><BUTTON id="${remove_button_id}" class="remove_button">X</BUTTON></DIV></LI>`;
+        var li_html = `<LI class="search_criteria" id="${li_id}">${sanitized}<DIV class="criteria_buttons"><BUTTON id="${inc_button_id}" class="include_button" title="Whether to find stories with or without this tag">Include</BUTTON><BUTTON id="${impl_button_id}" class="implied_button" title="Whether to only search explicitly mentioned tags or also implied oens">I</BUTTON><BUTTON id="${remove_button_id}" class="remove_button" title="Remove this search criteria">X</BUTTON></DIV></LI>`;
         ul.insertAdjacentHTML("beforeend", li_html);
         // wire up the elements
         var li = document.getElementById(unescaped_li_id);
