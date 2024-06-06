@@ -37,6 +37,15 @@ HR {
 
 /* story summary */
 
+.story_summary_div:not(.story_list_page_item .story_summary_div) {
+  /* story summary that's not part of the story list */
+  background: lightgrey;
+  border: 1px solid darkgray;
+  margin: 1em;
+  padding: 1em;
+  padding-bottom: 0em;
+}
+
 .story_summary_footer P {
   text-align: right;
 }
@@ -497,6 +506,11 @@ HR {
 /* mobile */
 
 @media only screen and (max-width: 920px) {
+  .story_summary_div:not(.story_list_page_item .story_summary_div) {
+    padding: 0.4em;
+    margin: initial;
+  }
+
   .category_long_list {
     columns: 1;
     -webkit-columns: 1;

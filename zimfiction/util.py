@@ -149,10 +149,10 @@ def format_number(n):
         return str(n)
     for fmt in ("", "K", "M", "B", "T", "Qa"):
         if n < 1000.0:
-            return "{:.1f}{}".format(round(n, 3), fmt)
+            return "{:.2f}{}".format(round(n, 3), fmt)
         else:
             n /= 1000.0
-    return "{:.1f}Qi".format(round(n, 2))
+    return "{:.2f}Qi".format(round(n, 2))
 
 
 def format_size(nbytes):
