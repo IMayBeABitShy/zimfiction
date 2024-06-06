@@ -87,7 +87,8 @@ def convert_epub(path):
                     # metadata
                     if line.lower() == "</body>":
                         # handle special case: no summary
-                        summary = "[No Summary]"
+                        if not summary:
+                            summary = "[No Summary]"
                         continue
                     if line.lower().startswith("summary"):
                         in_summary = True
@@ -95,9 +96,12 @@ def convert_epub(path):
                     else:
                         header.append(line)
                 else:
-                    # summary - ends with </body>
-                    if line.lower() == "</body>":
+                    # summary - ends with </body> or <br />
+                    line_contains_br_end = (("<br/ >" in rawline.lower()[-10:]) or ("<br/>" in rawline.lower()[-10:]))
+                    if (line.lower() == "</body>") or line_contains_br_end:
                         in_summary = False
+                        if line_contains_br_end:
+                            summary += rawline
                         continue
                     else:
                         summary += rawline

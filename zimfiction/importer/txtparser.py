@@ -144,6 +144,9 @@ def parse_txt_story(session, fin, force_publisher=None):
             elif key in (
                 "Chapters",
                 "Words",
+                "Word Count",
+                "Word count",
+                "Author",
             ):
                 # skip these
                 continue
@@ -158,7 +161,7 @@ def parse_txt_story(session, fin, force_publisher=None):
                 meta["url"] = value
             elif key == "Status":
                 meta["is_done"] = is_done_from_status(value)
-            elif key in ("Genre", "Erotica Tags"):
+            elif key in ("Genre", "Genres", "Erotica Tags"):
                 for tag in _split_tags(value):
                     add_to_dict_list(tags, "genre", tag)
             elif key == "Warnings":
@@ -170,6 +173,12 @@ def parse_txt_story(session, fin, force_publisher=None):
             elif key == "Relationships":
                 for tag in _split_tags(value):
                     add_to_dict_list(tags, "relationship", tag)
+            elif key in ("Chars/Pairs", "Characters/Pairing"):
+                for tag in _split_tags(value):
+                    if ("&" in tag) or ("/" in tag):
+                        add_to_dict_list(tags, "relationship", tag)
+                    else:
+                        add_to_dict_list(tags, "character", tag)
             elif key == "Series":
                 series_index = int(value[value.rfind("[")+1: value.rfind("]")])
                 series_name = value[:value.rfind("[") - 1]
