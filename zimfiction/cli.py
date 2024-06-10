@@ -106,7 +106,7 @@ def run_find_implications(ns):
         reporter = VoidReporter()
     engine = connect_to_db(ns)
     with Session(engine) as session:
-        implicator = get_default_implicator(session)
+        implicator = get_default_implicator(session, ao3_merger_path=ns.ao3_merger_path)
         add_all_implications(session, implicator, reporter=reporter)
     reporter.msg("Found {} implied tags.".format(implicator.n_tags_implied))
     reporter.msg("Found {} implied categories.".format(implicator.n_categories_implied))
@@ -200,6 +200,13 @@ def main():
         "database",
         action="store",
         help="database to store stories in, as sqlalchemy connection URL",
+    )
+    implication_parser.add_argument(
+        "--ao3-mergers",
+        action="store",
+        dest="ao3_merger_path",
+        default=None,
+        help="Path to a CSV file of ao3 tag info to extract merger information from",
     )
 
     # parser for the ZIM build

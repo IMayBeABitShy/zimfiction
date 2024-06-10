@@ -9,6 +9,7 @@ from ..reporter import BaseReporter, VoidReporter
 
 from .finder import ImplicationFinder
 from .relationships import RelationshipCharactersFinder
+from .ao3dumpfinder import Ao3MergerFinder
 
 
 class Implicator(object):
@@ -99,20 +100,24 @@ class Implicator(object):
             self.n_categories_implied += 1
 
 
-def get_default_implicator(session):
+def get_default_implicator(session, ao3_merger_path=None):
     """
     Return a L{Implicator} configured to use the default L{zimfiction.implication.finder.ImplicationFinder} implementations.
 
     @ivar session: session to add stories to
     @type session: L{sqlalchemy.orm.Session}
+    @param ao3_merger_path: if specified, a path to a CSV dump of ao3 tag info
+    @type ao3_merger_path: L{str} or L{None}
     @return: an implicator which uses a choosen set of implication finders
     @rtype: L{Implicator}
     """
+    finders = []
+    finders.append(RelationshipCharactersFinder())
+    if ao3_merger_path is not None:
+        finders.append(Ao3MergerFinder(ao3_merger_path))
     implicator = Implicator(
         session,
-        finders=[
-            RelationshipCharactersFinder(),
-        ],
+        finders=finders,
     )
     return implicator
 
