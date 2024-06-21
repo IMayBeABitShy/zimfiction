@@ -107,6 +107,10 @@ def run_find_implications(ns):
     engine = connect_to_db(ns)
     with Session(engine) as session:
         implicator = get_default_implicator(session, ao3_merger_path=ns.ao3_merger_path)
+        if ns.delete_existing:
+            reporter.msg("Deleting existing implications... ", end="")
+            implicator.delete_implications()
+            reporter.msg("Done.")
         add_all_implications(session, implicator, reporter=reporter)
     reporter.msg("Found {} implied tags.".format(implicator.n_tags_implied))
     reporter.msg("Found {} implied categories.".format(implicator.n_categories_implied))
@@ -200,6 +204,12 @@ def main():
         "database",
         action="store",
         help="database to store stories in, as sqlalchemy connection URL",
+    )
+    implication_parser.add_argument(
+        "--delete",
+        action="store_true",
+        dest="delete_existing",
+        help="delete existing implications",
     )
     implication_parser.add_argument(
         "--ao3-mergers",

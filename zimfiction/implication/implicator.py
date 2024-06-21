@@ -1,7 +1,7 @@
 """
 This module contains the L{Implicator}, which manages the implication detection.
 """
-from sqlalchemy import select, func
+from sqlalchemy import select, delete, func
 from sqlalchemy.orm import subqueryload
 
 from ..db.models import Story, StoryCategoryAssociation, StoryTagAssociation, Tag, Publisher, Category
@@ -52,6 +52,23 @@ class Implicator(object):
         """
         assert isinstance(finder, ImplicationFinder)
         self.finders.append(finder)
+
+    def delete_implications(self):
+        """
+        Delete existing implications.
+        """
+        # tags
+        stmt = (
+            delete(StoryTagAssociation)
+            .where(StoryTagAssociation.implied == True)
+        )
+        self.session.execute(stmt)
+        # categories
+        stmt = (
+            delete(StoryCategoryAssociation)
+            .where(StoryCategoryAssociation.implied == True)
+        )
+        self.session.execute(stmt)
 
     def process(self, story):
         """

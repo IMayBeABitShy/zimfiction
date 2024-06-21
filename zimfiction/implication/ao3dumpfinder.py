@@ -43,15 +43,20 @@ class Ao3MergerFinder(ImplicationFinder):
     @type tag2canon: L{dict} of (L{str}, L{str}) -> L{list} of (L{str}, L{str})
     @ivar tag_implications: a dict of canon (tagtype, tagname) -> list of other (tagtype, tagnames) of same tag
     @type tag_implications: L{dict} of (L{str}, L{str}) -> L{list} of (L{str}, L{str})
+    @ivar imply_all: if nonzero, each tag implies each variation
+    @type imply_all: L{bool}
     """
-    def __init__(self, path):
+    def __init__(self, path, imply_all=False):
         """
         The default constructor.
 
         @param path: path to the "tags" CSV file
         @type path: L{str}
+        @ivar imply_all: if nonzero, each tag implies each variation
+        @type imply_all: L{bool}
         """
         self.path = path
+        self.imply_all = imply_all
         self._load_mergers()
 
     def _load_mergers(self):
@@ -114,12 +119,16 @@ class Ao3MergerFinder(ImplicationFinder):
                 is_category = (tag_type in AO3_CATEGORY_TAG_TYPES)
                 if is_category:
                     category2canon[tag_name] = canon_tag_name
-                    add_to_dict_list(category_implications, canon_tag_name, tag_name)
+                    cur_tag_is_canon = (tag_name == canon_tag_name)
+                    if cur_tag_is_canon or self.imply_all:
+                        add_to_dict_list(category_implications, canon_tag_name, tag_name)
                 else:
                     converted_canon_tag_type = AO3_TYPE_TO_ZIMFICTION_TYPE[canon_tag_type]
                     converted_tag_type = AO3_TYPE_TO_ZIMFICTION_TYPE[tag_type]
                     tag2canon[(converted_tag_type, tag_name)] = (converted_canon_tag_type, canon_tag_name)
-                    add_to_dict_list(tag_implications, (converted_canon_tag_type, canon_tag_name), (converted_tag_type, tag_name))
+                    cur_tag_is_canon = ((tag_type, tag_name) == canon_tag_info)
+                    if cur_tag_is_canon or self.imply_all:
+                        add_to_dict_list(tag_implications, (converted_canon_tag_type, canon_tag_name), (converted_tag_type, tag_name))
         # finalize
         self.tag2canon = tag2canon
         self.tag_implications = tag_implications
