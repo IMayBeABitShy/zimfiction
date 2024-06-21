@@ -416,16 +416,35 @@ class Worker(object):
         """
         # get the category
         t0 = time.time()
-        category = self.session.scalars(
+        stmt = (
             select(Category)
-            .where(Category.publisher_name == task.publisher, Category.name == task.name)
-            .options(
-                # eager loading options
-                joinedload(Category.story_associations),
-                joinedload(Category.story_associations, StoryCategoryAssociation.story),
+            .where(
+                Category.publisher_name == task.publisher,
+                Category.name == task.name,
+            ).join(
+                StoryCategoryAssociation,
+                and_(
+                    StoryCategoryAssociation.category_publisher == Category.publisher_name,
+                    StoryCategoryAssociation.category_name == Category.name,
+                    StoryCategoryAssociation.implied == False,
+                ),
+            ).join(
+                Story,
+                and_(
+                    StoryCategoryAssociation.story_publisher == Story.publisher_name,
+                    StoryCategoryAssociation.story_id == Story.id,
+                    StoryCategoryAssociation.implied == False,
+                ),
+            ).options(
+                contains_eager(Category.story_associations),
+                contains_eager(Category.story_associations, StoryCategoryAssociation.story),
+                selectinload(Category.story_associations, StoryCategoryAssociation.story, Story.chapters),
             )
-        ).first()
+        )
+        category = self.session.scalars(stmt).first()
         t1 = time.time()
+        if category is None:
+            return RenderResult()
         result = self.renderer.render_category(category)
         t2 = time.time()
         self.outqueue.put(result)

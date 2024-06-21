@@ -1,6 +1,13 @@
 """
-An L{zimfiction.implication.finder.ImplicationFinder} for extracting characters from relationships.
+An L{zimfiction.implication.finder.ImplicationFinder} for extracting
+characters and sub-relationships from relationships.
+
+A relationship A/B/C will imply:
+    - characters A, B and C
+    - relationships A/B, B/C and A/C
 """
+import itertools
+
 from .finder import ImplicationFinder
 
 
@@ -19,10 +26,17 @@ class RelationshipCharactersFinder(ImplicationFinder):
             relationships.append(relationship.name)
         # split relationships
         characters = []
+        subrelationships = []
         for relationship in relationships:
             for sep in ("/", "&"):
                 if sep not in relationship:
                     continue
                 for character in relationship.split(sep):
                     characters.append(character.strip())
-        return [("character", c) for c in characters]
+                if relationship.count(sep) >= 2:
+                    # has subrelationships
+                    splitted_relationship = relationship.split(sep)
+                    for sr in itertools.combinations(splitted_relationship, 2):
+                        subrelationships.append(sep.join(sr))
+        implied_tags = [("character", c) for c in characters] + [("relationship", sr) for sr in subrelationships]
+        return implied_tags
