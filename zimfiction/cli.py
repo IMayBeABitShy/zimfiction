@@ -9,8 +9,10 @@ from sqlalchemy.orm import Session
 from fs import open_fs
 
 
+from .reporter import StdoutReporter, VoidReporter
 from .importer.importer import import_from_fs
 from .zimbuild.builder import ZimBuilder, BuildOptions
+from .implication.implicator import get_default_implicator, add_all_implications
 from .db.models import mapper_registry
 
 
@@ -89,6 +91,29 @@ def run_import(ns):
             )
             session.flush()
             session.commit()
+
+
+def run_find_implications(ns):
+    """
+    Run the find-implications command.
+
+    @param ns: namespace containing arguments
+    @type ns: L{argparse.Namespace}
+    """
+    if ns.verbose > 0:
+        reporter = StdoutReporter()
+    else:
+        reporter = VoidReporter()
+    engine = connect_to_db(ns)
+    with Session(engine) as session:
+        implicator = get_default_implicator(session, ao3_merger_path=ns.ao3_merger_path)
+        if ns.delete_existing:
+            reporter.msg("Deleting existing implications... ", end="")
+            implicator.delete_implications()
+            reporter.msg("Done.")
+        add_all_implications(session, implicator, reporter=reporter)
+    reporter.msg("Found {} implied tags.".format(implicator.n_tags_implied))
+    reporter.msg("Found {} implied categories.".format(implicator.n_categories_implied))
 
 
 def run_build(ns):
@@ -170,6 +195,30 @@ def main():
         help="directories to import from"
     )
 
+    # parser for the implication finder
+    implication_parser = subparsers.add_parser(
+        "find-implications",
+        help="Find implied tags and categories for the story",
+    )
+    implication_parser.add_argument(
+        "database",
+        action="store",
+        help="database to store stories in, as sqlalchemy connection URL",
+    )
+    implication_parser.add_argument(
+        "--delete",
+        action="store_true",
+        dest="delete_existing",
+        help="delete existing implications",
+    )
+    implication_parser.add_argument(
+        "--ao3-mergers",
+        action="store",
+        dest="ao3_merger_path",
+        default=None,
+        help="Path to a CSV file of ao3 tag info to extract merger information from",
+    )
+
     # parser for the ZIM build
     build_parser = subparsers.add_parser(
         "build",
@@ -203,6 +252,9 @@ def main():
     if ns.command == "import":
         # import from a database
         run_import(ns)
+    elif ns.command == "find-implications":
+        # find implied tags
+        run_find_implications(ns)
     elif ns.command == "build":
         # build a ZIM
         run_build(ns)

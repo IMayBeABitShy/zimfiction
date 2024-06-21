@@ -5,7 +5,7 @@
     {{ super() }}
     <META name="description" content="{{ chapter.story.summary|striptags }}">
     <META name="author" content="{{ chapter.story.author.name }}">
-    <META name="keywords" content="Chapters: {{ chapter.story.chapters|length }}, Type: Story, Words: {{ chapter.story.total_words }}, {{ chapter.story.tags|join(", ", attribute="name") }}">
+    <META name="keywords" content="Chapters: {{ chapter.story.chapters|length }}, Type: Story, Words: {{ chapter.story.total_words }}, {{ chapter.story.explicit_tags|join(", ", attribute="name") }}">
 {% endblock %}
 
 {% block title %}

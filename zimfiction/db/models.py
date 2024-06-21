@@ -5,7 +5,7 @@ This module contains the database models.
 # resource: https://stackoverflow.com/questions/7504753/relations-on-composite-keys-using-sqlalchemy
 
 from sqlalchemy.orm import registry, relationship, deferred
-from sqlalchemy import Column, ForeignKeyConstraint, Table, ForeignKey
+from sqlalchemy import Column, ForeignKeyConstraint, ForeignKey
 from sqlalchemy import Integer, String, DateTime, Boolean, UnicodeText, Unicode
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.orderinglist import ordering_list
@@ -34,26 +34,6 @@ MAX_CHAPTER_TITLE_LENGTH = 64
 MAX_CHAPTER_TEXT_LENGTH = 16 * 1024 * 1024
 MAX_AUTHOR_URL_LENGTH = 256
 MAX_TAG_TYPE_LENGTH = 32
-
-
-story_has_category_table = Table(
-    "story_has_category",
-    Base.metadata,
-    Column("story_publisher", String(MAX_SITE_LENGTH), nullable=False),
-    Column("story_id", Integer, nullable=False),
-    Column("category_publisher", String(MAX_SITE_LENGTH) , nullable=False),
-    Column("category_name", Unicode(MAX_CATEGORY_NAME_LENGTH)),
-    ForeignKeyConstraint(
-        ("story_publisher", "story_id"),
-        ("story.publisher_name", "story.id"),
-        ondelete="CASCADE",
-    ),
-    ForeignKeyConstraint(
-        ("category_publisher", "category_name"),
-        ("category.publisher_name", "category.name"),
-        ondelete="CASCADE",
-    ),
-)
 
 
 class Publisher(UniqueMixin, Base):
@@ -123,7 +103,15 @@ class Category(UniqueMixin, Base):
     publisher_name = Column(String(MAX_SITE_LENGTH), ForeignKey("publisher.name"), primary_key=True)
     name = Column(Unicode(MAX_CATEGORY_NAME_LENGTH), primary_key=True)
     publisher = relationship("Publisher", back_populates="categories")
-    stories = relationship("Story", secondary=story_has_category_table, back_populates="categories")
+    story_associations = relationship(
+        "StoryCategoryAssociation",
+        back_populates="category",
+        cascade="all, delete-orphan",
+    )
+    stories = association_proxy(
+        "story_associations",
+        "story",
+    )
 
     @classmethod
     def unique_hash(cls, publisher, name):
@@ -145,6 +133,54 @@ class Category(UniqueMixin, Base):
         @rtype: L{int}
         """
         return len(self.stories)
+
+
+class StoryCategoryAssociation(Base):
+    """
+    A model for the association story<->category providing the "implied" attribute.
+    """
+    __tablename__ = "story_has_category"
+
+    story_publisher = Column(String(MAX_SITE_LENGTH), primary_key=True)
+    story_id = Column(Integer, primary_key=True)
+    category_publisher = Column(String(MAX_SITE_LENGTH), primary_key=True)
+    category_name = Column(Unicode(MAX_CATEGORY_NAME_LENGTH), primary_key=True)
+    implied = Column(Boolean, default=False, nullable=False)
+
+    story = relationship(
+        "Story",
+        back_populates="category_associations",
+    )
+    category = relationship(
+        "Category",
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            [story_publisher, story_id],
+            ["story.publisher_name", "story.id"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            [category_publisher, category_name],
+            ["category.publisher_name", "category.name"],
+            ondelete="CASCADE",
+        ),
+    )
+
+    def __init__(self, category, implied=False):
+        """
+        The default constructor.
+
+        @param category: category this association is for
+        @type category: L{Category}
+        @param implied: whether this category is implied or not
+        @type implied: L{bool}
+        """
+        assert isinstance(category, Category)
+        assert isinstance(implied, bool)
+        self.category = category
+        self.implied = implied
 
 
 class Tag(UniqueMixin, Base):
@@ -181,7 +217,8 @@ class Tag(UniqueMixin, Base):
 
 class StoryTagAssociation(Base):
     """
-    A model for the association of story->tag, providing the "index" attribute for order.
+    A model for the association of story->tag, providing the "index"
+    attribute for order and the "implied" attribute.
     """
     __tablename__ = "story_has_tag"
 
@@ -190,6 +227,7 @@ class StoryTagAssociation(Base):
     tag_type = Column(Unicode(MAX_TAG_TYPE_LENGTH), primary_key=True)
     tag_name = Column(Unicode(MAX_STORY_TAG_LENGTH), primary_key=True)
     index = Column(Integer, autoincrement=False)
+    implied = Column(Boolean, default=False, nullable=False)
 
     story = relationship(
         "Story",
@@ -212,7 +250,7 @@ class StoryTagAssociation(Base):
         ),
     )
 
-    def __init__(self, tag, index=None):
+    def __init__(self, tag, index=None, implied=False):
         """
         The default constructor.
 
@@ -220,14 +258,18 @@ class StoryTagAssociation(Base):
         @type tag: L{Tag}
         @param index: index of this tag
         @type index: L{int} or L{None}
+        @param implied: wheteher this tag is implied or not
+        @type implied: L{bool}
         """
         assert isinstance(tag, Tag)
         assert isinstance(index, int) or (index is None)
+        assert isinstance(implied, bool)
         self.tag = tag
         if index is None:
             self.index = 0
         else:
             self.index = index
+        self.implied = implied
 
 
 class Series(UniqueMixin, Base):
@@ -345,7 +387,15 @@ class Story(Base):
     packaged = Column(DateTime, nullable=False)
     rating = Column(String(MAX_STORY_RATING_LENGTH), nullable=True)
     summary = Column(UnicodeText(MAX_STORY_SUMMARY_LENGTH), nullable=False)
-    categories = relationship("Category", secondary=story_has_category_table, back_populates="stories")
+    category_associations = relationship(
+        "StoryCategoryAssociation",
+        back_populates="story",
+        cascade="all, delete-orphan",
+    )
+    categories = association_proxy(
+        "category_associations",
+        "category",
+    )
     tag_associations = relationship(
         "StoryTagAssociation",
         back_populates="story",
@@ -398,14 +448,64 @@ class Story(Base):
         self.series_associations = []
 
     @property
+    def implied_categories(self):
+        """
+        A list of all implied categories.
+
+        @return: a list of all implied categories
+        @rtype: L{list} of L{Category}
+        """
+        return [c_a.category for c_a in self.category_associations if c_a.implied]
+
+    @property
+    def explicit_categories(self):
+        """
+        A list of all explicit (non-implied) categories.
+
+        @return: a list of all non-implied categories
+        @rtype: L{list} of L{Category}
+        """
+        return [c_a.category for c_a in self.category_associations if not c_a.implied]
+
+    @property
+    def implied_tags(self):
+        """
+        A list of all implied tags.
+
+        @return: a list of all implied tags, regardless of type
+        @rtype: L{list} of L{Tag}
+        """
+        return [t_a.tag for t_a in self.tag_associations if t_a.implied]
+
+    @property
+    def explicit_tags(self):
+        """
+        A list of all explicit (non-implied) tags.
+
+        @return: a list of all non-implied tags, regardless of type
+        @rtype: L{list} of L{Tag}
+        """
+        return [t_a.tag for t_a in self.tag_associations if not t_a.implied]
+
+    @property
     def warnings(self):
         """
-        A list of all warning tags.
+        A list of all explicit warning tags.
 
         @return: a list of all warning tags
         @rtype: L{list} of L{Tag}
         """
-        return [tag for tag in self.tags if tag.type == "warning"]
+        return [tag for tag in self.explicit_tags if tag.type == "warning"]
+
+    @property
+    def implied_warnings(self):
+        """
+        A list of all implied warning tags.
+
+        @return: a list of all implied warning tags
+        @rtype: L{list} of L{Tag}
+        """
+        return [tag for tag in self.implied_tags if tag.type == "warning"]
 
     @property
     def genres(self):
@@ -415,7 +515,17 @@ class Story(Base):
         @return: a list of all genre tags
         @rtype: L{list} of L{Tag}
         """
-        return [tag for tag in self.tags if tag.type == "genre"]
+        return [tag for tag in self.explicit_tags if tag.type == "genre"]
+
+    @property
+    def implied_genres(self):
+        """
+        A list of all implied genre tags.
+
+        @return: a list of all implied genre tags
+        @rtype: L{list} of L{Tag}
+        """
+        return [tag for tag in self.implied_tags if tag.type == "genre"]
 
     @property
     def relationships(self):
@@ -425,7 +535,17 @@ class Story(Base):
         @return: a list of all relationship tags
         @rtype: L{list} of L{Tag}
         """
-        return [tag for tag in self.tags if tag.type == "relationship"]
+        return [tag for tag in self.explicit_tags if tag.type == "relationship"]
+
+    @property
+    def implied_relationships(self):
+        """
+        A list of all relationship tags.
+
+        @return: a list of all implied relationship tags
+        @rtype: L{list} of L{Tag}
+        """
+        return [tag for tag in self.implied_tags if tag.type == "relationship"]
 
     @property
     def characters(self):
@@ -435,12 +555,22 @@ class Story(Base):
         @return: a list of all character tags
         @rtype: L{list} of L{Tag}
         """
-        return [tag for tag in self.tags if tag.type == "character"]
+        return [tag for tag in self.explicit_tags if tag.type == "character"]
+
+    @property
+    def implied_characters(self):
+        """
+        A list of all implied character tags.
+
+        @return: a list of all implied character tags
+        @rtype: L{list} of L{Tag}
+        """
+        return [tag for tag in self.implied_tags if tag.type == "character"]
 
     @property
     def ordered_tags(self):
         """
-        Return a list of all tags, ordered by type to match ao3.
+        Return a list of all explicit tags, ordered by type to match ao3.
 
         @return: an ordered list of all tags
         @rtype: L{list} of L{Tag}
@@ -503,11 +633,16 @@ class Story(Base):
         data = {
             "publisher": self.publisher.name,
             "id": self.id,
-            "categories": [c.name for c in self.categories],
+            "categories": [c.name for c in self.explicit_categories],
+            "implied_categories": [c.name for c in self.implied_categories],
             "tags": [t.name.lower() for t in self.genres],
+            "implied_tags": [t.name.lower() for t in self.implied_genres],
             "warnings": [t.name for t in self.warnings],
+            "implied_warnings": [t.name for t in self.implied_warnings],
             "relationships": [normalize_relationship(t.name) for t in self.relationships],
+            "implied_relationships": [normalize_relationship(t.name) for t in self.implied_relationships],
             "characters": [t.name for t in self.characters],
+            "implied_characters": [t.name for t in self.implied_characters],
             "updated": format_date(self.updated),
             "language": self.language,
             "status": self.status,

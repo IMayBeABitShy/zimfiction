@@ -14,7 +14,7 @@ try:
 except ImportError:
     minify_html = None
 
-from ..util import format_size, format_number, format_date, normalize_tag, get_resource_file_path
+from ..util import format_size, format_number, normalize_tag, get_resource_file_path
 from ..statistics import StoryListStatCreator
 from .buckets import BucketMaker
 from .search import SearchMetadataCreator
@@ -23,7 +23,7 @@ from .search import SearchMetadataCreator
 STORIES_PER_PAGE = 20
 CATEGORIES_PER_PAGE = 200
 CATEGORIES_ON_PUBLISHER_PAGE = 200
-SEARCH_ITEMS_PER_FILE = 50000
+SEARCH_ITEMS_PER_FILE = 35000
 MIN_STORIES_FOR_SEARCH = 5
 MAX_STORIES_FOR_SEARCH = float("inf")
 SEARCH_ONLY_ON_FIRST_PAGE = True
@@ -328,6 +328,11 @@ class HtmlRenderer(object):
         """
         result = RenderResult()
         bucketmaker = BucketMaker(STORIES_PER_PAGE)
+        # check if tag has no stories, in which case we exit early
+        # this can happen if a tag is only implied
+        # we are only looking for stories that explicitly feature this tag
+        if (tag.stories is None) or (len(tag.stories) == 0):
+            return result
         result.add(
             Redirect(
                 "tag/{}/{}/".format(tag.type, normalize_tag(tag.name)),
@@ -468,6 +473,11 @@ class HtmlRenderer(object):
         """
         result = RenderResult()
         bucketmaker = BucketMaker(STORIES_PER_PAGE)
+        # check if category has no stories, in which case we exit early
+        # this can happen if a category is only implied
+        # we are only looking for stories that explicitly feature this tag
+        if (category.stories is None) or (len(category.stories) == 0):
+            return result
         result.add(
             Redirect(
                 "category/{}/{}/".format(category.publisher.name, normalize_tag(category.name)),

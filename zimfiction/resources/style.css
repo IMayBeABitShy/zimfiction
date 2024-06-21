@@ -453,7 +453,7 @@ HR {
   padding: 0px;
 }
 
-.include_button, .remove_button {
+.include_button, .remove_button, .implied_button {
   border-radius: 0;
   border: 1px solid black;
   margin: 0px;

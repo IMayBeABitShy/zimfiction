@@ -294,19 +294,25 @@ class ZimfictionSearch {
         }
         var inc_button_id = `search_include_button_${field}_${sanitized}`;
         var unescaped_inc_button_id = `search_include_button_${field}_${value}`;
+        var impl_button_id = `search_implied_button_${field}_${sanitized}`;
+        var unescaped_impl_button_id = `search_implied_button_${field}_${value}`;
         var remove_button_id = `search_remove_button_${field}_${sanitized}`;
         var unescaped_remove_button_id = `search_remove_button_${field}_${value}`;
-        var li_html = `<LI class="search_criteria" id="${li_id}">${sanitized}<DIV class="criteria_buttons"><BUTTON id="${inc_button_id}" class="include_button">Include</BUTTON><BUTTON id="${remove_button_id}" class="remove_button">X</BUTTON></DIV></LI>`;
+        var li_html = `<LI class="search_criteria" id="${li_id}">${sanitized}<DIV class="criteria_buttons"><BUTTON id="${inc_button_id}" class="include_button" title="Whether to find stories with or without this tag">Include</BUTTON><BUTTON id="${impl_button_id}" class="implied_button" title="Whether to only search explicitly mentioned tags or also implied oens">I</BUTTON><BUTTON id="${remove_button_id}" class="remove_button" title="Remove this search criteria">X</BUTTON></DIV></LI>`;
         ul.insertAdjacentHTML("beforeend", li_html);
         // wire up the elements
         var li = document.getElementById(unescaped_li_id);
         var inc_button = document.getElementById(unescaped_inc_button_id);
+        var impl_button = document.getElementById(unescaped_impl_button_id);
         var remove_button = document.getElementById(unescaped_remove_button_id);
         li.criteria_field = field;
         li.criteria_value = value;
         li.criteria_include = true;
+        li.criteria_implied = true;
         inc_button.addEventListener("click", this.on_include_button_click);
         inc_button.target_id = unescaped_li_id;
+        impl_button.addEventListener("click", this.on_implied_button_click);
+        impl_button.target_id = unescaped_li_id;
         remove_button.addEventListener("click", this.on_remove_button_click);
         remove_button.target_id = unescaped_li_id;
     }
@@ -326,6 +332,21 @@ class ZimfictionSearch {
         event.preventDefault();
     }
 
+    on_implied_button_click(event) {
+        // called when the implied/explicit toggle button was clicked
+        var element = event.target;
+        var target = document.getElementById(element.target_id);
+        var cur_state = target.criteria_implied;
+        if (cur_state) {
+            element.innerHTML = "E";
+            target.criteria_implied = false;
+        } else {
+            element.innerHTML = "I";
+            target.criteria_implied = true;
+        }
+        event.preventDefault();
+    }
+
     on_remove_button_click(event) {
         // called when the remove button was clicked
         var element = event.target;
@@ -336,11 +357,11 @@ class ZimfictionSearch {
     }
 
     get_search_criterias() {
-        // return a list of tuples of (field, value, include) of all search criterias
+        // return a list of tuples of (field, value, include, implied) of all search criterias
         var criterias = [];
         var elements = document.getElementsByClassName("search_criteria");
         for (const element of elements) {
-            var criteria = [element.criteria_field, element.criteria_value, element.criteria_include];
+            var criteria = [element.criteria_field, element.criteria_value, element.criteria_include, element.criteria_implied];
             criterias.push(criteria);
         }
         return criterias;
@@ -388,8 +409,8 @@ class ZimfictionSearch {
 
     resolve_criterias(criterias) {
         // resolve a list of criterias to tag ids
-        // criterias should be a list of [[field, value, include], ...]
-        // returns a list of [[tag_id, include], ...], sorted.
+        // criterias should be a list of [[field, value, include, implied], ...]
+        // returns a list of [[tag_id, include, implied], ...], sorted.
         // returns null if search is invalid
 
         // resolve tag ids
@@ -399,6 +420,7 @@ class ZimfictionSearch {
             var field = criteria[0];
             var value = criteria[1];
             var include = criteria[2];
+            var implied = criteria[3];
             // check if criteria is valid
             if (!obj_has_key(all_tag_ids, field)) {
                 console.log("Error: No such field: '" + field + "'!");
@@ -410,7 +432,7 @@ class ZimfictionSearch {
             }
             // resolve
             var tag_id = all_tag_ids[field][value];
-            resolved.push([tag_id, include]);
+            resolved.push([tag_id, include, implied]);
         }
         // sort by first element
         resolved.sort((a, b) => (a[0] - b[0]));
@@ -464,14 +486,25 @@ class ZimfictionSearch {
         // we could use indexes and sort order to check this more efficiently
         // but for now, lets just use a simple loop
         var tag_ids = story["tags"]
+        var implied_tag_ids = story["implied_tags"];
         for (const criteria of resolved_criterias) {
             var tag_id = criteria[0];
             var include = criteria[1];
+            var implied = criteria[2];
             if (tag_ids.includes(tag_id)){
                 if (!include) {
+                    // has tag but we filter by exclude
+                    return false;
+                }
+            } else if (implied && implied_tag_ids.includes(tag_id)) {
+                // story does not explicitly have tags
+                // but we should search implied tags and an implied tag has it
+                if (!include) {
+                    // tag is implied but we filter by exclude
                     return false;
                 }
             } else if (include) {
+                // does not have tag but is required
                 return false;
             }
         }

@@ -6,7 +6,7 @@ import re
 
 from ..util import add_to_dict_list, count_words
 from ..db.models import Story, Chapter, Author, Category, Tag, Series, Publisher
-from ..db.models import StoryTagAssociation, StorySeriesAssociation
+from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation
 from ..exceptions import ParseError
 
 
@@ -258,12 +258,6 @@ def parse_txt_story(session, fin, force_publisher=None):
         name=meta["author"],
         url=meta["author url"]
     )
-    if "series" in meta:
-        meta["series"] = Series.as_unique(
-            session,
-            publisher=publisher,
-            name=meta["series"],
-        )
     if "category" not in meta:
         # sometimes there are stories without categories
         # We instead put it in a special one
@@ -271,15 +265,6 @@ def parse_txt_story(session, fin, force_publisher=None):
     # split categories
     categories = _split_categories(meta["category"])
     del meta["category"]
-    # convert categories into objects
-    meta["categories"] = [
-        Category.as_unique(
-            session,
-            publisher=publisher,
-            name=c,
-        )
-        for c in categories
-    ]
     if "summary" not in meta:
         meta["summary"] = ""
     if "language" not in meta:
@@ -305,6 +290,14 @@ def parse_txt_story(session, fin, force_publisher=None):
     story = Story(
         **meta,
     )
+    # link categories
+    for category_name in categories:
+        story.category_associations.append(
+            StoryCategoryAssociation(
+                Category.as_unique(session, publisher=publisher, name=category_name),
+                implied=False,
+            ),
+        )
     # link tags
     tag_i = 0
     for tagtype in tags.keys():
@@ -313,6 +306,7 @@ def parse_txt_story(session, fin, force_publisher=None):
                 StoryTagAssociation(
                     Tag.as_unique(session, type=tagtype, name=tagname),
                     index=tag_i,
+                    implied=False,
                 ),
             )
             tag_i += 1

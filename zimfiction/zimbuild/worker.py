@@ -13,13 +13,13 @@ take the results and add them to the creator.
 """
 import time
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload, subqueryload, raiseload
+from sqlalchemy import select, and_
+from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, contains_eager
 
-from .renderer import HtmlRenderer
+from .renderer import HtmlRenderer, RenderResult
 from ..statistics import StoryListStatCreator
 from ..db.models import Story, Chapter, Tag, Author, Category, Publisher
-from ..db.models import StoryTagAssociation, StorySeriesAssociation, Series
+from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation, Series
 
 
 DEBUG_PERFOMANCE = False
@@ -323,7 +323,8 @@ class Worker(object):
                     joinedload(Story.author),
                     joinedload(Story.series_associations),
                     joinedload(Story.series_associations, StorySeriesAssociation.series),
-                    subqueryload(Story.categories),
+                    subqueryload(Story.category_associations),
+                    subqueryload(Story.category_associations, StoryCategoryAssociation.category),
                 )
             ).first()
             t1 = time.time()
@@ -342,18 +343,39 @@ class Worker(object):
         @type task: L{TagRenderTask}
         """
         # get the tag
+        # only load non-implied tag associations
         t0 = time.time()
-        story = self.session.scalars(
+        stmt = (
             select(Tag)
-            .where(Tag.type == task.tag_type, Tag.name == task.tag_name)
-            .options(
-                # eager loading options
-                joinedload(Tag.story_associations),
-                joinedload(Tag.story_associations, StoryTagAssociation.story),
+            .where(
+                Tag.type == task.tag_type,
+                Tag.name == task.tag_name,
+            ).join(
+                StoryTagAssociation,
+                and_(
+                    StoryTagAssociation.tag_type == Tag.type,
+                    StoryTagAssociation.tag_name == Tag.name,
+                    StoryTagAssociation.implied == False,
+                ),
+            ).join(
+                Story,
+                and_(
+                    StoryTagAssociation.story_publisher == Story.publisher_name,
+                    StoryTagAssociation.story_id == Story.id,
+                    StoryTagAssociation.implied == False,
+                ),
+            ).options(
+                contains_eager(Tag.story_associations),
+                contains_eager(Tag.story_associations, StoryTagAssociation.story),
+                selectinload(Tag.story_associations, StoryTagAssociation.story, Story.chapters),
             )
-        ).first()
+        )
+        # print(stmt); time.sleep(2); raise Exception()  # DEBUG
+        tag = self.session.scalars(stmt).first()
+        if tag is None:
+            return RenderResult()
         t1 = time.time()
-        result = self.renderer.render_tag(story)
+        result = self.renderer.render_tag(tag)
         t2 = time.time()
         self.outqueue.put(result)
         t3 = time.time()
@@ -394,15 +416,35 @@ class Worker(object):
         """
         # get the category
         t0 = time.time()
-        category = self.session.scalars(
+        stmt = (
             select(Category)
-            .where(Category.publisher_name == task.publisher, Category.name == task.name)
-            .options(
-                # eager loading options
-                joinedload(Category.stories),
+            .where(
+                Category.publisher_name == task.publisher,
+                Category.name == task.name,
+            ).join(
+                StoryCategoryAssociation,
+                and_(
+                    StoryCategoryAssociation.category_publisher == Category.publisher_name,
+                    StoryCategoryAssociation.category_name == Category.name,
+                    StoryCategoryAssociation.implied == False,
+                ),
+            ).join(
+                Story,
+                and_(
+                    StoryCategoryAssociation.story_publisher == Story.publisher_name,
+                    StoryCategoryAssociation.story_id == Story.id,
+                    StoryCategoryAssociation.implied == False,
+                ),
+            ).options(
+                contains_eager(Category.story_associations),
+                contains_eager(Category.story_associations, StoryCategoryAssociation.story),
+                selectinload(Category.story_associations, StoryCategoryAssociation.story, Story.chapters),
             )
-        ).first()
+        )
+        category = self.session.scalars(stmt).first()
         t1 = time.time()
+        if category is None:
+            return RenderResult()
         result = self.renderer.render_category(category)
         t2 = time.time()
         self.outqueue.put(result)
@@ -451,7 +493,8 @@ class Worker(object):
             .options(
                 # eager loading options
                 joinedload(Publisher.categories),
-                joinedload(Publisher.categories, Category.stories),
+                joinedload(Publisher.categories, Category.story_associations),
+                joinedload(Publisher.categories, Category.story_associations, StoryCategoryAssociation.story),
             )
         ).first()
         t1 = time.time()
@@ -479,7 +522,7 @@ class Worker(object):
                     # eager loading options
                     subqueryload(Publisher.categories),
                     # joinedload(Publisher.categories, Category.stories),
-                    raiseload(Publisher.categories, Category.stories),
+                    raiseload(Publisher.categories, Category.story_associations),
                 )
             ).all()
             result = self.renderer.render_index(publishers=publishers)
@@ -495,7 +538,8 @@ class Worker(object):
                     # joinedload(Story.author),
                     # joinedload(Story.series_associations),
                     # joinedload(Story.series_associations, StorySeriesAssociation.series),
-                    subqueryload(Story.categories),
+                    subqueryload(Story.category_associations),
+                    subqueryload(Story.category_associations, StoryCategoryAssociation.category),
                 )
             ).all()
             stats = StoryListStatCreator.get_stats_from_iterable(stories)

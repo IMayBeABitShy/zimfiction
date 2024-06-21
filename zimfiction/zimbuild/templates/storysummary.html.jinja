@@ -6,7 +6,7 @@
         {% if not extended %}
             <P class="story_updated_text">{{ story.updated|format_date }}</P>
             <DIV class="story_short_categories">
-                {% with categories=story.categories, to_root=to_root %}
+                {% with categories=story.explicit_categories, to_root=to_root %}
                     {% include "categorylist.html.jinja" %}
                 {% endwith %}
             </DIV>
@@ -73,6 +73,16 @@
                     <TH>Relationships</TH>
                     <TD>
                         {% with to_root=to_root, tags=story.relationships %}
+                            {% include "taglist.html.jinja" %}
+                        {% endwith %}
+                    </TD>
+                </TR>
+            {% endif %}
+            {% if story.characters|length > 0 %}
+                <TR>
+                    <TH>Characters</TH>
+                    <TD>
+                        {% with to_root=to_root, tags=story.characters %}
                             {% include "taglist.html.jinja" %}
                         {% endwith %}
                     </TD>
