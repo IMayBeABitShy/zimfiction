@@ -35,7 +35,7 @@ class RelationshipCharactersFinder(ImplicationFinder):
                     characters.append(character.strip())
                 if relationship.count(sep) >= 2:
                     # has subrelationships
-                    splitted_relationship = relationship.split(sep)
+                    splitted_relationship = [e.strip() for e in relationship.split(sep)]
                     for sr in itertools.combinations(splitted_relationship, 2):
                         subrelationships.append(sep.join(sr))
         implied_tags = [("character", c) for c in characters] + [("relationship", sr) for sr in subrelationships]

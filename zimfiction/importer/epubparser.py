@@ -10,6 +10,8 @@ import tempfile
 import io
 import os
 
+from html import unescape as html_unescape
+
 import html2text
 import ebooklib
 from ebooklib import epub
@@ -56,7 +58,7 @@ def convert_epub(path):
                     # always have a trailing newline
                     # will be removed from "line" later on
                     rawline += "\n"
-                line = rawline
+                line = html_unescape(rawline)
                 line = line.replace("<b>", "").replace("<B>", "")
                 line = line.replace("</b>", "").replace("</B>", "")
                 line = line.replace("<div>", "").replace("<DIV>", "")  # note: do not replace <DIV class="...">
@@ -147,7 +149,7 @@ def convert_epub(path):
                 chapter_title = "Chapter {}".format(chapter_index)
             else:
                 chapter_title_match = CHAPTER_TITLE_REGEX.search(html)
-                chapter_title = chapter_title_match.group(1)
+                chapter_title = html_unescape(chapter_title_match.group(1))
             pages.append((chapter_index, chapter_title, chapter_text))
 
     # parsing complete, output txt
