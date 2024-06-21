@@ -328,6 +328,11 @@ class HtmlRenderer(object):
         """
         result = RenderResult()
         bucketmaker = BucketMaker(STORIES_PER_PAGE)
+        # check if tag has no stories, in which case we exit early
+        # this can happen if a tag is only implied
+        # we are only looking for stories that explicitly feature this tag
+        if (tag.stories is None) or (len(tag.stories) == 0):
+            return result
         result.add(
             Redirect(
                 "tag/{}/{}/".format(tag.type, normalize_tag(tag.name)),
