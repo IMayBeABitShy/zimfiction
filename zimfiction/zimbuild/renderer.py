@@ -441,6 +441,14 @@ class HtmlRenderer(object):
         bucket = bucketmaker.finish()
         if bucket is not None:
             pages.append(bucket)
+        if not pages:
+            # for some reason, it can happen that an author does not
+            # have any associated stories. This is most likely a bug
+            # probably somewhere in the import
+            # Until that one is fixed, we need to ensure that there's
+            # always at least on (perhaps empty) page for each author
+            # otherwise some redirects and links won't work correctly
+            pages.append([])
         stats = stat_creator.get_stats()
         for i, stories in enumerate(pages, start=1):
             page = list_page_template.render(

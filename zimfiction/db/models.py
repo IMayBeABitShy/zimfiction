@@ -20,20 +20,36 @@ Base = mapper_registry.generate_base()
 
 
 # various constants
-MAX_SITE_LENGTH = 32
-MAX_AUTHOR_NAME_LENGTH = 128
-MAX_CATEGORY_NAME_LENGTH = 256
-MAX_STORY_TITLE_LENGTH = 256
-MAX_STORY_TAG_LENGTH = 256
-MAX_STORY_RATING_LENGTH = 16
-MAX_STORY_SUMMARY_LENGTH = 2 * 1024
-MAX_STORY_URL_LENGTH = 256
-MAX_STORY_SERIES_LENGTH = 256
-MAX_LANGUAGE_LENGTH = 16
-MAX_CHAPTER_TITLE_LENGTH = 64
+MAX_SITE_LENGTH = 64
+MAX_AUTHOR_NAME_LENGTH = 256
+MAX_CATEGORY_NAME_LENGTH = 1024
+MAX_STORY_TITLE_LENGTH = 1024
+MAX_STORY_TAG_LENGTH = 512
+MAX_STORY_RATING_LENGTH = 32
+MAX_STORY_SUMMARY_LENGTH = 4 * 1024
+MAX_STORY_URL_LENGTH = 512
+MAX_STORY_SERIES_LENGTH = 512
+MAX_LANGUAGE_LENGTH = 32
+MAX_CHAPTER_TITLE_LENGTH = 512
 MAX_CHAPTER_TEXT_LENGTH = 16 * 1024 * 1024
-MAX_AUTHOR_URL_LENGTH = 256
+MAX_AUTHOR_URL_LENGTH = 1024
 MAX_TAG_TYPE_LENGTH = 32
+
+
+def _get_longtext_type(max_length=None):
+    """
+    A helper function returning the type definition for a long, variable
+    size text.
+
+    This method is used so that we can quickly change the code to use
+    or ignore the "max_length" type.
+
+    @param max_length: max length for the text
+    @type max_length: L{int} or L{None}
+    @return: a type that can be used as argument for L{sqlalchemy.Column}
+    @rtype:
+    """
+    return UnicodeText
 
 
 class Publisher(UniqueMixin, Base):
@@ -386,7 +402,7 @@ class Story(Base):
     updated = Column(DateTime, nullable=False)
     packaged = Column(DateTime, nullable=False)
     rating = Column(String(MAX_STORY_RATING_LENGTH), nullable=True)
-    summary = Column(UnicodeText(MAX_STORY_SUMMARY_LENGTH), nullable=False)
+    summary = Column(_get_longtext_type(MAX_STORY_SUMMARY_LENGTH), nullable=False)
     category_associations = relationship(
         "StoryCategoryAssociation",
         back_populates="story",
@@ -672,7 +688,7 @@ class Chapter(Base):
     )
     index = Column(Integer, primary_key=True, nullable=False, autoincrement=False)
     title = Column(Unicode(MAX_CHAPTER_TITLE_LENGTH), nullable=False)
-    text = deferred(Column(UnicodeText(MAX_CHAPTER_TEXT_LENGTH), nullable=False))
+    text = deferred(Column(_get_longtext_type(MAX_CHAPTER_TEXT_LENGTH), nullable=False))
     num_words = Column(Integer, nullable=False)
 
     __table_args__ = (
