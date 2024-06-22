@@ -3,6 +3,7 @@ This module contains functionality to create the search metadata.
 """
 import math
 
+from ..util import set_or_increment
 from .buckets import BucketMaker
 
 
@@ -33,6 +34,7 @@ class SearchMetadataCreator(object):
         self._max_page_size = max_page_size
         self._raw_search_metadata = []
         self._tag_ids = None
+        self._amounts = {}
 
     def feed(self, story):
         """
@@ -53,6 +55,7 @@ class SearchMetadataCreator(object):
         """
         cur_i = 0
         tag_ids = {f: {} for f in self._SEARCH_FIELDS if not f.startswith("implied_")}  # field -> {tag -> id}
+        amounts = {}
         for item in self._raw_search_metadata:
             for fieldname in self._SEARCH_FIELDS:
                 outkey = fieldname.replace("implied_", "")
@@ -63,9 +66,14 @@ class SearchMetadataCreator(object):
                     tags = [tags]
                 for tag in tags:
                     if tag not in tag_ids[outkey]:
-                        tag_ids[outkey][tag] = cur_i
+                        tag_id = cur_i
                         cur_i += 1
+                        tag_ids[outkey][tag] = tag_id
+                    else:
+                        tag_id = tag_ids[outkey][tag]
+                    set_or_increment(amounts, tag_id, 1)
         self._tag_ids = tag_ids
+        self._amounts = amounts
 
     def get_search_header(self):
         """
@@ -80,6 +88,7 @@ class SearchMetadataCreator(object):
         header = {}
         header["num_pages"] = math.ceil(len(self._raw_search_metadata) / self._max_page_size)
         header["tag_ids"] = self._tag_ids
+        header["amounts"] = self._amounts
         return header
 
     def iter_search_pages(self):

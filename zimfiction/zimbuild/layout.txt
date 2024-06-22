@@ -118,6 +118,9 @@ header:
         field (e.g. warnings): {
             tagname: tag_id,
         }
+    },
+    "amounts": {
+        tag_id: amount,
     }
 }
 

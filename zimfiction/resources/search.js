@@ -79,6 +79,7 @@ class ZimfictionSearch {
         this.set_status("Initializing...");
         this.header = null;
         this.results = [];
+        this.field2tags = {};  // field name -> possible tags for this field
     }
 
     async start() {
@@ -91,6 +92,7 @@ class ZimfictionSearch {
             // search not available, exiting
             return;
         }
+        this.init_autocomplete_values();
         this.install_autocomplete();
         this.set_search_enabled(true);
         this.set_status("Search is ready.");
@@ -271,9 +273,26 @@ class ZimfictionSearch {
             var elementid = "search_input_" + field;
             var element = document.getElementById(elementid);
             element.search_object = this;  // so we can handle events here
-            var values = this.get_possible_values_for(field);
-            values.sort();
+            var values = this.field2tags[field];
             autocomplete(element, values);
+        }
+    }
+
+    init_autocomplete_values() {
+        // populate this.field2tags with the autocomplete values
+        this.field2tags = {};
+        for (const field of FIELDS) {
+            this.field2tags[field] = this.get_possible_values_for(field);
+        }
+        this.update_autocomplete_values();
+    }
+
+    update_autocomplete_values() {
+        // update the autocomplete values (e.g. by ordering them by current occurences)
+        for (const field of FIELDS) {
+            // TODO: order by occurences
+            // problem: current best idea would take way too long
+            this.field2tags[field].sort();
         }
     }
 
@@ -723,6 +742,32 @@ class ZimfictionSearch {
             a[j] = t;
         }
     }
+
+    get_occurences_of(field, name) {
+        // return the number of occurences a tag has in the current result set
+        // if there are no results, return the general number of occurences
+        var tag_id = this.header["tag_ids"][field][name];
+        if (this.results.length > 0) {
+            // get amount from result set
+            var n = 0;
+            for (const story of this.results) {
+                if (story["tags"].includes(tag_id) || story["implied_tags"].includes(tag_id)) {
+                    n++;
+                }
+            }
+            return n;
+        } else {
+            // get base amount
+            return this.header["amounts"][tag_id];
+        }
+    }
+
+    get_occurences_for_autocomplete(inp, value) {
+        // return the number of occurences for a specific autocomplete value
+        var id = inp.id;
+        var field = id.replace("search_input_", "");
+        return this.get_occurences_of(field, value);
+    }
 }
 
 // autocomplete logic
@@ -754,7 +799,7 @@ function autocomplete(inp, arr) {
                 b = document.createElement("DIV");
                /*make the matching letters bold:*/
                b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
-               b.innerHTML += arr[i].substr(val.length);
+               b.innerHTML += arr[i].substr(val.length) + " (" + inp.search_object.get_occurences_for_autocomplete(inp, arr[i]) + ")";
                /*insert a input field that will hold the current array item's value:*/
                // b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
                b.autocomplete_value = arr[i];
