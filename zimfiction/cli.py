@@ -13,6 +13,7 @@ from .reporter import StdoutReporter, VoidReporter
 from .importer.importer import import_from_fs
 from .zimbuild.builder import ZimBuilder, BuildOptions
 from .implication.implicator import get_default_implicator, add_all_implications
+from .exporter.exporter import Exporter, get_dumper
 from .db.models import mapper_registry
 
 
@@ -132,6 +133,24 @@ def run_build(ns):
     builder.build(ns.outpath, options=build_options)
 
 
+def run_export(ns):
+    """
+    Run the export command.
+
+    @param ns: namespace containing arguments
+    @type ns: L{argparse.Namespace}
+    """
+    if ns.verbose > 0:
+        reporter = StdoutReporter()
+    else:
+        reporter = VoidReporter()
+    dumper = get_dumper(ns.format)
+    engine = connect_to_db(ns)
+    with Session(engine) as session:
+        exporter = Exporter(session, dumper=dumper, reporter=reporter)
+        exporter.export_to(ns.directory, criteria=True)
+
+
 def main():
     """
     The main function.
@@ -227,7 +246,7 @@ def main():
     build_parser.add_argument(
         "database",
         action="store",
-        help="database to store stories in, as sqlalchemy connection URL",
+        help="database to load stories from, as sqlalchemy connection URL",
     )
     build_parser.add_argument(
         "outpath",
@@ -247,6 +266,29 @@ def main():
         help="use this many non-zim workers",
     )
 
+    # parser for the non-ZIM export
+    export_parser = subparsers.add_parser(
+        "export",
+        help="export stories",
+    )
+    export_parser.add_argument(
+        "database",
+        action="store",
+        help="database to load stories from, as sqlalchemy connection URL",
+    )
+    export_parser.add_argument(
+        "directory",
+        action="store",
+        help="directory to write stories to",
+    )
+    export_parser.add_argument(
+        "-f",
+        "--format",
+        action="store",
+        default="txt",
+        help="Format to export stories as",
+    )
+
     ns = parser.parse_args()
 
     if ns.command == "import":
@@ -258,6 +300,9 @@ def main():
     elif ns.command == "build":
         # build a ZIM
         run_build(ns)
+    elif ns.command == "export":
+        # export stories
+        run_export(ns)
     else:
         raise RuntimeError("Unknown subcommand: {}".format(ns.command))
 

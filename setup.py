@@ -26,6 +26,7 @@ setup(
         "zimfiction.importer",
         "zimfiction.implication",
         "zimfiction.zimbuild",
+        "zimfiction.exporter",
         ],
     include_package_data=True,
     install_requires=[

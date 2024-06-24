@@ -22,13 +22,13 @@ def _split_tags(s):
     @return:: the list of tags
     @rtype: L{list} of L{str}
     """
-    tags = set()
+    tags = []
     splitted = s.split(",")
     for e in splitted:
         e = e.strip()
-        if e:
-            tags.add(e)
-    return list(tags)
+        if e and (e not in tags):
+            tags.append(e)
+    return tags
 
 
 def _split_categories(s):
@@ -40,16 +40,16 @@ def _split_categories(s):
     @return:: the list of categories
     @rtype: L{list} of L{str}
     """
-    categories = set()
+    categories = []
     splitted = s.split(",")
     for e in splitted:
         e = e.strip()
         subsplit = e.split(" > ")  # some sites use a hierarchy
         for i in range(len(subsplit)):
             c = " > ".join(subsplit[:i+1])
-            if c:
-                categories.add(c)
-    return list(categories)
+            if c and (c not in categories):
+                categories.append(c)
+    return categories
 
 
 def parse_txt_story(session, fin, force_publisher=None):

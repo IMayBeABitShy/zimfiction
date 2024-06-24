@@ -417,7 +417,7 @@ class Story(Base):
         back_populates="story",
         cascade="all, delete-orphan",
         collection_class=ordering_list("index"),
-        order_by="StoryTagAssociation.index"
+        order_by="StoryTagAssociation.index",
     )
     tags = association_proxy(
         "tag_associations",
