@@ -39,7 +39,7 @@ from ..util import format_timedelta, format_size, get_resource_file_path, format
 from ..db.models import Story, Tag, Author, Category, Series, Publisher
 from ..db.unique import set_unique_enabled
 from ..reporter import StdoutReporter
-from .renderer import HtmlPage, Redirect, JsonObject, Script
+from .renderer import HtmlPage, Redirect, JsonObject, Script, RenderOptions
 from .worker import Worker, StopTask, StoryRenderTask, TagRenderTask
 from .worker import AuthorRenderTask, CategoryRenderTask, SeriesRenderTask
 from .worker import PublisherRenderTask, EtcRenderTask
@@ -344,6 +344,9 @@ class BuildOptions(object):
     @type use_threads: L{bool}
     @ivar num_workers: number of (non-zim) workers to use
     @type num_workers: L{int}
+
+    @ivar include_external_links: whether the ZIM should contain external links or not
+    @type include_external_links: L{bool}
     """
     def __init__(
         self,
@@ -357,6 +360,8 @@ class BuildOptions(object):
 
         use_threads=False,
         num_workers=None,
+
+        include_external_links=False,
         ):
         """
         The default constructor.
@@ -376,10 +381,13 @@ class BuildOptions(object):
         @param indexing: whether indexing should be enabled or not
         @type indexing: L{bool}
 
-        @ivar use_threads: if nonzero, use threads instead of processes
+        @param use_threads: if nonzero, use threads instead of processes
         @type use_threads: L{bool}
-        @ivar num_workers: number of (non-zim) workers to use (None -> auto)
+        @param num_workers: number of (non-zim) workers to use (None -> auto)
         @type num_workers: L{int} or L{None}
+
+        @param include_external_links: whether the ZIM should contain external links or not
+        @type include_external_links: L{bool}
         """
         self.name = name
         self.title = title
@@ -394,6 +402,8 @@ class BuildOptions(object):
             self.num_workers = get_n_cores()
         else:
             self.num_workers = int(num_workers)
+
+        self.include_external_links = include_external_links
 
     def get_metadata_dict(self):
         """
@@ -423,6 +433,18 @@ class BuildOptions(object):
             "Scraper": "zimfiction",
         }
         return metadata
+
+    def get_render_options(self):
+        """
+        Return the render options the renderer should use.
+
+        @return: options for the renderer
+        @rtype: L{zimfiction.zimbuild.renderer.RenderOptions}
+        """
+        options = RenderOptions(
+            include_external_links=self.include_external_links,
+        )
+        return options
 
 
 class ZimBuilder(object):
@@ -702,6 +724,7 @@ class ZimBuilder(object):
         n_workers = options.num_workers
 
         worker_class = (threading.Thread if options.use_threads else multiprocessing.Process)
+        render_options = options.get_render_options()
 
         # start workers
         self.reporter.msg("     -> Starting workers... ", end="")
@@ -710,6 +733,9 @@ class ZimBuilder(object):
             worker = worker_class(
                 name="Content worker {}".format(i),
                 target=self._worker_process,
+                kwargs={
+                    "render_options": render_options,
+                },
             )
             worker.daemon = True
             worker.start()
@@ -844,12 +870,15 @@ class ZimBuilder(object):
                             # unknown result object
                             raise RuntimeError("Unknown render result: {}".format(type(rendered_object)))
 
-    def _worker_process(self):
+    def _worker_process(self, render_options):
         """
         This method will be executed as a worker process.
 
         The workers take tasks from the inqueue, process them and add
         the result to the outqueue.
+
+        @param render_options: options for the renderer
+        @type render_options: L{zimfiction.zimbuild.renderer.RenderOptions}
         """
         # before starting the worker, clean up engine connections
         self.engine.dispose(close=False)
@@ -860,6 +889,7 @@ class ZimBuilder(object):
             inqueue=self.inqueue,
             outqueue=self.outqueue,
             engine=self.engine,
+            options=render_options,
         )
         worker.run()
 

@@ -129,6 +129,7 @@ def run_build(ns):
     build_options = BuildOptions(
         use_threads=ns.threaded,
         num_workers=ns.workers,
+        include_external_links=ns.include_external_links,
     )
     builder.build(ns.outpath, options=build_options)
 
@@ -264,6 +265,12 @@ def main():
         type=int,
         default=None,
         help="use this many non-zim workers",
+    )
+    build_parser.add_argument(
+        "--no-external-links",
+        action="store_false",
+        dest="include_external_links",
+        help="do not include external links to the works",
     )
 
     # parser for the non-ZIM export

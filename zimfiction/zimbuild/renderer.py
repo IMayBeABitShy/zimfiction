@@ -206,22 +206,53 @@ class RenderResult(object):
             yield obj
 
 
+class RenderOptions(object):
+    """
+    Options for the renderer.
+
+    @ivar include_external_links: whether external links should be included
+    @type include_external_links: L{bool}
+    """
+    def __init__(self, include_external_links=False):
+        """
+        The default constructor.
+
+        @param include_external_links: whether external links should be included
+        @type include_external_links: L{bool}
+        """
+        self.include_external_links = include_external_links
+
+
 class HtmlRenderer(object):
     """
     The HTML renderer renders HTML pages for various objects.
 
     @ivar environment: the jinja2 environment used to render templates
     @type environment: L{jinja2.environment}
+    @ivar options: render options
+    @type options: L{RenderOptions}
     """
-    def __init__(self):
+    def __init__(self, options):
         """
         The default constructor.
+
+        @param options: render options
+        @type options: L{RenderOptions}
         """
+        assert isinstance(options, RenderOptions)
+        self.options = options
+
+        # setup jinja environment
         self.environment = Environment(
             loader=PackageLoader("zimfiction.zimbuild"),
             auto_reload=False,
             autoescape=select_autoescape(),
         )
+
+        # configure environment globals
+        self.environment.globals["options"] = self.options
+
+        # configure filters
         self.environment.filters["render_storytext"] = self._render_storytext_filter
         self.environment.filters["format_number"] = format_number
         self.environment.filters["format_size"] = format_size

@@ -12,6 +12,12 @@
         {% include "storyliststats.html.jinja" %}
     {% endwith %}
     <HR>
+    {% if options.include_external_links %}
+        <DIV class="author_org_link_div">
+            <A class="external_link" href="{{ author.url }}">{{ author.name }} on {{ author.publisher.name }}</A>
+        </DIV>
+        <HR>
+    {% endif %}
     {% for story in stories %}
         <DIV class="story_list_page_item">
             {% with story=story, to_root=to_root, extended=False %}

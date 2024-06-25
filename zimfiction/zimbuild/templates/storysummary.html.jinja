@@ -46,6 +46,12 @@
                 <TH>Rating</TH>
                 <TD>{{ story.rating|title if p is not none else "Unknown"}}</TD>
             </TR>
+            {% if options.include_external_links %}
+            <TR>
+                <TH>URL</TH>
+                <TD><A class="external_link" href="{{ story.url }}">Link</A></TD>
+            </TR>
+            {% endif %}
             <TR>
                 <TH>Published</TH>
                 <TD>{{ story.published|format_date }}</TD>

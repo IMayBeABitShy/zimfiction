@@ -467,6 +467,11 @@ HR {
   font-weight: bolder;
 }
 
+/* author */
+.author_org_link_div .external_link {
+    margin-left: 1em;
+}
+
 /* css code for autocomplete from https://www.w3schools.com/howto/howto_js_autocomplete.asp */
 
 .autocomplete {

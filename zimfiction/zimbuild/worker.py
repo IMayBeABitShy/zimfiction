@@ -228,7 +228,7 @@ class Worker(object):
     @ivar session: database session
     @type session: L{sqlalchemy.orm.Session}
     """
-    def __init__(self, inqueue, outqueue, engine):
+    def __init__(self, inqueue, outqueue, engine, options):
         """
         The default constructor.
 
@@ -238,13 +238,15 @@ class Worker(object):
         @type outqueue: L{multiprocessing.Queue}
         @param engine: engine used for database connection. Be sure to dispose the connection pool first!
         @type engine: L{sqlalchemy.engine.Engine}
+        @param options: options for the renderer
+        @type options: L{zimfiction.zimbuild.renderer.RenderOptions}
         """
         self.inqueue = inqueue
         self.outqueue = outqueue
         self.engine = engine
 
         self.session = Session(engine)
-        self.renderer = HtmlRenderer()
+        self.renderer = HtmlRenderer(options=options)
 
     def run(self):
         """
