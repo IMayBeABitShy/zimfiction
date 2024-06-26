@@ -80,6 +80,7 @@ class ZimfictionSearch {
         this.header = null;
         this.results = [];
         this.field2tags = {};  // field name -> possible tags for this field
+        this.amounts = null;  // mapping of tag_id -> number of occurences
     }
 
     async start() {
@@ -126,6 +127,7 @@ class ZimfictionSearch {
         }
         console.log("Successfully retrieved search header.");
         this.header = json;
+        this.amounts = this.header["amounts"];
         return true;
     }
 
@@ -211,6 +213,7 @@ class ZimfictionSearch {
             return;
         }
         this.apply_sort(sort_order);
+        this.update_autocomplete_values();
         this.set_status("" + this.results.length + " Results");
         this.display_result_page(1);
         // finish
@@ -290,10 +293,14 @@ class ZimfictionSearch {
     update_autocomplete_values() {
         // update the autocomplete values (e.g. by ordering them by current occurences)
         for (const field of FIELDS) {
-            // TODO: order by occurences
-            // problem: current best idea would take way too long
-            this.field2tags[field].sort();
+            this.field2tags[field].sort((a, b, fieldname=field) => this.autocomplete_sort_function(fieldname, a, b));
         }
+    }
+
+    autocomplete_sort_function(fieldname, a, b) {
+        // a sort function for ordering the fields in an autocomplete field
+        // by occurences
+        return (this.get_occurences_of(fieldname, b) - this.get_occurences_of(fieldname, a))
     }
 
     on_autocomplete(inp, value) {
@@ -462,6 +469,7 @@ class ZimfictionSearch {
         // return a list of all stories that match the specified criterias
         // expects the result of resolve_criterias() as an argument
         var results = [];
+        var amounts = {};
         // the stories are grouped together in multiple files
         // iterate over each file
         var cur_file = 0;
@@ -490,11 +498,20 @@ class ZimfictionSearch {
             for (const story of body) {
                 if (this.does_story_match_criterias(story, resolved_criterias, range_criterias)) {
                     results.push(story);
+                    // update amounts
+                    for (const tag_id of story["tags"]) {
+                        if (obj_has_key(amounts, tag_id)) {
+                            amounts[tag_id] = amounts[tag_id] + 1;
+                        } else {
+                            amounts[tag_id] = 1;
+                        }
+                    }
                 }
             }
 
             cur_file += 1;
         }
+        this.amounts = amounts;
         return results;
     }
 
@@ -749,13 +766,11 @@ class ZimfictionSearch {
         var tag_id = this.header["tag_ids"][field][name];
         if (this.results.length > 0) {
             // get amount from result set
-            var n = 0;
-            for (const story of this.results) {
-                if (story["tags"].includes(tag_id) || story["implied_tags"].includes(tag_id)) {
-                    n++;
-                }
+            if (obj_has_key(this.amounts, tag_id)) {
+                return this.amounts[tag_id];
+            } else {
+                return 0;
             }
-            return n;
         } else {
             // get base amount
             return this.header["amounts"][tag_id];
