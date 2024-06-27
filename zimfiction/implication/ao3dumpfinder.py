@@ -35,6 +35,8 @@ class Ao3MergerFinder(ImplicationFinder):
     An ImplicationFinder finding implied tags using AO3's merger IDs from
     their oficial dumps.
 
+    @ivar path: path to the "tags" CSV file
+    @type path: L{str}
     @ivar category2canon: a dict of category name -> canon category name unless category has no variations
     @type category2canon: L{dict} of L{str} -> L{str}
     @ivar category_implications: a dict of canon category name -> other category names of same category
@@ -70,7 +72,7 @@ class Ao3MergerFinder(ImplicationFinder):
             reader = csv.reader(fin)
             for row in reader:
                 if row[0] == "id":
-                    # first line contains filed names
+                    # first line contains column names
                     continue
                 tag_id, tag_type, tag_name, is_canonical, cached_count, merger_id = row
                 if not tag_name:
