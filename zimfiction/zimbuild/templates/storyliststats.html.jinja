@@ -33,13 +33,25 @@
                 ("Average amount of tags per story", "average_tag_count"),
                 ("Number of unique series", "series_count"),
                 ("Total number of series tags", "total_series_count"),
+                ("Oldest published story", "min_date_published"),
+                ("Youngest published story", "max_date_published"),
+                ("Average publishing date", "average_date_published"),
+                ("Oldest story update", "min_date_updated"),
+                ("Youngest story update", "max_date_updated"),
+                ("Average story update", "average_date_updated"),
 
             ]
         %}
             <TR>
                 <TH> {{ name }}</TH>
                 {% if not (stats|attr(key) is none) %}
-                    <TD>{{ stats|attr(key)|format_number }}</TD>
+                    <TD>
+                        {% if stats|attr(key) is date %}
+                            {{ stats|attr(key)|format_date }}
+                        {% else %}
+                            {{ stats|attr(key)|format_number }}
+                        {% endif %}
+                    </TD>
                 {% else %}
                     <TD>N/A</TD>
                 {% endif %}

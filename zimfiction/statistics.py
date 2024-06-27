@@ -1,6 +1,7 @@
 """
 Module for evaluating statistics.
 """
+import datetime
 
 
 def zerodiv(a, b):
@@ -113,19 +114,46 @@ class UniqueCounter(Counter):
         return len(self._encountered)
 
 
-class _StatCreator(object):
+class DatetimeCounter(Counter):
     """
-    A base class for generating statistics incrementally.
+    An extension of L{Counter} for gathering min, mac and average datetime-.
     """
+    def __init__(self):
+        Counter.__init__(self)
+        self.min = None
+        self.max = None
+        self.sum = 0
+
     def feed(self, element):
         """
         Process an element.
 
         @param element: element to process
-        @type element: any
+        @type element: L{datetime.datetime}
         """
-        pass
+        assert isinstance(element, datetime.datetime)
+        Counter.feed(self, element)
+        timestamp = element.timestamp()
+        self.sum += timestamp
+        self.min = (element if self.min is None else min(self.min, element))
+        self.max = (element if self.max is None else max(self.max, element))
 
+    @property
+    def average(self):
+        """
+        The average date.
+
+        @return: the average date of the elements
+        @rtype: L{datetime.datetime}
+        """
+        avg_timestamp = zerodiv(self.sum, self.count)
+        return datetime.datetime.fromtimestamp(avg_timestamp)
+
+
+class _StatCreator(object):
+    """
+    A base class for generating statistics incrementally.
+    """
     @classmethod
     def from_iterable(cls, iterable):
         """
@@ -229,6 +257,20 @@ class StoryListStats(_Stats):
     @type series_count: L{int}
     @ivar total_series_count: total (non-unique) number of series encountered
     @type total_series_count: L{int}
+
+    @ivar min_date_published: date of oldest published story
+    @type min_date_published: L{datetime.datetime}
+    @ivar max_date_published: date of youngest published story
+    @type max_date_published: L{datetime.datetime}
+    @ivar average_date_published: average day of story publishing
+    @type average_date_published: L{datetime.datetime}
+
+    @ivar min_date_updated: date of oldest story update
+    @type min_date_updated: L{datetime.datetime}
+    @ivar max_date_updated: date of youngest story update
+    @type max_date_updated: L{datetime.datetime}
+    @ivar average_date_updated: average day of story update
+    @type average_date_updated: L{datetime.datetime}
     """
     def __init__(
         self,
@@ -255,6 +297,14 @@ class StoryListStats(_Stats):
 
         series_count,
         total_series_count,
+
+        min_date_published,
+        max_date_published,
+        average_date_published,
+
+        min_date_updated,
+        max_date_updated,
+        average_date_updated,
     ):
         """
         The default constructor.
@@ -300,6 +350,20 @@ class StoryListStats(_Stats):
         @type series_count: L{int}
         @param total_series_count: total (non-unique) number of series encountered
         @type total_series_count: L{int}
+
+        @param min_date_published: date of oldest published story
+        @type min_date_published: L{datetime.datetime}
+        @param max_date_published: date of youngest published story
+        @type max_date_published: L{datetime.datetime}
+        @param average_date_published: average day of story publishing
+        @type average_date_published: L{datetime.datetime}
+
+        @param min_date_updated: date of oldest story update
+        @type min_date_updated: L{datetime.datetime}
+        @param max_date_updated: date of youngest story update
+        @type max_date_updated: L{datetime.datetime}
+        @param average_date_updated: average day of story update
+        @type average_date_updated: L{datetime.datetime}
         """
         self.story_count = story_count
         self.total_words = total_words
@@ -332,6 +396,14 @@ class StoryListStats(_Stats):
         self.series_count = series_count
         self.total_series_count = total_series_count
 
+        self.min_date_published = min_date_published
+        self.max_date_published = max_date_published
+        self.average_date_published = average_date_published
+
+        self.min_date_updated = min_date_updated
+        self.max_date_updated = max_date_updated
+        self.average_date_updated = average_date_updated
+
 
 
 class StoryListStatCreator(_StatCreator):
@@ -346,6 +418,8 @@ class StoryListStatCreator(_StatCreator):
         self._tag_counter = UniqueCounter()
         self._author_counter = UniqueCounter()
         self._series_counter = UniqueCounter()
+        self._published_counter = DatetimeCounter()
+        self._updated_counter = DatetimeCounter()
 
     def feed(self, element):
         """
@@ -368,6 +442,8 @@ class StoryListStatCreator(_StatCreator):
         self._author_counter.feed((story.author.publisher.name, story.author.name))
         for series in story.series:
             self._series_counter.feed((story.publisher.name, series.name))
+        self._published_counter.feed(story.published)
+        self._updated_counter.feed(story.updated)
 
     def get_stats(self):
         """
@@ -400,5 +476,13 @@ class StoryListStatCreator(_StatCreator):
 
             series_count=self._series_counter.unique_count,
             total_series_count=self._series_counter.count,
+
+            min_date_published = self._published_counter.min,
+            max_date_published = self._published_counter.max,
+            average_date_published = self._published_counter.average,
+
+            min_date_updated = self._updated_counter.min,
+            max_date_updated = self._updated_counter.max,
+            average_date_updated = self._updated_counter.average,
         )
         return stats

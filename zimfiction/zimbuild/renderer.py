@@ -3,6 +3,7 @@ The renderer generates HTML pages.
 """
 import urllib.parse
 import json
+import datetime
 
 import htmlmin
 import mistune
@@ -259,6 +260,9 @@ class HtmlRenderer(object):
         self.environment.filters["normalize_tag"] = self._normalize_tag
         self.environment.filters["format_date"] = self._format_date
         self.environment.filters["first_elements"] = self._first_elements
+
+        # configure tests
+        self.environment.tests["date"] = self._is_date
 
     @staticmethod
     def minify_html(s):
@@ -799,4 +803,17 @@ class HtmlRenderer(object):
         @rtype: L{list}
         """
         return list(value)[:n]
+
+    # =========== tests ===============
+
+    def _is_date(self, obj):
+        """
+        Return True if obj is a date or datetime.
+
+        @param obj: object to check
+        @type obj: any
+        @return: True if obj is a date or datetime
+        @rtype: L{bool}
+        """
+        return isinstance(obj, (datetime.date, datetime.datetime))
 
