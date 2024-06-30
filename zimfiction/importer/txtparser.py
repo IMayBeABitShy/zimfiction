@@ -80,6 +80,7 @@ def parse_txt_story(session, fin, force_publisher=None):
     publisher = None
 
     for line in (fin if not isinstance(fin, str) else fin.splitlines(keepends=True)):
+        line = line.replace("\x00", "")  # some database dislikes such strings
         if not in_body:
             # process header
             line = line.strip()
