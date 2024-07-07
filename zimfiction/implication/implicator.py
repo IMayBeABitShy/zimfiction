@@ -1,15 +1,19 @@
 """
 This module contains the L{Implicator}, which manages the implication detection.
 """
-from sqlalchemy import select, delete, func
+from sqlalchemy import select, delete, tuple_
 from sqlalchemy.orm import subqueryload
 
 from ..db.models import Story, StoryCategoryAssociation, StoryTagAssociation, Tag, Publisher, Category
 from ..reporter import BaseReporter, VoidReporter
+from ..zimbuild.buckets import BucketMaker
 
 from .finder import ImplicationFinder
 from .relationships import RelationshipCharactersFinder
 from .ao3dumpfinder import Ao3MergerFinder
+
+
+STORIES_PER_QUERY = 1000
 
 
 class Implicator(object):
@@ -155,26 +159,41 @@ def add_all_implications(session, implicator, reporter=None):
     if reporter is None:
         reporter = VoidReporter()
 
-    # find amount of stories
-    n_stories = session.execute(
-        select(func.count(Story.id))
-    ).scalar_one()
-    # find stories
-    stories = session.scalars(
-        select(Story)
-        .options(
-            # eager loading options
-            # as it turns out, lazyloading is simply the fastest... This seems wrong...
-            subqueryload(Story.category_associations),
-            subqueryload(Story.category_associations, StoryCategoryAssociation.category),
-        )
-    ).all()
-    # feed stories into implicator and commit them
+    # find story ids
+    reporter.msg("Loading storiy ids... ", end="")
+    id_bucket_maker = BucketMaker(maxsize=STORIES_PER_QUERY)
+    select_story_ids_stmt = select(Story.publisher_name, Story.id)
+    result = session.execute(select_story_ids_stmt)
+    n_stories = 0
+    story_id_groups = []
+    for story in result:
+        n_stories += 1
+        bucket = id_bucket_maker.feed((story.publisher_name, story.id))
+        if bucket is not None:
+            story_id_groups.append(bucket)
+    bucket = id_bucket_maker.finish()
+    if bucket is not None:
+        story_id_groups.append(bucket)
+    reporter.msg("Done.")
+
+    # process stories
     with reporter.with_progress("Finding implications... ", max=n_stories, unit="stories") as bar:
-        for i, story in enumerate(stories):
-            implicator.process(story)
-            session.add(story)
-            if i % 1000 == 0:
-                session.commit()
-            bar.advance(1)
-        session.commit()
+        for story_id_group in story_id_groups:
+            # load stories group-wise
+            stories = session.scalars(
+                select(Story)
+                .where(tuple_(Story.publisher_name, Story.id).in_(story_id_group))
+                .options(
+                    # eager loading options
+                    # as it turns out, lazyloading is simply the fastest... This seems wrong...
+                    subqueryload(Story.category_associations),
+                    subqueryload(Story.category_associations, StoryCategoryAssociation.category),
+                )
+            ).all()
+            # feed stories to the implicator
+            for story in stories:
+                implicator.process(story)
+                session.add(story)
+                bar.advance(1)
+            session.commit()
+    reporter.msg("Done.")

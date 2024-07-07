@@ -100,8 +100,11 @@ class Ao3MergerFinder(ImplicationFinder):
         category2canon = {}  # same as above, but using categoryname
         tag_implications = {}
         category_implications = {}
-        for canon_tag_id, tag_group in canonical2variations.items():
+        canon_tag_ids = list(canonical2variations.keys())
+        while canon_tag_ids:
             # each taggroup contains all tag ids that imply each other
+            canon_tag_id = canon_tag_ids.pop(0)
+            tag_group = canonical2variations[canon_tag_id]
             if len(tag_group) <= 1:
                 # group contains no implications
                 # only the tag itself
@@ -147,20 +150,20 @@ class Ao3MergerFinder(ImplicationFinder):
             tag_info = (tag.type, tag.name)
             try:
                 canon_tag_info = self.tag2canon[tag_info]
+                other_tags = self.tag_implications[canon_tag_info]
             except KeyError:
                 # no tag implications
                 continue
-            other_tags = self.tag_implications[canon_tag_info]
             for other_tag in other_tags:
                 new_tags.append(other_tag)
         # process implicit tags
         for tag_info in implied_tags:
             try:
                 canon_tag_info = self.tag2canon[tag_info]
+                other_tags = self.tag_implications[canon_tag_info]
             except KeyError:
                 # no tag implications
                 continue
-            other_tags = self.tag_implications[canon_tag_info]
             for other_tag in other_tags:
                 new_tags.append(other_tag)
         return new_tags
