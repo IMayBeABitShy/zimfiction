@@ -402,7 +402,7 @@ class Story(Base):
     updated = Column(DateTime, nullable=False)
     packaged = Column(DateTime, nullable=False)
     rating = Column(String(MAX_STORY_RATING_LENGTH), nullable=True)
-    summary = Column(_get_longtext_type(MAX_STORY_SUMMARY_LENGTH), nullable=False)
+    summary = deferred(Column(_get_longtext_type(MAX_STORY_SUMMARY_LENGTH), nullable=False))
     category_associations = relationship(
         "StoryCategoryAssociation",
         back_populates="story",

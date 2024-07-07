@@ -14,7 +14,7 @@ take the results and add them to the creator.
 import time
 
 from sqlalchemy import select, and_
-from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, contains_eager
+from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, contains_eager, undefer
 
 from .renderer import HtmlRenderer, RenderResult
 from ..statistics import StoryListStatCreator
@@ -370,6 +370,7 @@ class Worker(object):
                 contains_eager(Tag.story_associations),
                 contains_eager(Tag.story_associations, StoryTagAssociation.story),
                 selectinload(Tag.story_associations, StoryTagAssociation.story, Story.chapters),
+                undefer(Tag.story_associations, StoryTagAssociation.story, Story.summary),
             )
         )
         # print(stmt); time.sleep(2); raise Exception()  # DEBUG
@@ -398,7 +399,7 @@ class Worker(object):
             .where(Author.publisher_name == task.publisher, Author.name == task.name)
             .options(
                 # eager loading options
-                joinedload(Author.stories),
+                joinedload(Author.stories).undefer(Story.summary),
             )
         ).first()
         t1 = time.time()
@@ -441,6 +442,7 @@ class Worker(object):
                 contains_eager(Category.story_associations),
                 contains_eager(Category.story_associations, StoryCategoryAssociation.story),
                 selectinload(Category.story_associations, StoryCategoryAssociation.story, Story.chapters),
+                undefer(Category.story_associations, StoryCategoryAssociation.story, Story.summary),
             )
         )
         category = self.session.scalars(stmt).first()
@@ -469,7 +471,7 @@ class Worker(object):
             .options(
                 # eager loading options
                 joinedload(Series.story_associations),
-                joinedload(Series.story_associations, StorySeriesAssociation.story),
+                joinedload(Series.story_associations, StorySeriesAssociation.story).undefer(Story.summary),
             )
         ).first()
         t1 = time.time()
