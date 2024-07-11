@@ -347,6 +347,9 @@ class BuildOptions(object):
 
     @ivar include_external_links: whether the ZIM should contain external links or not
     @type include_external_links: L{bool}
+
+    @ivar skip_stories: debug option to not render stories
+    @type skip_stories: L{bool}
     """
     def __init__(
         self,
@@ -362,6 +365,8 @@ class BuildOptions(object):
         num_workers=None,
 
         include_external_links=False,
+
+        skip_stories=False,
         ):
         """
         The default constructor.
@@ -388,6 +393,9 @@ class BuildOptions(object):
 
         @param include_external_links: whether the ZIM should contain external links or not
         @type include_external_links: L{bool}
+
+        @param skip_stories: debug option to not render stories
+        @type skip_stories: L{bool}
         """
         self.name = name
         self.title = title
@@ -404,6 +412,8 @@ class BuildOptions(object):
             self.num_workers = int(num_workers)
 
         self.include_external_links = include_external_links
+
+        self.skip_stories = skip_stories
 
     def get_metadata_dict(self):
         """
@@ -605,22 +615,25 @@ class ZimBuilder(object):
         """
         self.reporter.msg("Adding content...")
         # --- stories ---
-        self.reporter.msg(" -> Adding stories...")
-        self.reporter.msg("     -> Finding stories... ", end="")
-        n_stories = self.session.execute(
-            select(func.count(Story.id))
-        ).scalar_one()
-        self.reporter.msg("found {} stories.".format(n_stories))
-        n_story_tasks = math.ceil(n_stories / STORIES_PER_TASK)
-        with self._run_stage(
-            creator=creator,
-            options=options,
-            task_name="Adding stories...",
-            n_tasks=n_story_tasks,
-            task_unit="stories",
-            task_multiplier=STORIES_PER_TASK,
-        ):
-            self._send_story_tasks()
+        if not options.skip_stories:
+            self.reporter.msg(" -> Adding stories...")
+            self.reporter.msg("     -> Finding stories... ", end="")
+            n_stories = self.session.execute(
+                select(func.count(Story.id))
+            ).scalar_one()
+            self.reporter.msg("found {} stories.".format(n_stories))
+            n_story_tasks = math.ceil(n_stories / STORIES_PER_TASK)
+            with self._run_stage(
+                creator=creator,
+                options=options,
+                task_name="Adding stories...",
+                n_tasks=n_story_tasks,
+                task_unit="stories",
+                task_multiplier=STORIES_PER_TASK,
+            ):
+                self._send_story_tasks()
+        else:
+            self.reporter.msg(" -> Skipping stories!")
         # --- tags ---
         self.reporter.msg(" -> Adding tags...")
         self.reporter.msg("     -> Finding tags... ", end="")

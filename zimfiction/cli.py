@@ -130,6 +130,7 @@ def run_build(ns):
         use_threads=ns.threaded,
         num_workers=ns.workers,
         include_external_links=ns.include_external_links,
+        skip_stories=ns.skip_stories,
     )
     builder.build(ns.outpath, options=build_options)
 
@@ -271,6 +272,12 @@ def main():
         action="store_false",
         dest="include_external_links",
         help="do not include external links to the works",
+    )
+    build_parser.add_argument(
+        "--debug-skip-stories",
+        action="store_true",
+        dest="skip_stories",
+        help="do not include stories (debug option)",
     )
 
     # parser for the non-ZIM export
