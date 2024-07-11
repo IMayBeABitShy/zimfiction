@@ -11,13 +11,12 @@ take the results and add them to the creator.
 @var MARKER_TASK_COMPLETED: a symbolic constant put into the output queue when a task was completed
 @type MARKER_TASK_COMPLETED: L{str}
 """
-import time
-
 from sqlalchemy import select, and_
 from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, contains_eager, undefer
 
 from .renderer import HtmlRenderer, RenderResult
 from ..statistics import StoryListStatCreator
+from ..util import ensure_iterable
 from ..db.models import Story, Chapter, Tag, Author, Category, Publisher
 from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation, Series
 
@@ -264,10 +263,7 @@ class Worker(object):
         """
         running = True
         while running:
-            t0 = time.time()  # DEBUG
             task = self.inqueue.get(block=True)
-            if DEBUG_PERFOMANCE:
-                print(f"Got task in {time.time() - t0}s")  # DEBUG
 
             if task.type == "stop":
                 # stop the worker
@@ -304,6 +300,17 @@ class Worker(object):
         self.session.close()
         self.engine.dispose()
 
+    def handle_result(self, result):
+        """
+        Handle a renderer result, putting it in the outqueue.
+
+        @param result: result to handle
+        @type result: L{zimfiction.zimbuild.renderer.RenderResult} or iterable of it
+        """
+        it = ensure_iterable(result)
+        for subresult in it:
+            self.outqueue.put(subresult)
+
     def process_story_task(self, task):
         """
         Process a received story task.
@@ -313,7 +320,7 @@ class Worker(object):
         """
         for publisher, story_id in task.story_ids:
             # get the story
-            t0 = time.time()
+
             story = self.session.scalars(
                 select(Story)
                 .where(Story.publisher_name == publisher, Story.id == story_id)
@@ -329,13 +336,8 @@ class Worker(object):
                     subqueryload(Story.category_associations, StoryCategoryAssociation.category),
                 )
             ).first()
-            t1 = time.time()
             result = self.renderer.render_story(story)
-            t2 = time.time()
-            self.outqueue.put(result)
-            t3 = time.time()
-            if DEBUG_PERFOMANCE:
-                print(f"Got story in {t1-t0}s, rendered it in {t2-t1}s and put it in outqueue in {t3-t2}s (total: {t3-t0}s)")
+            self.handle_result(result)
 
     def process_tag_task(self, task):
         """
@@ -346,7 +348,6 @@ class Worker(object):
         """
         # get the tag
         # only load non-implied tag associations
-        t0 = time.time()
         stmt = (
             select(Tag)
             .where(
@@ -376,14 +377,10 @@ class Worker(object):
         # print(stmt); time.sleep(2); raise Exception()  # DEBUG
         tag = self.session.scalars(stmt).first()
         if tag is None:
-            return RenderResult()
-        t1 = time.time()
-        result = self.renderer.render_tag(tag)
-        t2 = time.time()
-        self.outqueue.put(result)
-        t3 = time.time()
-        if DEBUG_PERFOMANCE:
-            print(f"Got tag in {t1-t0}s, rendered it in {t2-t1}s and put it in outqueue in {t3-t2}s (total: {t3-t0}s)")
+            result = RenderResult()
+        else:
+            result = self.renderer.render_tag(tag)
+        self.handle_result(result)
 
     def process_author_task(self, task):
         """
@@ -393,7 +390,6 @@ class Worker(object):
         @type task: L{AuthorRenderTask}
         """
         # get the author
-        t0 = time.time()
         author = self.session.scalars(
             select(Author)
             .where(Author.publisher_name == task.publisher, Author.name == task.name)
@@ -402,13 +398,8 @@ class Worker(object):
                 joinedload(Author.stories).undefer(Story.summary),
             )
         ).first()
-        t1 = time.time()
         result = self.renderer.render_author(author)
-        t2 = time.time()
-        self.outqueue.put(result)
-        t3 = time.time()
-        if DEBUG_PERFOMANCE:
-            print(f"Got author in {t1-t0}s, rendered it in {t2-t1}s and put it in outqueue in {t3-t2}s (total: {t3-t0}s)")
+        self.handle_result(result)
 
     def process_category_task(self, task):
         """
@@ -418,7 +409,6 @@ class Worker(object):
         @type task: L{CategoryRenderTask}
         """
         # get the category
-        t0 = time.time()
         stmt = (
             select(Category)
             .where(
@@ -446,15 +436,11 @@ class Worker(object):
             )
         )
         category = self.session.scalars(stmt).first()
-        t1 = time.time()
         if category is None:
-            return RenderResult()
-        result = self.renderer.render_category(category)
-        t2 = time.time()
-        self.outqueue.put(result)
-        t3 = time.time()
-        if DEBUG_PERFOMANCE:
-            print(f"Got category in {t1-t0}s, rendered it in {t2-t1}s and put it in outqueue in {t3-t2}s (total: {t3-t0}s)")
+            result = RenderResult()
+        else:
+            result = self.renderer.render_category(category)
+        self.handle_result(result)
 
     def process_series_task(self, task):
         """
@@ -464,7 +450,6 @@ class Worker(object):
         @type task: L{SeriesRenderTask}
         """
         # get the series
-        t0 = time.time()
         series = self.session.scalars(
             select(Series)
             .where(Series.publisher_name == task.publisher, Series.name == task.name)
@@ -474,13 +459,8 @@ class Worker(object):
                 joinedload(Series.story_associations, StorySeriesAssociation.story).undefer(Story.summary),
             )
         ).first()
-        t1 = time.time()
         result = self.renderer.render_series(series)
-        t2 = time.time()
-        self.outqueue.put(result)
-        t3 = time.time()
-        if DEBUG_PERFOMANCE:
-            print(f"Got series in {t1-t0}s, rendered it in {t2-t1}s and put it in outqueue in {t3-t2}s (total: {t3-t0}s)")
+        self.handle_result(result)
 
     def process_publisher_task(self, task):
         """
@@ -490,7 +470,6 @@ class Worker(object):
         @type task: L{PublisherRenderTask}
         """
         # get the categories in the series
-        t0 = time.time()
         publisher = self.session.scalars(
             select(Publisher)
             .where(Publisher.name == task.publisher)
@@ -501,15 +480,10 @@ class Worker(object):
                 joinedload(Publisher.categories, Category.story_associations, StoryCategoryAssociation.story),
             )
         ).first()
-        t1 = time.time()
         result = self.renderer.render_publisher(
             publisher=publisher,
         )
-        t2 = time.time()
-        self.outqueue.put(result)
-        t3 = time.time()
-        if DEBUG_PERFOMANCE:
-            print(f"Got publisher in {t1-t0}s, rendered it in {t2-t1}s and put it in outqueue in {t3-t2}s (total: {t3-t0}s)")
+        self.handle_result(result)
 
     def process_etc_task(self, task):
         """
@@ -553,4 +527,4 @@ class Worker(object):
             result = self.renderer.render_search_script()
         else:
             raise ValueError("Unknown etc subtask: '{}'!".format(task.subtask))
-        self.outqueue.put(result)
+        self.handle_result(result)

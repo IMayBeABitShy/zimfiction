@@ -279,6 +279,22 @@ def set_or_increment(d, k, v=1):
         d[k] = v
 
 
+def ensure_iterable(obj):
+    """
+    If obj is iterable, return obj, else return an iterable yielding obj.
+
+    May not work correctly on primitive data types.
+
+    @param obj: object to turn iterable
+    @type obj: any
+    @return: an iterable (either obj or one yielding obj)
+    @rtype: iterable
+    """
+    if hasattr(obj, "__iter__"):
+        return obj
+    else:
+        return (obj, )
+
 if __name__ == "__main__":
     # test code
     val = int(input("n: "))

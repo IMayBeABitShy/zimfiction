@@ -28,6 +28,7 @@ SEARCH_ITEMS_PER_FILE = 35000
 MIN_STORIES_FOR_SEARCH = 5
 MAX_STORIES_FOR_SEARCH = float("inf")
 SEARCH_ONLY_ON_FIRST_PAGE = True
+MAX_ITEMS_PER_RESULT = 200
 
 
 class RenderedObject(object):
@@ -297,6 +298,8 @@ class HtmlRenderer(object):
         @return: the rendered pages and redirects
         @rtype: L{RenderResult}
         """
+        # NOTE: not keeping track of items per result here
+        # -> stories with 198+ chapters are relatively rare and shouldn't cause RAM problems
         result = RenderResult()
         chapter_template = self.environment.get_template("chapter.html.jinja")
         min_chapter_i = None
@@ -362,6 +365,7 @@ class HtmlRenderer(object):
         @rtype: L{RenderResult}
         """
         result = RenderResult()
+        items_in_result = 0
         bucketmaker = BucketMaker(STORIES_PER_PAGE)
         # check if tag has no stories, in which case we exit early
         # this can happen if a tag is only implied
@@ -376,6 +380,7 @@ class HtmlRenderer(object):
                 is_front=True,
             ),
         )
+        items_in_result = +1
         list_page_template = self.environment.get_template("storylistpage.html.jinja")
         pages = []
         num_stories = 0
@@ -409,6 +414,11 @@ class HtmlRenderer(object):
                     is_front=False,
                 ),
             )
+            items_in_result += 1
+            if items_in_result >= MAX_ITEMS_PER_RESULT:
+                yield result
+                result = RenderResult()
+                items_in_result = 0
         # add statistics
         stats = stat_creator.get_stats()
         stats_page_template = self.environment.get_template("storyliststatspage.html.jinja")
@@ -426,6 +436,7 @@ class HtmlRenderer(object):
                 is_front=False
             )
         )
+        items_in_result += 1
         # add search
         if include_search:
             search_header_data = search_creator.get_search_header()
@@ -436,6 +447,7 @@ class HtmlRenderer(object):
                     content=search_header_data,
                 ),
             )
+            items_in_result += 1
             for i, search_data in search_creator.iter_search_pages():
                 result.add(
                     JsonObject(
@@ -444,7 +456,12 @@ class HtmlRenderer(object):
                         content=search_data,
                     ),
                 )
-        return result
+                items_in_result += 1
+                if items_in_result >= MAX_ITEMS_PER_RESULT:
+                    yield result
+                    result = RenderResult()
+                    items_in_result = 0
+        yield result
 
     def render_author(self, author):
         """
@@ -455,6 +472,9 @@ class HtmlRenderer(object):
         @return: the rendered pages and redirects
         @rtype: L{RenderResult}
         """
+        # NOTE: not keeping track of items per result here
+        # -> authors with MAX_ITEMS_PER_RESULT*STORIES_PER_PAGE are rare
+        #    and should not cause memory problems
         result = RenderResult()
         bucketmaker = BucketMaker(STORIES_PER_PAGE)
         result.add(
@@ -515,6 +535,7 @@ class HtmlRenderer(object):
         @rtype: L{RenderResult}
         """
         result = RenderResult()
+        items_in_result = 0
         bucketmaker = BucketMaker(STORIES_PER_PAGE)
         # check if category has no stories, in which case we exit early
         # this can happen if a category is only implied
@@ -529,6 +550,7 @@ class HtmlRenderer(object):
                 is_front=True,
             ),
         )
+        items_in_result += 1
         list_page_template = self.environment.get_template("category.html.jinja")
         pages = []
         num_stories = 0
@@ -562,6 +584,11 @@ class HtmlRenderer(object):
                     is_front=False,
                 ),
             )
+            items_in_result += 1
+            if items_in_result >= MAX_ITEMS_PER_RESULT:
+                yield result
+                result = RenderResult()
+                items_in_result = 0
         # add statistics
         stats = stat_creator.get_stats()
         stats_page_template = self.environment.get_template("storyliststatspage.html.jinja")
@@ -579,6 +606,7 @@ class HtmlRenderer(object):
                 is_front=False
             )
         )
+        items_in_result += 1
         # add search
         if include_search:
             search_header_data = search_creator.get_search_header()
@@ -597,7 +625,12 @@ class HtmlRenderer(object):
                         content=search_data,
                     ),
                 )
-        return result
+                items_in_result += 1
+                if items_in_result >= MAX_ITEMS_PER_RESULT:
+                    yield result
+                    result = RenderResult()
+                    items_in_result = 0
+        yield result
 
 
     def render_series(self, series):
@@ -636,6 +669,10 @@ class HtmlRenderer(object):
         @return: the rendered pages and redirects
         @rtype: L{RenderResult}
         """
+        # NOTE: also not keeping track of items in result here
+        # -> items in publisher depend on number of categories, which
+        #    individually should not take enough RAM to cause memory
+        #    problems in mass
         result = RenderResult()
         publisher_template = self.environment.get_template("publisher.html.jinja")
         stats = StoryListStatCreator.get_stats_from_iterable(publisher.stories)
