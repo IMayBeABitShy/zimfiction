@@ -9,6 +9,7 @@ from sqlalchemy import Column, ForeignKeyConstraint, ForeignKey
 from sqlalchemy import Integer, String, DateTime, Boolean, UnicodeText, Unicode
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.orderinglist import ordering_list
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from ..util import format_date, format_number, normalize_relationship
 from .unique import UniqueMixin
@@ -593,15 +594,30 @@ class Story(Base):
         """
         return self.warnings + self.relationships + self.characters + self.genres
 
-    @property
+    @hybrid_property
     def total_words(self):
         """
         The total number of words in this story.
+
+        This is a sqlalchemy hybrid property. It's behavior differs
+        between class and instance level.
 
         @return: the number of words in this story
         @rtype: L{int}
         """
         return sum([chapter.num_words for chapter in self.chapters])
+
+    @total_words.inplace.expression
+    @classmethod
+    def _total_words_expression(cls):
+        return (
+            select(func.sum(Chapter.num_words))
+            .where(
+                Chapter.story_publisher == cls.publisher_name,
+                Chapter.story_id == cls.id,
+            )
+            .label("total_words")
+        )
 
     @property
     def status(self):
