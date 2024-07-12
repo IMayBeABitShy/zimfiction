@@ -10,9 +10,12 @@ take the results and add them to the creator.
 @type MARKER_WORKER_STOPPED: L{str}
 @var MARKER_TASK_COMPLETED: a symbolic constant put into the output queue when a task was completed
 @type MARKER_TASK_COMPLETED: L{str}
+
+@var MAX_STORY_EAGERLOAD: when loading tags and categories, do not eagerload if more than this number of stories are in said object
+@type MAX_STORY_EAGERLOAD: L{int}
 """
-from sqlalchemy import select, and_
-from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, contains_eager, undefer
+from sqlalchemy import select, and_, func
+from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, lazyload, contains_eager, undefer
 
 from .renderer import HtmlRenderer, RenderResult
 from ..statistics import StoryListStatCreator
@@ -21,10 +24,10 @@ from ..db.models import Story, Chapter, Tag, Author, Category, Publisher
 from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation, Series
 
 
-DEBUG_PERFOMANCE = False
-
 MARKER_WORKER_STOPPED = "stopped"
 MARKER_TASK_COMPLETED = "completed"
+
+MAX_STORY_EAGERLOAD = 4000
 
 
 class Task(object):
@@ -346,7 +349,33 @@ class Worker(object):
         @param task: task to process
         @type task: L{TagRenderTask}
         """
+        # count stories in tag
+        count_stmt = (
+            select(func.count(StoryTagAssociation.story_id))
+            .where(
+                StoryTagAssociation.tag_type == task.tag_type,
+                StoryTagAssociation.tag_name == task.tag_name,
+                StoryTagAssociation.implied == False,
+            )
+        )
+        n_stories_in_tag = self.session.execute(count_stmt).scalar_one()
         # get the tag
+        should_eagerload = (n_stories_in_tag <= MAX_STORY_EAGERLOAD)
+        # setup options
+        if should_eagerload:
+            options = (
+                contains_eager(Tag.story_associations),
+                contains_eager(Tag.story_associations, StoryTagAssociation.story),
+                selectinload(Tag.story_associations, StoryTagAssociation.story, Story.chapters),
+                undefer(Tag.story_associations, StoryTagAssociation.story, Story.summary),
+            )
+        else:
+            # like above, but don't undefer summary nor eager load chapters
+            options = (
+                contains_eager(Tag.story_associations),
+                contains_eager(Tag.story_associations, StoryTagAssociation.story),
+                lazyload(Tag.story_associations, StoryTagAssociation.story, Story.chapters),
+            )
         # only load non-implied tag associations
         stmt = (
             select(Tag)
@@ -368,13 +397,9 @@ class Worker(object):
                     StoryTagAssociation.implied == False,
                 ),
             ).options(
-                contains_eager(Tag.story_associations),
-                contains_eager(Tag.story_associations, StoryTagAssociation.story),
-                selectinload(Tag.story_associations, StoryTagAssociation.story, Story.chapters),
-                undefer(Tag.story_associations, StoryTagAssociation.story, Story.summary),
+                *options,
             )
         )
-        # print(stmt); time.sleep(2); raise Exception()  # DEBUG
         tag = self.session.scalars(stmt).first()
         if tag is None:
             result = RenderResult()
@@ -408,6 +433,33 @@ class Worker(object):
         @param task: task to process
         @type task: L{CategoryRenderTask}
         """
+        # count stories in category
+        count_stmt = (
+            select(func.count(StoryCategoryAssociation.story_id))
+            .where(
+                StoryCategoryAssociation.category_publisher == Category.publisher_name,
+                StoryCategoryAssociation.category_name == Category.name,
+                StoryCategoryAssociation.implied == False,
+            )
+        )
+        n_stories_in_category = self.session.execute(count_stmt).scalar_one()
+        # get the tag
+        should_eagerload = (n_stories_in_category <= MAX_STORY_EAGERLOAD)
+        # setup options
+        if should_eagerload:
+            options = (
+                contains_eager(Category.story_associations),
+                contains_eager(Category.story_associations, StoryCategoryAssociation.story),
+                selectinload(Category.story_associations, StoryCategoryAssociation.story, Story.chapters),
+                undefer(Category.story_associations, StoryCategoryAssociation.story, Story.summary),
+            )
+        else:
+            # same as above, but don't undefer story summaries not eager load chapters
+            options = (
+                contains_eager(Category.story_associations),
+                contains_eager(Category.story_associations, StoryCategoryAssociation.story),
+                lazyload(Category.story_associations, StoryCategoryAssociation.story, Story.chapters),
+            )
         # get the category
         stmt = (
             select(Category)
@@ -429,10 +481,7 @@ class Worker(object):
                     StoryCategoryAssociation.implied == False,
                 ),
             ).options(
-                contains_eager(Category.story_associations),
-                contains_eager(Category.story_associations, StoryCategoryAssociation.story),
-                selectinload(Category.story_associations, StoryCategoryAssociation.story, Story.chapters),
-                undefer(Category.story_associations, StoryCategoryAssociation.story, Story.summary),
+                *options,
             )
         )
         category = self.session.scalars(stmt).first()
