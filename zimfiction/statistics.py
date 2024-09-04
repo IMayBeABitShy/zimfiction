@@ -116,7 +116,7 @@ class UniqueCounter(Counter):
 
 class DatetimeCounter(Counter):
     """
-    An extension of L{Counter} for gathering min, mac and average datetime-.
+    An extension of L{Counter} for gathering min, max and average datetime-.
     """
     def __init__(self):
         Counter.__init__(self)

@@ -14,12 +14,21 @@ take the results and add them to the creator.
 @var MAX_STORY_EAGERLOAD: when loading tags and categories, do not eagerload if more than this number of stories are in said object
 @type MAX_STORY_EAGERLOAD: L{int}
 """
+import contextlib
+import os
+import time
+
 from sqlalchemy import select, and_, func
 from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, lazyload, contains_eager, undefer
 
+try:
+    import memray
+except:
+    memray = None
+
 from .renderer import HtmlRenderer, RenderResult
 from ..statistics import StoryListStatCreator
-from ..util import ensure_iterable
+from ..util import ensure_iterable, normalize_tag
 from ..db.models import Story, Chapter, Tag, Author, Category, Publisher
 from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation, Series
 
@@ -27,7 +36,7 @@ from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCatego
 MARKER_WORKER_STOPPED = "stopped"
 MARKER_TASK_COMPLETED = "completed"
 
-MAX_STORY_EAGERLOAD = 4000
+MAX_STORY_EAGERLOAD = 10000
 
 
 class Task(object):
@@ -39,12 +48,26 @@ class Task(object):
     """
     type = "<unset>"
 
+    @property
+    def name(self):
+        """
+        Return a name describing this task.
+
+        @return: a name describing this task
+        @rtype: L{str}
+        """
+        return "<unknown>"
+
 
 class StopTask(Task):
     """
     Task indicating that the worker should shut down.
     """
     type = "stop"
+
+    @property
+    def name(self):
+        return "stop"
 
 
 class StoryRenderTask(Task):
@@ -68,6 +91,16 @@ class StoryRenderTask(Task):
         assert isinstance(story_ids[0][0], str)
         assert isinstance(story_ids[0][1], int)
         self.story_ids = story_ids
+
+    @property
+    def name(self):
+        if len(self.story_ids) == 0:
+            return "stories_empty"
+        return "stories_{}-{}+{}".format(
+            self.story_ids[0][0],
+            self.story_ids[0][1],
+            len(self.story_ids[0]) - 1,
+        )
 
 
 class TagRenderTask(Task):
@@ -95,6 +128,10 @@ class TagRenderTask(Task):
         self.tag_type = tag_type
         self.tag_name = tag_name
 
+    @property
+    def name(self):
+        return "tag_{}_{}".format(self.tag_type, self.tag_name)
+
 
 class AuthorRenderTask(Task):
     """
@@ -120,6 +157,10 @@ class AuthorRenderTask(Task):
         assert isinstance(name, str)
         self.publisher = publisher
         self.name = name
+
+    @property
+    def name(self):
+        return "author_{}_{}".format(self.publisher, self.name)
 
 
 class CategoryRenderTask(Task):
@@ -147,6 +188,10 @@ class CategoryRenderTask(Task):
         self.publisher = publisher
         self.name = name
 
+    @property
+    def name(self):
+        return "category_{}_{}".format(self.publisher, self.name)
+
 
 class SeriesRenderTask(Task):
     """
@@ -173,6 +218,10 @@ class SeriesRenderTask(Task):
         self.publisher = publisher
         self.name = name
 
+    @property
+    def name(self):
+        return "series_{}_{}".format(self.publisher, self.name)
+
 
 class PublisherRenderTask(Task):
     """
@@ -192,6 +241,10 @@ class PublisherRenderTask(Task):
         """
         assert isinstance(publisher, str)
         self.publisher = publisher
+
+    @property
+    def name(self):
+        return "publisher_{}".format(self.publisher)
 
 
 class EtcRenderTask(Task):
@@ -213,12 +266,42 @@ class EtcRenderTask(Task):
         assert isinstance(subtask, str)
         self.subtask = subtask
 
+    @property
+    def name(self):
+        return "etc_{}".format(self.subtask)
+
+
+class WorkerOptions(object):
+    """
+    Options for the worker.
+
+    @ivar log_directory: if not None, enable logging and write log here
+    @type log_directory: L{str} or L{None}
+    @ivar memprofile_directory: if not None, profile memory usage and write files into this directory
+    @type memprofile_directory: L{str} or L{None}
+    """
+    def __init__(self, log_directory=None, memprofile_directory=None):
+        """
+        The default constructor.
+
+        @param log_directory: if specified, enable logging and write log here
+        @type log_directory: L{str} or L{None}
+        @param memprofile_directory: if specified, profile memory usage and write files into this directory
+        @type memprofile_directory: L{str} or L{None}
+        """
+        assert isinstance(log_directory, str) or (log_directory is None)
+        assert isinstance(memprofile_directory, str) or (memprofile_directory is None)
+        self.log_directory = log_directory
+        self.memprofile_directory = memprofile_directory
+
 
 class Worker(object):
     """
     The worker should be instantiated in a new process, where it will
     continuously process tasks from the main process.
 
+    @ivar id: id of this worker
+    @type id: L{int}
     @ivar inqueue: the queue providing new tasks
     @type inqueue: L{multiprocessing.Queue}
     @ivar outqueue: the queue where results will be put
@@ -229,26 +312,76 @@ class Worker(object):
     @type engine: L{sqlalchemy.engine.Engine}
     @ivar session: database session
     @type session: L{sqlalchemy.orm.Session}
+    @ivar options: options for this worker
+    @type options: L{WorkerOptions}
+
+    @ivar _log_file: file used for logging
+    @type _log_file: file-like object
+    @ivar _last_log_time: timestamp of last log entry
+    @ivar _last_log_time: L{int}
     """
-    def __init__(self, inqueue, outqueue, engine, options):
+    def __init__(self, id, inqueue, outqueue, engine, options, render_options):
         """
         The default constructor.
 
+        @param id: id of this worker
+        @type id: L{int}
         @param inqueue: the queue providing new tasks
         @type inqueue: L{multiprocessing.Queue}
         @param outqueue: the queue where results will be put
         @type outqueue: L{multiprocessing.Queue}
         @param engine: engine used for database connection. Be sure to dispose the connection pool first!
         @type engine: L{sqlalchemy.engine.Engine}
-        @param options: options for the renderer
-        @type options: L{zimfiction.zimbuild.renderer.RenderOptions}
+        @param options: options for the worrker
+        @type options: L{WorkerOptions}
+        @param render_options: options for the renderer
+        @type render_options: L{zimfiction.zimbuild.renderer.RenderOptions}
         """
+        assert isinstance(id, int)
+        self.id = id
         self.inqueue = inqueue
         self.outqueue = outqueue
         self.engine = engine
 
         self.session = Session(engine)
-        self.renderer = HtmlRenderer(options=options)
+        self.options = options
+        self.renderer = HtmlRenderer(options=render_options)
+
+        self.setup_logging()
+
+        self.log("Worker initialized.")
+
+    def setup_logging(self):
+        """
+        Setup the logging system.
+        """
+        self._last_log_time = time.time()
+        if self.options.log_directory is not None:
+            fn = os.path.join(
+                self.options.log_directory,
+                "log_worker_{}.txt".format(self.id),
+            )
+            self._log_file = open(fn, mode="w", encoding="utf-8")
+        else:
+            self._log_file = None
+
+    def log(self, msg):
+        """
+        Log a message.
+
+        @param msg: message to log
+        @type msg: L{str}
+        """
+        assert isinstance(msg, str)
+        if self._log_file is not None:
+            full_msg = "[{}][+{:8.3f}s] {}\n".format(
+                time.ctime(),
+                time.time() - self._last_log_time,
+                msg,
+            )
+            self._log_file.write(full_msg)
+            self._log_file.flush()
+        self._last_log_time = time.time()
 
     def run(self):
         """
@@ -264,35 +397,41 @@ class Worker(object):
         Additionally, L{MARKER_TASK_COMPLETED} is put in the queue
         after each task.
         """
+        self.log("Entering mainloop.")
         running = True
         while running:
             task = self.inqueue.get(block=True)
+            self.log("Received task '{}'".format(task.name))
 
-            if task.type == "stop":
-                # stop the worker
-                running = False
-                self._cleanup()
-            elif task.type == "story":
-                self.process_story_task(task)
-            elif task.type == "tag":
-                self.process_tag_task(task)
-            elif task.type == "author":
-                self.process_author_task(task)
-            elif task.type == "category":
-                self.process_category_task(task)
-            elif task.type == "series":
-                self.process_series_task(task)
-            elif task.type == "publisher":
-                self.process_publisher_task(task)
-            elif task.type == "etc":
-                self.process_etc_task(task)
-            else:
-                raise ValueError("Task {} has an unknown task type '{}'!".format(repr(task), task.type))
-            if task.type != "stop":
-                # notify builder that a task was completed
-                self.outqueue.put(MARKER_TASK_COMPLETED)
+            with self.get_task_processing_context(task=task):
+                if task.type == "stop":
+                    # stop the worker
+                    self.log("Stopping worker...")
+                    running = False
+                    self._cleanup()
+                elif task.type == "story":
+                    self.process_story_task(task)
+                elif task.type == "tag":
+                    self.process_tag_task(task)
+                elif task.type == "author":
+                    self.process_author_task(task)
+                elif task.type == "category":
+                    self.process_category_task(task)
+                elif task.type == "series":
+                    self.process_series_task(task)
+                elif task.type == "publisher":
+                    self.process_publisher_task(task)
+                elif task.type == "etc":
+                    self.process_etc_task(task)
+                else:
+                    raise ValueError("Task {} has an unknown task type '{}'!".format(repr(task), task.type))
+                if task.type != "stop":
+                    # notify builder that a task was completed
+                    self.log("Marking task as completed.")
+                    self.outqueue.put(MARKER_TASK_COMPLETED)
         # send a message indicated that this worker has finished
         self.outqueue.put(MARKER_WORKER_STOPPED)
+        self.log("Worker finished.")
 
     def _cleanup(self):
         """
@@ -311,8 +450,38 @@ class Worker(object):
         @type result: L{zimfiction.zimbuild.renderer.RenderResult} or iterable of it
         """
         it = ensure_iterable(result)
-        for subresult in it:
+        for i, subresult in enumerate(it):
+            self.log("Submitting result part {}...".format(i))
             self.outqueue.put(subresult)
+
+    def get_task_processing_context(self, task):
+        """
+        Return A context manager that runs while a task is being processed.
+
+        @param task: task the context is for
+        @type task: Task
+        @return: context manager to use
+        @rtype: a context manager
+        """
+        if self.options.memprofile_directory is not None:
+            if memray is None:
+                raise ImportError("Could not import package 'memray' required for memory profiling!")
+            file_name = os.path.join(
+                self.options.memprofile_directory,
+                "mp_{}_{}.bin".format(self.id, normalize_tag(task.name))
+            )
+            return memray.Tracker(
+                destination=memray.FileDestination(
+                    path=file_name,
+                    overwrite=True,
+                    compress_on_exit=False,
+                ),
+                native_traces=False,
+                trace_python_allocators=False,
+                follow_fork=False,  # already in fork
+            )
+        else:
+            return contextlib.nullcontext()
 
     def process_story_task(self, task):
         """
@@ -323,7 +492,7 @@ class Worker(object):
         """
         for publisher, story_id in task.story_ids:
             # get the story
-
+            self.log("Retrieving story...")
             story = self.session.scalars(
                 select(Story)
                 .where(Story.publisher_name == publisher, Story.id == story_id)
@@ -339,8 +508,11 @@ class Worker(object):
                     subqueryload(Story.category_associations, StoryCategoryAssociation.category),
                 )
             ).first()
+            self.log("Retrieved story, rendering...")
             result = self.renderer.render_story(story)
+            self.log("Rendered story, submitting result...")
             self.handle_result(result)
+            self.log("Done.")
 
     def process_tag_task(self, task):
         """
@@ -350,6 +522,7 @@ class Worker(object):
         @type task: L{TagRenderTask}
         """
         # count stories in tag
+        self.log("Counting non-implied stories in tag...")
         count_stmt = (
             select(func.count(StoryTagAssociation.story_id))
             .where(
@@ -359,10 +532,12 @@ class Worker(object):
             )
         )
         n_stories_in_tag = self.session.execute(count_stmt).scalar_one()
+        self.log("Found {} stories.".format(n_stories_in_tag))
         # get the tag
         should_eagerload = (n_stories_in_tag <= MAX_STORY_EAGERLOAD)
         # setup options
         if should_eagerload:
+            self.log("-> Utilizing eagerloading.")
             options = (
                 contains_eager(Tag.story_associations),
                 contains_eager(Tag.story_associations, StoryTagAssociation.story),
@@ -371,12 +546,14 @@ class Worker(object):
             )
         else:
             # like above, but don't undefer summary nor eager load chapters
+            self.log("-> Not utilizing eagerloading.")
             options = (
                 contains_eager(Tag.story_associations),
                 contains_eager(Tag.story_associations, StoryTagAssociation.story),
                 lazyload(Tag.story_associations, StoryTagAssociation.story, Story.chapters),
             )
         # only load non-implied tag associations
+        self.log("Loading tag...")
         stmt = (
             select(Tag)
             .where(
@@ -401,11 +578,16 @@ class Worker(object):
             )
         )
         tag = self.session.scalars(stmt).first()
+        self.log("Tag loaded.")
         if tag is None:
+            self.log("-> Tag not found!")
             result = RenderResult()
         else:
+            self.log("Rendering tag...")
             result = self.renderer.render_tag(tag)
+        self.log("Submitting result...")
         self.handle_result(result)
+        self.log("Done.")
 
     def process_author_task(self, task):
         """
@@ -415,6 +597,7 @@ class Worker(object):
         @type task: L{AuthorRenderTask}
         """
         # get the author
+        self.log("Retrieving author...")
         author = self.session.scalars(
             select(Author)
             .where(Author.publisher_name == task.publisher, Author.name == task.name)
@@ -423,8 +606,11 @@ class Worker(object):
                 joinedload(Author.stories).undefer(Story.summary),
             )
         ).first()
+        self.log("Rendering author...")
         result = self.renderer.render_author(author)
+        self.log("Submitting result...")
         self.handle_result(result)
+        self.log("Done.")
 
     def process_category_task(self, task):
         """
@@ -434,6 +620,7 @@ class Worker(object):
         @type task: L{CategoryRenderTask}
         """
         # count stories in category
+        self.log("Counting non-implied stories in category...")
         count_stmt = (
             select(func.count(StoryCategoryAssociation.story_id))
             .where(
@@ -443,10 +630,12 @@ class Worker(object):
             )
         )
         n_stories_in_category = self.session.execute(count_stmt).scalar_one()
+        self.log("Found {} stories.".format(n_stories_in_category))
         # get the tag
         should_eagerload = (n_stories_in_category <= MAX_STORY_EAGERLOAD)
         # setup options
         if should_eagerload:
+            self.log("-> Utilizing eagerloading.")
             options = (
                 contains_eager(Category.story_associations),
                 contains_eager(Category.story_associations, StoryCategoryAssociation.story),
@@ -455,12 +644,14 @@ class Worker(object):
             )
         else:
             # same as above, but don't undefer story summaries not eager load chapters
+            self.log("-> Not utilizing eagerloading.")
             options = (
                 contains_eager(Category.story_associations),
                 contains_eager(Category.story_associations, StoryCategoryAssociation.story),
                 lazyload(Category.story_associations, StoryCategoryAssociation.story, Story.chapters),
             )
         # get the category
+        self.log("Loading category...")
         stmt = (
             select(Category)
             .where(
@@ -485,11 +676,16 @@ class Worker(object):
             )
         )
         category = self.session.scalars(stmt).first()
+        self.log("Category loaded.")
         if category is None:
+            self.log("-> Category not found!")
             result = RenderResult()
         else:
+            self.log("Rendering category...")
             result = self.renderer.render_category(category)
+        self.log("Submitting result...")
         self.handle_result(result)
+        self.log("Done.")
 
     def process_series_task(self, task):
         """
@@ -499,6 +695,7 @@ class Worker(object):
         @type task: L{SeriesRenderTask}
         """
         # get the series
+        self.log("Retrieving series...")
         series = self.session.scalars(
             select(Series)
             .where(Series.publisher_name == task.publisher, Series.name == task.name)
@@ -508,8 +705,11 @@ class Worker(object):
                 joinedload(Series.story_associations, StorySeriesAssociation.story).undefer(Story.summary),
             )
         ).first()
+        self.log("Rendering series...")
         result = self.renderer.render_series(series)
+        self.log("Submitting result...")
         self.handle_result(result)
+        self.log("Done.")
 
     def process_publisher_task(self, task):
         """
@@ -519,6 +719,7 @@ class Worker(object):
         @type task: L{PublisherRenderTask}
         """
         # get the categories in the series
+        self.log("Retrieving publisher...")
         publisher = self.session.scalars(
             select(Publisher)
             .where(Publisher.name == task.publisher)
@@ -529,10 +730,13 @@ class Worker(object):
                 joinedload(Publisher.categories, Category.story_associations, StoryCategoryAssociation.story),
             )
         ).first()
+        self.log("Rendering publisher...")
         result = self.renderer.render_publisher(
             publisher=publisher,
         )
+        self.log("Submitting result...")
         self.handle_result(result)
+        self.log("Done.")
 
     def process_etc_task(self, task):
         """
@@ -543,6 +747,7 @@ class Worker(object):
         """
         if task.subtask == "index":
             # render the indexpage
+            self.log("Retrieving publishers...")
             publishers = self.session.scalars(
                 select(Publisher)
                 .options(
@@ -552,9 +757,11 @@ class Worker(object):
                     raiseload(Publisher.categories, Category.story_associations),
                 )
             ).all()
+            self.log("Rendering index page...")
             result = self.renderer.render_index(publishers=publishers)
         elif task.subtask == "stats":
             # render the global statistics
+            self.log("Retrieving stories...")
             stories = self.session.scalars(
                 select(Story)
                 .options(
@@ -569,11 +776,16 @@ class Worker(object):
                     subqueryload(Story.category_associations, StoryCategoryAssociation.category),
                 )
             ).all()
+            self.log("Generating stats...")
             stats = StoryListStatCreator.get_stats_from_iterable(stories)
+            self.log("Rendering statistics...")
             result = self.renderer.render_global_stats(stats)
         elif task.subtask == "search":
             # The search script
+            self.log("Renderign search script...")
             result = self.renderer.render_search_script()
         else:
             raise ValueError("Unknown etc subtask: '{}'!".format(task.subtask))
+        self.log("Submitting result...")
         self.handle_result(result)
+        self.log("Done.")

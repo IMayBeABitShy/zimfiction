@@ -40,15 +40,15 @@ from ..db.models import Story, Tag, Author, Category, Series, Publisher
 from ..db.unique import set_unique_enabled
 from ..reporter import StdoutReporter
 from .renderer import HtmlPage, Redirect, JsonObject, Script, RenderOptions
-from .worker import Worker, StopTask, StoryRenderTask, TagRenderTask
-from .worker import AuthorRenderTask, CategoryRenderTask, SeriesRenderTask
-from .worker import PublisherRenderTask, EtcRenderTask
+from .worker import Worker, WorkerOptions, StopTask, StoryRenderTask
+from .worker import TagRenderTask, AuthorRenderTask, CategoryRenderTask
+from .worker import SeriesRenderTask, PublisherRenderTask, EtcRenderTask
 from .worker import MARKER_TASK_COMPLETED, MARKER_WORKER_STOPPED
 from .buckets import BucketMaker
 
 
 MAX_OUTSTANDING_TASKS = 1024 * 4
-MAX_RESULT_BACKLOG = 512
+MAX_RESULT_BACKLOG = 128
 STORIES_PER_TASK = 64
 
 
@@ -344,6 +344,11 @@ class BuildOptions(object):
     @type use_threads: L{bool}
     @ivar num_workers: number of (non-zim) workers to use
     @type num_workers: L{int}
+    @ivar log_directory: if not None, enable logging and write logs into this directory
+    @type log_directory: L{str} or L{None}
+
+    @ivar memprofile_directory: if not None, enable memory profiling and write files into this directory
+    @type memprpofile_directory: L{str} or L{None}
 
     @ivar include_external_links: whether the ZIM should contain external links or not
     @type include_external_links: L{bool}
@@ -353,6 +358,8 @@ class BuildOptions(object):
     """
     def __init__(
         self,
+
+        # ZIM options
         name="zimfiction_eng",
         title="ZimFiction",
         creator="Various fanfiction communities",
@@ -361,11 +368,20 @@ class BuildOptions(object):
         language="eng",
         indexing=True,
 
+        # genral build_options
+        log_directory=None,
+
+        # worker management options
         use_threads=False,
         num_workers=None,
 
+        # worker options
+        memprofile_directory=None,
+
+        # render options
         include_external_links=False,
 
+        # debug options
         skip_stories=False,
         ):
         """
@@ -391,6 +407,12 @@ class BuildOptions(object):
         @param num_workers: number of (non-zim) workers to use (None -> auto)
         @type num_workers: L{int} or L{None}
 
+        @param log_directory: if specified, enable logging and write logs into this directory
+        @type log_directory: L{str} or L{None}
+
+        @param memprofile_directory: if specified, enable memory profiling and write files into this directory
+        @type memprpofile_directory: L{str} or L{None}
+
         @param include_external_links: whether the ZIM should contain external links or not
         @type include_external_links: L{bool}
 
@@ -410,6 +432,10 @@ class BuildOptions(object):
             self.num_workers = get_n_cores()
         else:
             self.num_workers = int(num_workers)
+
+        self.log_directory = log_directory
+
+        self.memprofile_directory = memprofile_directory
 
         self.include_external_links = include_external_links
 
@@ -444,6 +470,19 @@ class BuildOptions(object):
         }
         return metadata
 
+    def get_worker_options(self):
+        """
+        Return the worker options the worker should use.
+
+        @return: options for the worker.
+        @rtype: L{zimfiction.zimbuild.worker.WorkerOptions}
+        """
+        options = WorkerOptions(
+            memprofile_directory=self.memprofile_directory,
+            log_directory=self.log_directory,
+        )
+        return options
+
     def get_render_options(self):
         """
         Return the render options the renderer should use.
@@ -473,6 +512,8 @@ class ZimBuilder(object):
     @type reporter: L{zimfiction.reporter.BaseReporter}
     @ivar num_files_added: a dict mapping a filetype to the number of files of that type
     @type num_files_added: L{dict} of L{str} -> L{int}
+    @ivar next_worker_id: ID to give next worker
+    @type next_worker_id: L{int}
     """
     def __init__(self, engine):
         """
@@ -486,6 +527,7 @@ class ZimBuilder(object):
         self.inqueue = None
         self.outqueue = None
         self.num_files_added = {}
+        self.next_worker_id = 0
 
         self.session = Session(engine)
         self.reporter = StdoutReporter();
@@ -737,16 +779,21 @@ class ZimBuilder(object):
         n_workers = options.num_workers
 
         worker_class = (threading.Thread if options.use_threads else multiprocessing.Process)
+        worker_options = options.get_worker_options()
         render_options = options.get_render_options()
 
         # start workers
         self.reporter.msg("     -> Starting workers... ", end="")
         workers = []
         for i in range(n_workers):
+            worker_id = self.next_worker_id
+            self.next_worker_id += 1
             worker = worker_class(
-                name="Content worker {}".format(i),
+                name="Content worker {}".format(worker_id),
                 target=self._worker_process,
                 kwargs={
+                    "id": worker_id,
+                    "worker_options": worker_options,
                     "render_options": render_options,
                 },
             )
@@ -883,26 +930,32 @@ class ZimBuilder(object):
                             # unknown result object
                             raise RuntimeError("Unknown render result: {}".format(type(rendered_object)))
 
-    def _worker_process(self, render_options):
+    def _worker_process(self, id, worker_options, render_options):
         """
         This method will be executed as a worker process.
 
         The workers take tasks from the inqueue, process them and add
         the result to the outqueue.
 
+        @param id: id of the worker
+        @type id: L{int}
+        @param worker_options: options for the worker
+        @type worker_options: L{zimfiction.zimbuild.worker.WorkerOptions}
         @param render_options: options for the renderer
         @type render_options: L{zimfiction.zimbuild.renderer.RenderOptions}
         """
         # before starting the worker, clean up engine connections
         self.engine.dispose(close=False)
         # also, prepare the process priority
-        config_process(name="ZF worker", nice=10, ionice=5)
+        config_process(name="ZF worker {}".format(id), nice=10, ionice=5)
         # start the worker
         worker = Worker(
+            id=id,
             inqueue=self.inqueue,
             outqueue=self.outqueue,
             engine=self.engine,
-            options=render_options,
+            options=worker_options,
+            render_options=render_options,
         )
         worker.run()
 

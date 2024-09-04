@@ -4,9 +4,9 @@ This module contains the database models.
 
 # resource: https://stackoverflow.com/questions/7504753/relations-on-composite-keys-using-sqlalchemy
 
-from sqlalchemy.orm import registry, relationship, deferred
-from sqlalchemy import Column, ForeignKeyConstraint, ForeignKey
+from sqlalchemy import Column, ForeignKeyConstraint, ForeignKey, func, select
 from sqlalchemy import Integer, String, DateTime, Boolean, UnicodeText, Unicode
+from sqlalchemy.orm import registry, relationship, deferred
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.ext.hybrid import hybrid_property

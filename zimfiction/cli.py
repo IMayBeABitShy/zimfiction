@@ -129,6 +129,8 @@ def run_build(ns):
     build_options = BuildOptions(
         use_threads=ns.threaded,
         num_workers=ns.workers,
+        log_directory=ns.log_directory,
+        memprofile_directory=ns.memprofile_directory,
         include_external_links=ns.include_external_links,
         skip_stories=ns.skip_stories,
     )
@@ -266,6 +268,18 @@ def main():
         type=int,
         default=None,
         help="use this many non-zim workers",
+    )
+    build_parser.add_argument(
+        "--log-directory",
+        action="store",
+        default=None,
+        help="enable logging and write logs into this directory",
+    )
+    build_parser.add_argument(
+        "--memprofile-directory",
+        action="store",
+        default=None,
+        help="enable memory profile and write into this directory",
     )
     build_parser.add_argument(
         "--no-external-links",
