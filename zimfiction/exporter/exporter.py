@@ -9,6 +9,7 @@ from ..db.models import Story
 from ..reporter import BaseReporter, VoidReporter
 from .dumper import Dumper
 from .txtdumper import TxtDumper
+from .jsondumper import JsonDumper
 
 
 def get_dumper(format):
@@ -24,6 +25,8 @@ def get_dumper(format):
     assert isinstance(format, str)
     if format in ("txt", "text"):
         return TxtDumper()
+    elif format == "json":
+        return JsonDumper()
     else:
         raise KeyError("No dumper for format '{}' known!".format(format))
 

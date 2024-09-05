@@ -49,9 +49,9 @@ class Task(object):
     type = "<unset>"
 
     @property
-    def name(self):
+    def id(self):
         """
-        Return a name describing this task.
+        Return a non-unqiue id describing this task.
 
         @return: a name describing this task
         @rtype: L{str}
@@ -66,7 +66,7 @@ class StopTask(Task):
     type = "stop"
 
     @property
-    def name(self):
+    def id(self):
         return "stop"
 
 
@@ -93,7 +93,7 @@ class StoryRenderTask(Task):
         self.story_ids = story_ids
 
     @property
-    def name(self):
+    def id(self):
         if len(self.story_ids) == 0:
             return "stories_empty"
         return "stories_{}-{}+{}".format(
@@ -129,7 +129,7 @@ class TagRenderTask(Task):
         self.tag_name = tag_name
 
     @property
-    def name(self):
+    def id(self):
         return "tag_{}_{}".format(self.tag_type, self.tag_name)
 
 
@@ -159,7 +159,7 @@ class AuthorRenderTask(Task):
         self.name = name
 
     @property
-    def name(self):
+    def id(self):
         return "author_{}_{}".format(self.publisher, self.name)
 
 
@@ -189,7 +189,7 @@ class CategoryRenderTask(Task):
         self.name = name
 
     @property
-    def name(self):
+    def id(self):
         return "category_{}_{}".format(self.publisher, self.name)
 
 
@@ -219,7 +219,7 @@ class SeriesRenderTask(Task):
         self.name = name
 
     @property
-    def name(self):
+    def id(self):
         return "series_{}_{}".format(self.publisher, self.name)
 
 
@@ -243,7 +243,7 @@ class PublisherRenderTask(Task):
         self.publisher = publisher
 
     @property
-    def name(self):
+    def id(self):
         return "publisher_{}".format(self.publisher)
 
 
@@ -401,7 +401,7 @@ class Worker(object):
         running = True
         while running:
             task = self.inqueue.get(block=True)
-            self.log("Received task '{}'".format(task.name))
+            self.log("Received task '{}'".format(task.id))
 
             with self.get_task_processing_context(task=task):
                 if task.type == "stop":
@@ -468,7 +468,7 @@ class Worker(object):
                 raise ImportError("Could not import package 'memray' required for memory profiling!")
             file_name = os.path.join(
                 self.options.memprofile_directory,
-                "mp_{}_{}.bin".format(self.id, normalize_tag(task.name))
+                "mp_{}_{}.bin".format(self.id, normalize_tag(task.id))
             )
             return memray.Tracker(
                 destination=memray.FileDestination(

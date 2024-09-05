@@ -11,6 +11,7 @@ from sqlalchemy.sql import func
 from .txtparser import parse_txt_story
 from .epubparser import parse_epub_story
 from .htmlparser import parse_html_story
+from .jsonparser import parse_json_story
 from ..exceptions import ParseError
 from ..db.models import Story, Chapter
 from ..db.unique import clear_unique_cache
@@ -42,9 +43,9 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher
     # all of the stories in the current batch to avoid duplicates.
     current_story_ids_to_stories = {}
 
-    walker = Walker(filter=["*.txt", "*.epub", "*.html"])
+    walker = Walker(filter=["*.txt", "*.epub", "*.html", "*.json"])
     for i, path in enumerate(walker.files(fs)):
-        use_encoding = path.split(".")[-1] in ("txt", "html")
+        use_encoding = path.split(".")[-1] in ("txt", "html", "json")
         open_kwargs = {}
         if use_encoding:
             open_kwargs["encoding"] = ("utf-8" if use_encoding else None)
@@ -58,6 +59,8 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher
                     story = parse_html_story(session, fin, force_publisher=force_publisher)
                 elif path.endswith(".epub"):
                     story = parse_epub_story(session, fin, force_publisher=force_publisher)
+                elif path.endswith(".json"):
+                    story = parse_json_story(session, fin, force_publisher=force_publisher)
                 else:
                     raise ValueError("Don't know how to parse '{}'!".format(path))
             except Exception as e:
