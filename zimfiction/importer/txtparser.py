@@ -4,9 +4,8 @@ This module contains the txt/markdown story parse logic.
 import datetime
 import re
 
-from ..util import add_to_dict_list, count_words
-from ..db.models import Story, Chapter, Author, Category, Tag, Series, Publisher
-from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation
+from .raw import RawStory, RawChapter, RawSeriesMembership
+from ..util import add_to_dict_list
 from ..exceptions import ParseError
 
 
@@ -52,7 +51,7 @@ def _split_categories(s):
     return categories
 
 
-def parse_txt_story(session, fin, force_publisher=None):
+def parse_txt_story(session, fin):
     """
     Parse a story in txt/markdown format.
 
@@ -60,10 +59,8 @@ def parse_txt_story(session, fin, force_publisher=None):
     @type session: L{sqlalchemy.orm.Session}
     @param fin: file-like object to read or text to parse
     @type fin: file-like or L{str}
-    @param force_publisher: if not None, force all stories imported to have this publisher
-    @type force_publisher: L{str} or L{None}
-    @return: the story
-    @rtype: L{zimfiction.db.models.Story}
+    @return: the raw story
+    @rtype: L{zimfiction.importer.raw.RawStory}
     """
     in_body = False
     in_summary = False
@@ -71,7 +68,12 @@ def parse_txt_story(session, fin, force_publisher=None):
     got_meta = False
     n_empty_lines = 0
     meta = {}
-    tags = {}  # tag type -> tag list
+    tags = {  # tag type -> tag list
+        "genres": [],
+        "characters": [],
+        "relationships": [],
+        "warnings": [],
+    }
     series = []  # tuples of (name, index)
     chapters = []
     cur_lines = []
@@ -124,9 +126,7 @@ def parse_txt_story(session, fin, force_publisher=None):
             key, value = line.split(": ", 1)
             if key == "Publisher":
                 assert publisher is None
-                if force_publisher is not None:
-                    value = force_publisher
-                publisher = Publisher.as_unique(session, name=value.strip())
+                publisher = value.strip()
             elif key in (
                 "Category",
                 "Language",
@@ -139,7 +139,10 @@ def parse_txt_story(session, fin, force_publisher=None):
                     # in this case, the title is the author line
                     meta["author"] = meta["title"][3:].strip()
                     meta["title"] = "INVALID TITLE"
-                meta[key.lower()] = value.strip()
+                if key == "Author URL":
+                    meta["author_url"] = value.strip()
+                else:
+                    meta[key.lower()] = value.strip()
                 if key.lower() == "summary":
                     in_summary = True
             elif key in (
@@ -164,22 +167,22 @@ def parse_txt_story(session, fin, force_publisher=None):
                 meta["is_done"] = is_done_from_status(value)
             elif key in ("Genre", "Genres", "Erotica Tags"):
                 for tag in _split_tags(value):
-                    add_to_dict_list(tags, "genre", tag)
+                    add_to_dict_list(tags, "genres", tag)
             elif key == "Warnings":
                 for tag in _split_tags(value):
-                    add_to_dict_list(tags, "warning", tag)
+                    add_to_dict_list(tags, "warnings", tag)
             elif key == "Characters":
                 for tag in _split_tags(value):
-                    add_to_dict_list(tags, "character", tag)
+                    add_to_dict_list(tags, "characters", tag)
             elif key == "Relationships":
                 for tag in _split_tags(value):
-                    add_to_dict_list(tags, "relationship", tag)
+                    add_to_dict_list(tags, "relationships", tag)
             elif key in ("Chars/Pairs", "Characters/Pairing"):
                 for tag in _split_tags(value):
                     if ("&" in tag) or ("/" in tag):
-                        add_to_dict_list(tags, "relationship", tag)
+                        add_to_dict_list(tags, "relationships", tag)
                     else:
-                        add_to_dict_list(tags, "character", tag)
+                        add_to_dict_list(tags, "characters", tag)
             elif key == "Series":
                 series_index = int(value[value.rfind("[")+1: value.rfind("]")])
                 series_name = value[:value.rfind("[") - 1]
@@ -203,13 +206,10 @@ def parse_txt_story(session, fin, force_publisher=None):
                     text = "\n".join(cur_lines)
                     assert publisher is not None
                     chapters.append(
-                        Chapter(
-                            publisher=publisher,
-                            story_id=meta["id"],
+                        RawChapter(
                             index=cur_chapter_i,
                             title=cur_chapter_title,
                             text=text,
-                            num_words=count_words(text),
                         )
                     )
                 chapter_i, cur_chapter_title = line.strip().split(". ", 1)
@@ -243,28 +243,18 @@ def parse_txt_story(session, fin, force_publisher=None):
             cur_chapter_title = "Chapter 1"
         assert publisher is not None
         chapters.append(
-            Chapter(
-                publisher=publisher,
-                story_id=meta["id"],
+            RawChapter(
                 index=cur_chapter_i,
                 title=cur_chapter_title,
                 text=text,
-                num_words=count_words(text),
             )
         )
-
-    meta["author"] = Author.as_unique(
-        session,
-        publisher=publisher,
-        name=meta["author"],
-        url=meta["author url"]
-    )
     if "category" not in meta:
         # sometimes there are stories without categories
         # We instead put it in a special one
         meta["category"] = "No Category"
     # split categories
-    categories = _split_categories(meta["category"])
+    meta["categories"] = _split_categories(meta["category"])
     del meta["category"]
     if "summary" not in meta:
         meta["summary"] = ""
@@ -282,43 +272,25 @@ def parse_txt_story(session, fin, force_publisher=None):
     if "packaged" not in meta:
         meta["packaged"] = datetime.datetime(year=1, month=1, day=1)
     meta["chapters"] = chapters
-    if "author url" in meta:
-        del meta["author url"]
     meta["publisher"] = publisher
     # clean title
     meta["title"] = meta["title"].strip()
-
-    story = Story(
-        **meta,
-    )
-    # link categories
-    for category_name in categories:
-        story.category_associations.append(
-            StoryCategoryAssociation(
-                Category.as_unique(session, publisher=publisher, name=category_name),
-                implied=False,
-            ),
-        )
-    # link tags
-    tag_i = 0
-    for tagtype in tags.keys():
-        for tagname in tags[tagtype]:
-            story.tag_associations.append(
-                StoryTagAssociation(
-                    Tag.as_unique(session, type=tagtype, name=tagname),
-                    index=tag_i,
-                    implied=False,
-                ),
-            )
-            tag_i += 1
-    # link series
+    # add series
+    meta["series"] = []
     for series_name, series_i in series:
-        story.series_associations.append(
-            StorySeriesAssociation(
-                Series.as_unique(session, publisher=publisher, name=series_name),
+        meta["series"].append(
+            RawSeriesMembership(
+                publisher=publisher,
+                name=series_name,
                 index=series_i,
             ),
         )
+    # add tags
+    for tagtype in tags.keys():
+        meta[tagtype] = tags[tagtype]
+    story = RawStory(
+        **meta,
+    )
     return story
 
 

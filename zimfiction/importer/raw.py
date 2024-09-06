@@ -205,7 +205,7 @@ class RawStory(object):
     @type updated: L{datetime.datetime}
     @ivar packaged: date this story was downloaded
     @type packaged: L{datetime.datetime}
-    @ivar rating: rating of this story
+    @ivar rating: rating of this story or L{None}
     @type rating: L{str} or L{None}
     @ivar warnings: warning tags of this story
     @type warnings: L{list} of L{str}
@@ -229,6 +229,7 @@ class RawStory(object):
         id,
         title,
         summary,
+        chapters,
 
         author,
         author_url,
@@ -240,16 +241,14 @@ class RawStory(object):
         published,
         updated,
         packaged,
-        rating,
         warnings,
         publisher,
         url,
         characters,
         relationships,
-        score,
-        num_comments,
-
-        chapters,
+        rating=None,
+        score=0,
+        num_comments=0,
         ):
         """
         The default constructor.

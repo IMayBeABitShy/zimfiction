@@ -165,7 +165,7 @@ def convert_epub(path):
     return text
 
 
-def parse_epub_story(session, fin, force_publisher=None):
+def parse_epub_story(session, fin):
     """
     Parse a story in epub format.
 
@@ -173,10 +173,8 @@ def parse_epub_story(session, fin, force_publisher=None):
     @type session: L{sqlalchemy.orm.Session}
     @param fin: file-like object to read
     @type fin: file-like
-    @param force_publisher: if not None, force all stories imported to have this publisher
-    @type force_publisher: L{str} or L{None}
-    @return: the story
-    @rtype: L{zimfiction.db.models.Story}
+    @return: the raw story
+    @rtype: L{zimfiction.importer.raw.RawStory}
     """
     # copy file content to tempfile - ebooklib needs a path
     with tempfile.NamedTemporaryFile(delete=False) as tf:

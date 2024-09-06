@@ -54,15 +54,16 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher
         with fs.open(path, **open_kwargs) as fin:
             try:
                 if path.endswith(".txt"):
-                    story = parse_txt_story(session, fin, force_publisher=force_publisher)
+                    raw = parse_txt_story(session, fin)
                 elif path.endswith(".html"):
-                    story = parse_html_story(session, fin, force_publisher=force_publisher)
+                    raw = parse_html_story(session, fin)
                 elif path.endswith(".epub"):
-                    story = parse_epub_story(session, fin, force_publisher=force_publisher)
+                    raw = parse_epub_story(session, fin)
                 elif path.endswith(".json"):
-                    story = parse_json_story(session, fin, force_publisher=force_publisher)
+                    raw = parse_json_story(session, fin)
                 else:
                     raise ValueError("Don't know how to parse '{}'!".format(path))
+                story = raw.to_story(session=session, force_publisher=force_publisher)
             except Exception as e:
                 if verbose:
                     print("\nException caught parsing {}:".format(path))
