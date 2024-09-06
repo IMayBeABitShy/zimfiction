@@ -4,8 +4,9 @@ This module contains the L{Exporter}, which handles the systematic export of sto
 import os
 
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload, undefer
 
-from ..db.models import Story
+from ..db.models import Story, Chapter
 from ..reporter import BaseReporter, VoidReporter
 from .dumper import Dumper
 from .txtdumper import TxtDumper
@@ -75,8 +76,11 @@ class Exporter(object):
             select(func.count(Story.id))
         ).scalar_one()
         # get stories
-        stmt = select(Story).where(criteria)
-        stories = self.session.scalars(stmt)
+        stmt = select(Story).where(criteria).options(
+            selectinload(Story.chapters),
+            undefer(Story.chapters, Chapter.text),
+        )
+        stories = self.session.scalars(stmt).yield_per(10000)
         # export stories
         with self.reporter.with_progress("Exporting...", max=n_stories, unit="stories") as bar:
             for story in stories:

@@ -206,7 +206,7 @@ class RawStory(object):
     @ivar packaged: date this story was downloaded
     @type packaged: L{datetime.datetime}
     @ivar rating: rating of this story
-    @type rating: L{str}
+    @type rating: L{str} or L{None}
     @ivar warnings: warning tags of this story
     @type warnings: L{list} of L{str}
     @ivar publisher: name of the publishing site
@@ -281,7 +281,7 @@ class RawStory(object):
         @param packaged: date this story was downloaded
         @type packaged: L{datetime.datetime}
         @param rating: rating of this story
-        @type rating: L{str}
+        @type rating: L{str} or L{None}
         @param warnings: warning tags of this story
         @type warnings: L{list} of L{str}
         @param publisher: name of the publishing site
@@ -312,7 +312,7 @@ class RawStory(object):
         assert isinstance(published, datetime.datetime)
         assert isinstance(updated, datetime.datetime)
         assert isinstance(packaged, datetime.datetime)
-        assert isinstance(rating, str)
+        assert isinstance(rating, str) or rating is None
         assert isinstance(warnings, list)
         assert isinstance(publisher, str)
         assert isinstance(url, str)
