@@ -6,14 +6,13 @@ import traceback
 from fs.walk import Walker
 
 from sqlalchemy import and_, exists
-from sqlalchemy.sql import func
 
 from .txtparser import parse_txt_story
 from .epubparser import parse_epub_story
 from .htmlparser import parse_html_story
 from .jsonparser import parse_json_story
 from ..exceptions import ParseError
-from ..db.models import Story, Chapter
+from ..db.models import Story
 from ..db.unique import clear_unique_cache
 
 
@@ -84,7 +83,7 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher
                     exists().
                     where(
                         and_(
-                            Story.publisher_name == story.publisher.name,
+                            Story.publisher.has(name=story.publisher.name),
                             Story.id == story.id,
                         )
                     )
@@ -94,11 +93,11 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher
                 # check if current story has more words than story in DB
                 n_new_words = sum([c.num_words for c in story.chapters])
                 n_old_words = session.query(
-                    func.sum(Chapter.num_words),
+                    Story.total_words,
                 ).where(
                     and_(
-                        Chapter.publisher_name == story.publisher.name,
-                        Chapter.story_id == story.id,
+                        Story.publisher.has(name=story.publisher.name),  # TODO: ensure this really works
+                        Story.id == story.id,
                     )
                 ).scalar()
                 if n_new_words > n_old_words:
@@ -111,7 +110,7 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher
                         )
                     session.query(Story).filter(
                         and_(
-                            Story.publisher_name == story.publisher.name,
+                            Story.publisher.has(name=story.publisher.name),
                             Story.id == story.id,
                         )
                     ).delete()

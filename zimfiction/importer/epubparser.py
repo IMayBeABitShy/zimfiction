@@ -190,7 +190,7 @@ def parse_epub_story(session, fin):
         os.remove(path)
         # import from txt
         storyfile = io.StringIO(txt)
-        return parse_txt_story(session, storyfile, force_publisher=force_publisher)
+        return parse_txt_story(session, storyfile)
 
 
 def main():

@@ -1,10 +1,14 @@
 """
 This module contains the database models.
+
+NOTE: there are two types of IDs used here:
+- class.id may reference a site provided id that's not unique between sites
+- class.uid references a unqiue id that's not stable between multiple imports
 """
 
 # resource: https://stackoverflow.com/questions/7504753/relations-on-composite-keys-using-sqlalchemy
 
-from sqlalchemy import Column, ForeignKeyConstraint, ForeignKey, func, select
+from sqlalchemy import Column, Index, ForeignKeyConstraint, ForeignKey, func, select
 from sqlalchemy import Integer, String, DateTime, Boolean, UnicodeText, Unicode
 from sqlalchemy.orm import registry, relationship, deferred
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -59,12 +63,12 @@ class Publisher(UniqueMixin, Base):
     """
     __tablename__ = "publisher"
 
-    name = Column(String(MAX_SITE_LENGTH), primary_key=True)
+    uid = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(MAX_SITE_LENGTH), unique=True, index=True, nullable=False)
     stories = relationship("Story", back_populates="publisher", overlaps="stories")
     authors = relationship("Author", back_populates="publisher")
     categories = relationship("Category", back_populates="publisher")
     series = relationship("Series", back_populates="publisher")
-    chapters = relationship("Chapter", back_populates="publisher", overlaps="chapters")
 
     @classmethod
     def unique_hash(cls, name):
@@ -93,8 +97,9 @@ class Author(UniqueMixin, Base):
     """
     __tablename__ = "author"
 
-    publisher_name = Column(String(MAX_SITE_LENGTH), ForeignKey("publisher.name"), primary_key=True)
-    name = Column(Unicode(MAX_AUTHOR_NAME_LENGTH), primary_key=True)
+    uid = Column(Integer, primary_key=True, autoincrement=True)
+    publisher_uid = Column(Integer, ForeignKey("publisher.uid"), nullable=False)
+    name = Column(Unicode(MAX_AUTHOR_NAME_LENGTH), nullable=False)
     url = Column(String(MAX_AUTHOR_URL_LENGTH))
     publisher = relationship("Publisher", back_populates="authors")
     stories = relationship("Story", back_populates="author")
@@ -106,9 +111,11 @@ class Author(UniqueMixin, Base):
     @classmethod
     def unique_filter(cls, query, publisher, name, url):
         return query.filter(
-            Author.publisher_name == publisher.name,
+            Author.publisher.has(name=publisher.name),
             Author.name == name,
         )
+
+Index("author_name_index", Author.publisher_uid, Author.name, unique=True)
 
 
 class Category(UniqueMixin, Base):
@@ -117,8 +124,9 @@ class Category(UniqueMixin, Base):
     """
     __tablename__ = "category"
 
-    publisher_name = Column(String(MAX_SITE_LENGTH), ForeignKey("publisher.name"), primary_key=True)
-    name = Column(Unicode(MAX_CATEGORY_NAME_LENGTH), primary_key=True)
+    uid = Column(Integer, primary_key=True, autoincrement=True)
+    publisher_uid = Column(Integer, ForeignKey("publisher.uid"), nullable=False)
+    name = Column(Unicode(MAX_CATEGORY_NAME_LENGTH), nullable=False)
     publisher = relationship("Publisher", back_populates="categories")
     story_associations = relationship(
         "StoryCategoryAssociation",
@@ -137,7 +145,7 @@ class Category(UniqueMixin, Base):
     @classmethod
     def unique_filter(cls, query, publisher, name):
         return query.filter(
-            Category.publisher_name == publisher.name,
+            Category.publisher.has(name=publisher.name),
             Category.name == name,
         )
 
@@ -151,6 +159,8 @@ class Category(UniqueMixin, Base):
         """
         return len(self.stories)
 
+Index("category_name_index", Category.publisher_uid, Category.name, unique=True)
+
 
 class StoryCategoryAssociation(Base):
     """
@@ -158,10 +168,8 @@ class StoryCategoryAssociation(Base):
     """
     __tablename__ = "story_has_category"
 
-    story_publisher = Column(String(MAX_SITE_LENGTH), primary_key=True)
-    story_id = Column(Integer, primary_key=True)
-    category_publisher = Column(String(MAX_SITE_LENGTH), primary_key=True)
-    category_name = Column(Unicode(MAX_CATEGORY_NAME_LENGTH), primary_key=True)
+    story_uid = Column(Integer, primary_key=True)
+    category_uid = Column(Integer, primary_key=True)
     implied = Column(Boolean, default=False, nullable=False)
 
     story = relationship(
@@ -174,13 +182,13 @@ class StoryCategoryAssociation(Base):
 
     __table_args__ = (
         ForeignKeyConstraint(
-            [story_publisher, story_id],
-            ["story.publisher_name", "story.id"],
+            [story_uid],
+            ["story.uid"],
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
-            [category_publisher, category_name],
-            ["category.publisher_name", "category.name"],
+            [category_uid],
+            ["category.uid"],
             ondelete="CASCADE",
         ),
     )
@@ -208,8 +216,9 @@ class Tag(UniqueMixin, Base):
     """
     __tablename__ = "tag"
 
-    type = Column(Unicode(MAX_TAG_TYPE_LENGTH), primary_key=True)
-    name = Column(Unicode(MAX_STORY_TAG_LENGTH), primary_key=True)
+    uid = Column(Integer, primary_key=True, autoincrement=True)
+    type = Column(Unicode(MAX_TAG_TYPE_LENGTH), nullable=False)
+    name = Column(Unicode(MAX_STORY_TAG_LENGTH), nullable=False)
     story_associations = relationship(
         "StoryTagAssociation",
         back_populates="tag",
@@ -231,6 +240,8 @@ class Tag(UniqueMixin, Base):
             Tag.name == name,
         )
 
+Index("tag_name_index", Tag.type, Tag.name)
+
 
 class StoryTagAssociation(Base):
     """
@@ -239,10 +250,8 @@ class StoryTagAssociation(Base):
     """
     __tablename__ = "story_has_tag"
 
-    story_publisher = Column(String(MAX_SITE_LENGTH), primary_key=True)
-    story_id = Column(Integer, autoincrement=False, primary_key=True)
-    tag_type = Column(Unicode(MAX_TAG_TYPE_LENGTH), primary_key=True)
-    tag_name = Column(Unicode(MAX_STORY_TAG_LENGTH), primary_key=True)
+    story_uid = Column(Integer, autoincrement=False, primary_key=True)
+    tag_uid = Column(Integer, primary_key=True)
     index = Column(Integer, autoincrement=False)
     implied = Column(Boolean, default=False, nullable=False)
 
@@ -256,13 +265,13 @@ class StoryTagAssociation(Base):
 
     __table_args__ = (
         ForeignKeyConstraint(
-            [story_publisher, story_id],
-            ["story.publisher_name", "story.id"],
+            [story_uid],
+            ["story.uid"],
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
-            [tag_type, tag_name],
-            ["tag.type", "tag.name"],
+            [tag_uid],
+            ["tag.uid"],
             ondelete="CASCADE",
         ),
     )
@@ -295,8 +304,9 @@ class Series(UniqueMixin, Base):
     """
     __tablename__ = "series"
 
-    publisher_name = Column(String(MAX_SITE_LENGTH), ForeignKey("publisher.name"), primary_key=True)
-    name = Column(Unicode(MAX_STORY_SERIES_LENGTH), primary_key=True)
+    uid = Column(Integer, primary_key=True, autoincrement=True)
+    publisher_uid = Column(Integer, ForeignKey("publisher.name"), autoincrement=False, nullable=False)
+    name = Column(Unicode(MAX_STORY_SERIES_LENGTH), nullable=False)
     publisher = relationship("Publisher", back_populates="series")
     story_associations = relationship(
         "StorySeriesAssociation",
@@ -317,9 +327,11 @@ class Series(UniqueMixin, Base):
     @classmethod
     def unique_filter(cls, query, publisher, name):
         return query.filter(
-            Series.publisher_name == publisher.name,
+            Series.publisher.has(name=publisher.name),
             Series.name == name,
         )
+
+Index("series_name_index", Series.publisher_uid, Series.name)
 
 
 class StorySeriesAssociation(Base):
@@ -328,10 +340,8 @@ class StorySeriesAssociation(Base):
     """
     __tablename__ = "story_in_series"
 
-    story_publisher = Column(String(MAX_SITE_LENGTH), primary_key=True)
-    story_id = Column(Integer, autoincrement=False, primary_key=True)
-    series_publisher = Column(Unicode(MAX_SITE_LENGTH), primary_key=True)
-    series_name = Column(Unicode(MAX_STORY_SERIES_LENGTH), primary_key=True)
+    story_uid = Column(Integer, autoincrement=False, primary_key=True)
+    series_uid = Column(Integer, autoincrement=False, primary_key=True)
     index = Column(Integer, autoincrement=False)
 
     story = relationship(
@@ -344,13 +354,13 @@ class StorySeriesAssociation(Base):
 
     __table_args__ = (
         ForeignKeyConstraint(
-            [story_publisher, story_id],
-            ["story.publisher_name", "story.id"],
+            [story_uid],
+            ["story.uid"],
             ondelete="CASCADE",
         ),
         ForeignKeyConstraint(
-            [series_publisher, series_name],
-            ["series.publisher_name", "series.name"],
+            [series_uid],
+            ["series.uid"],
             ondelete="CASCADE",
         ),
     )
@@ -379,11 +389,12 @@ class Story(Base):
     """
     __tablename__ = "story"
 
-    publisher_name = Column(String(MAX_SITE_LENGTH), ForeignKey("publisher.name"), primary_key=True)
+    uid = Column(Integer, autoincrement=True, primary_key=True)
+    publisher_uid = Column(Integer, ForeignKey("publisher.uid"), nullable=False)
     publisher = relationship("Publisher", back_populates="stories", overlaps="stories")
-    id = Column(Integer, primary_key=True, autoincrement=False)
+    id = Column(Integer, primary_key=False, autoincrement=False, nullable=False)
     title = Column(Unicode(MAX_STORY_TITLE_LENGTH), nullable=False)
-    author_name = Column(String(MAX_AUTHOR_NAME_LENGTH), nullable=False)
+    author_uid = Column(Integer, ForeignKey("author.uid"), autoincrement=False, nullable=False)
     author = relationship(
         "Author",
         back_populates="stories",
@@ -444,8 +455,8 @@ class Story(Base):
 
     __table_args__ = (
         ForeignKeyConstraint(
-            [publisher_name, author_name],
-            ["author.publisher_name", "author.name"],
+            [author_uid],
+            ["author.uid"],
             ondelete="CASCADE",
         ),
     )
@@ -613,8 +624,7 @@ class Story(Base):
         return (
             select(func.sum(Chapter.num_words))
             .where(
-                Chapter.story_publisher == cls.publisher_name,
-                Chapter.story_id == cls.id,
+                Chapter.story_uid == cls.uid,
             )
             .label("total_words")
         )
@@ -650,7 +660,7 @@ class Story(Base):
             "words": format_number(self.total_words),
             "chapters": len(self.chapters),
             "score": self.score,
-            "series": [(sa.series.publisher.name, sa.index) for sa in self.series_associations],
+            "series": [(sa.series.name, sa.index) for sa in self.series_associations],
             "rating": (self.rating.title() if self.rating is not None else "Unknown"),
         }
         return data
@@ -686,6 +696,8 @@ class Story(Base):
         }
         return data
 
+Index("story_id_index", Story.publisher_uid, Story.id, unique=True)
+
 
 class Chapter(Base):
     """
@@ -693,24 +705,25 @@ class Chapter(Base):
     """
     __tablename__ = "chapter"
 
-    publisher_name = Column(String(MAX_SITE_LENGTH), ForeignKey("publisher.name"), primary_key=True)
-    publisher = relationship("Publisher", back_populates="chapters", overlaps="chapters")
-    story_id = Column(Integer, primary_key=True, autoincrement=False)
+    uid = Column(Integer, primary_key=True, autoincrement=True)
+    story_uid = Column(Integer, autoincrement=False, nullable=False)
     story = relationship(
         "Story",
         back_populates="chapters",
         overlaps="chapters, publisher",
         cascade="all",
     )
-    index = Column(Integer, primary_key=True, nullable=False, autoincrement=False)
+    index = Column(Integer, nullable=False, autoincrement=False)
     title = Column(Unicode(MAX_CHAPTER_TITLE_LENGTH), nullable=False)
     text = deferred(Column(_get_longtext_type(MAX_CHAPTER_TEXT_LENGTH), nullable=False))
     num_words = Column(Integer, nullable=False)
 
     __table_args__ = (
         ForeignKeyConstraint(
-            [publisher_name, story_id],
-            ["story.publisher_name", "story.id"],
+            [story_uid],
+            ["story.uid"],
             ondelete="CASCADE",
         ),
     )
+
+Index("chapter_id_index", Chapter.story_uid, Chapter.index, unique=True)

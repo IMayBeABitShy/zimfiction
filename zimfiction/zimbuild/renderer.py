@@ -313,7 +313,7 @@ class HtmlRenderer(object):
             result.add(
                 HtmlPage(
                     path="story/{}/{}/{}".format(story.publisher.name, story.id, chapter.index),
-                    title="{} by {} - Chapter {} - {}".format(story.title, story.author_name, chapter.index, chapter.title),
+                    title="{} by {} - Chapter {} - {}".format(story.title, story.author.name, chapter.index, chapter.title),
                     content=self.minify_html(chapter_page),
                     is_front=True,
                 ),
@@ -327,7 +327,7 @@ class HtmlRenderer(object):
             Redirect(
                 "story/{}/{}/".format(story.publisher.name, story.id),
                 "story/{}/{}/{}".format(story.publisher.name, story.id, min_chapter_i),
-                title="{} by {} on {}".format(story.title, story.author_name, story.publisher.name),
+                title="{} by {} on {}".format(story.title, story.author.name, story.publisher.name),
                 is_front=True,
             ),
         )
@@ -341,7 +341,7 @@ class HtmlRenderer(object):
             HtmlPage(
                 path="story/{}/{}/index".format(story.publisher.name, story.id),
                 content=self.minify_html(chapter_index_page),
-                title="{} by {} on {} - List of chapters".format(story.title, story.author_name, story.publisher.name),
+                title="{} by {} on {} - List of chapters".format(story.title, story.author.name, story.publisher.name),
                 is_front=False,
             ),
         )
@@ -664,8 +664,8 @@ class HtmlRenderer(object):
         """
         Render a publisher.
 
-        @param publisher_name: publisher to render
-        @type publisher_name: L{zimfiction.db.models.Publisher}
+        @param publisher: publisher to render
+        @type publisher: L{zimfiction.db.models.Publisher}
         @return: the rendered pages and redirects
         @rtype: L{RenderResult}
         """

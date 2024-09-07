@@ -87,7 +87,6 @@ class RawChapter(object):
         @rtype: L{zimfiction.db.models.Chapter}
         """
         chapter = Chapter(
-            publisher=publisher,
             story_id=story_id,
             index=self.index,
             title=self.title,
@@ -417,8 +416,6 @@ class RawStory(object):
         )
         chapters = [
             Chapter(
-                publisher=publisher,
-                # story_id=self.id,
                 index=c.index,
                 title=c.title,
                 text=c.text,
@@ -432,7 +429,6 @@ class RawStory(object):
             name=self.author,
             url=self.author_url
         )
-        # TODO: kwargs not finished
         kwargs = {
             "id": self.id,
             "title": self.title,
@@ -450,9 +446,7 @@ class RawStory(object):
             "num_comments": self.num_comments,
             "chapters": chapters,
         }
-        story = Story(
-        **kwargs
-        )
+        story = Story(**kwargs)
         # link categories
         for category_name in self.categories:
             story.category_associations.append(

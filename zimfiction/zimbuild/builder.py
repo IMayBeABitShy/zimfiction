@@ -661,7 +661,7 @@ class ZimBuilder(object):
             self.reporter.msg(" -> Adding stories...")
             self.reporter.msg("     -> Finding stories... ", end="")
             n_stories = self.session.execute(
-                select(func.count(Story.id))
+                select(func.count(Story.uid))
             ).scalar_one()
             self.reporter.msg("found {} stories.".format(n_stories))
             n_story_tasks = math.ceil(n_stories / STORIES_PER_TASK)
@@ -680,7 +680,7 @@ class ZimBuilder(object):
         self.reporter.msg(" -> Adding tags...")
         self.reporter.msg("     -> Finding tags... ", end="")
         n_tags = self.session.execute(
-            select(func.count(Tag.name))  # not distinct
+            select(func.count(Tag.uid))
         ).scalar_one()
         self.reporter.msg("found {} tags.".format(n_tags))
         with self._run_stage(
@@ -695,7 +695,7 @@ class ZimBuilder(object):
         self.reporter.msg(" -> Adding Authors...")
         self.reporter.msg("     -> Finding authors... ", end="")
         n_authors = self.session.execute(
-            select(func.count(Author.name))  # not distinct
+            select(func.count(Author.uid))
         ).scalar_one()
         self.reporter.msg("found {} authors.".format(n_authors))
         with self._run_stage(
@@ -710,7 +710,7 @@ class ZimBuilder(object):
         self.reporter.msg(" -> Adding Categories...")
         self.reporter.msg("     -> Finding categories... ", end="")
         n_categories = self.session.execute(
-            select(func.count(Category.name))  # not distinct
+            select(func.count(Category.uid))
         ).scalar_one()
         self.reporter.msg("found {} categories.".format(n_categories))
         with self._run_stage(
@@ -725,7 +725,7 @@ class ZimBuilder(object):
         self.reporter.msg(" -> Adding Series...")
         self.reporter.msg("     -> Finding series... ", end="")
         n_series = self.session.execute(
-            select(func.count(Series.name))  # not distinct
+            select(func.count(Series.uid))
         ).scalar_one()
         self.reporter.msg("found {} series.".format(n_series))
         with self._run_stage(
@@ -740,7 +740,7 @@ class ZimBuilder(object):
         self.reporter.msg(" -> Adding Publishers...")
         self.reporter.msg("     -> Finding publishers... ", end="")
         n_publishers = self.session.execute(
-            select(func.count(Publisher.name))
+            select(func.count(Publisher.uid))
         ).scalar_one()
         self.reporter.msg("found {} publishers.".format(n_publishers))
         with self._run_stage(
@@ -964,14 +964,14 @@ class ZimBuilder(object):
         Create and send the tasks for the stories to the worker inqueue.
         """
         story_bucket_maker = BucketMaker(maxsize=STORIES_PER_TASK)
-        select_story_ids_stmt = select(Story.publisher_name, Story.id)
+        select_story_ids_stmt = select(Story.uid)
         result = self.session.execute(select_story_ids_stmt)
         # create buckets and turn them into tasks
         for story in result:
-            bucket = story_bucket_maker.feed((story.publisher_name, story.id))
+            bucket = story_bucket_maker.feed(story.uid)
             if bucket is not None:
                 # send out a task
-                task = StoryRenderTask(bucket)
+                task = StoryRenderTask(story_uids=bucket)
                 self.inqueue.put(task)
         # send out all remaining tasks
         bucket = story_bucket_maker.finish()
@@ -983,50 +983,50 @@ class ZimBuilder(object):
         """
         Create and send the tasks for the tags to the worker inqueue.
         """
-        select_tags_stmt = select(Tag.type, Tag.name)
+        select_tags_stmt = select(Tag.uid)
         result = self.session.execute(select_tags_stmt)
         for tag in result:
-            task = TagRenderTask(tag.type, tag.name)
+            task = TagRenderTask(uid=tag.uid)
             self.inqueue.put(task)
 
     def _send_author_tasks(self):
         """
         Create and send the tasks for the authors to the worker inqueue.
         """
-        select_authors_stmt = select(Author.publisher_name, Author.name)
+        select_authors_stmt = select(Author.uid)
         result = self.session.execute(select_authors_stmt)
         for author in result:
-            task = AuthorRenderTask(author.publisher_name, author.name)
+            task = AuthorRenderTask(uid = author.uid)
             self.inqueue.put(task)
 
     def _send_category_tasks(self):
         """
         Create and send the tasks for the categories to the worker inqueue.
         """
-        select_categories_stmt = select(Category.publisher_name, Category.name)
+        select_categories_stmt = select(Category.uid)
         result = self.session.execute(select_categories_stmt)
         for category in result:
-            task = CategoryRenderTask(category.publisher_name, category.name)
+            task = CategoryRenderTask(uid=category.uid)
             self.inqueue.put(task)
 
     def _send_series_tasks(self):
         """
         Create and send the tasks for the series to the worker inqueue.
         """
-        select_series_stmt = select(Series.publisher_name, Series.name)
+        select_series_stmt = select(Series.uid)
         result = self.session.execute(select_series_stmt)
         for series in result:
-            task = SeriesRenderTask(series.publisher_name, series.name)
+            task = SeriesRenderTask(uid=series.uid)
             self.inqueue.put(task)
 
     def _send_publisher_tasks(self):
         """
         Create and send the tasks for the publishers to the worker inqueue.
         """
-        select_publishers_stmt = select(Publisher.name)
+        select_publishers_stmt = select(Publisher.uid)
         result = self.session.execute(select_publishers_stmt)
         for publisher in result:
-            task = PublisherRenderTask(publisher.name)
+            task = PublisherRenderTask(uid=publisher.uid)
             self.inqueue.put(task)
 
     def _send_etc_tasks(self):
