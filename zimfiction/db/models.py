@@ -305,7 +305,7 @@ class Series(UniqueMixin, Base):
     __tablename__ = "series"
 
     uid = Column(Integer, primary_key=True, autoincrement=True)
-    publisher_uid = Column(Integer, ForeignKey("publisher.name"), autoincrement=False, nullable=False)
+    publisher_uid = Column(Integer, ForeignKey("publisher.uid"), autoincrement=False, nullable=False)
     name = Column(Unicode(MAX_STORY_SERIES_LENGTH), nullable=False)
     publisher = relationship("Publisher", back_populates="series")
     story_associations = relationship(
