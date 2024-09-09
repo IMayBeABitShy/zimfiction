@@ -151,7 +151,7 @@ def run_export(ns):
     dumper = get_dumper(ns.format)
     engine = connect_to_db(ns)
     with Session(engine) as session:
-        exporter = Exporter(session, dumper=dumper, reporter=reporter)
+        exporter = Exporter(session, dumper=dumper, grouped=ns.grouped, reporter=reporter)
         exporter.export_to(ns.directory, criteria=True)
 
 
@@ -315,6 +315,11 @@ def main():
         action="store",
         default="txt",
         help="Format to export stories as",
+    )
+    export_parser.add_argument(
+        "--grouped",
+        action="store_true",
+        help="Group stories by publisher and id in subdirectories",
     )
 
     ns = parser.parse_args()

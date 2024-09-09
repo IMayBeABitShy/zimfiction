@@ -40,10 +40,12 @@ class Exporter(object):
     @type session: L{sqlalchemy.orm.Session}
     @ivar dumper: dumper to use to export stories
     @type dumper: L{zimfiction.exporter.dumper.Dumper}
+    @ivar grouped: whether stories should be grouped in subdirectories or not
+    @type grouped: L{bool}
     @ivar reporter: reporter to use for progress reporters
     @type reporter: L{zimfiction.reporter.BaseReporter}
     """
-    def __init__(self, session, dumper, reporter=None):
+    def __init__(self, session, dumper, grouped=False, reporter=None):
         """
         The default constructor.
 
@@ -51,6 +53,8 @@ class Exporter(object):
         @type session: L{sqlalchemy.orm.Session}
         @param dumper: dumper to use to export stories
         @type dumper: L{zimfiction.exporter.dumper.Dumper}
+        @param grouped: whether stories should be grouped in subdirectories or not
+        @type grouped: L{bool}
         @param reporter: reporter to use for progress reporters
         @type reporter: L{zimfiction.reporter.BaseReporter} or L{None}
         """
@@ -58,6 +62,7 @@ class Exporter(object):
         assert isinstance(reporter, BaseReporter) or (reporter is None)
         self.session = session
         self.dumper = dumper
+        self.grouped = grouped
         if reporter is None:
             reporter = VoidReporter()
         self.reporter = reporter
@@ -90,7 +95,15 @@ class Exporter(object):
 
                 is_binary = (encoding is None)
                 mode = ("wb" if is_binary else "w")
-                path = os.path.join(directory, filename)
+                if self.grouped:
+                    n_ids_per_group = 100000
+                    group_id = "{}-{}".format(story.publisher.name, (story.id // n_ids_per_group) * n_ids_per_group)
+                    parentdir = os.path.join(directory, group_id)
+                else:
+                    parentdir = directory
+                if not os.path.exists(parentdir):
+                    os.makedirs(parentdir)
+                path = os.path.join(parentdir, filename)
                 with open(path, mode, encoding=encoding) as fout:
                     fout.write(content)
                 bar.advance(1)
