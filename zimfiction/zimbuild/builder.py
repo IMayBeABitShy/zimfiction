@@ -608,6 +608,7 @@ class ZimBuilder(object):
             imagepath = get_resource_file_path("icon.png")
             with open(imagepath, "rb") as fin:
                 creator.add_illustration(48, fin.read())
+            set_or_increment(self.num_files_added, "image")
             self.reporter.msg("Done.")
 
             # add metadata
@@ -615,6 +616,7 @@ class ZimBuilder(object):
             metadata = options.get_metadata_dict()
             for key, value in metadata.items():
                 creator.add_metadata(key, value)
+                set_or_increment(self.num_files_added, "metadata")
             self.reporter.msg("Done.")
 
             # add general items
@@ -642,7 +644,11 @@ class ZimBuilder(object):
         self.reporter.msg("Final size: {}".format(format_size(final_size)))
         self.reporter.msg("Added files: ")
         for filetype, amount in self.num_files_added.items():
-            self.reporter.msg("    {}: {} ({})".format(filetype, amount, format_number(amount)))
+            if filetype != "total":
+                # print total later
+                self.reporter.msg("    {}: {} ({})".format(filetype, amount, format_number(amount)))
+        total_amount = self.num_files_added["total"]
+        self.reporter.msg("    total: {} ({})".format(total_amount, format_number(total_amount)))
 
 
     def _add_content(self, creator, options):
@@ -929,6 +935,7 @@ class ZimBuilder(object):
                         else:
                             # unknown result object
                             raise RuntimeError("Unknown render result: {}".format(type(rendered_object)))
+                        set_or_increment(self.num_files_added, "total")
 
     def _worker_process(self, id, worker_options, render_options):
         """
