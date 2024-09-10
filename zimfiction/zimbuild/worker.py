@@ -49,7 +49,7 @@ class Task(object):
     type = "<unset>"
 
     @property
-    def id(self):
+    def name(self):
         """
         Return a non-unqiue id describing this task.
 
@@ -66,7 +66,7 @@ class StopTask(Task):
     type = "stop"
 
     @property
-    def id(self):
+    def name(self):
         return "stop"
 
 
@@ -74,32 +74,29 @@ class StoryRenderTask(Task):
     """
     A L{Task} for rendering stories.
 
-    @ivar story_ids: ids of stories to render, as list of tuples of (publisher, id)
-    @type story_ids: L{list} of L{tuple} of (L{str}, L{int})
+    @ivar story_uids: ids of stories to render, as list of story uids
+    @type story_uids: L{list} of L{int}
     """
     type = "story"
 
-    def __init__(self, story_ids):
+    def __init__(self, story_uids):
         """
         The default constructor.
 
-        @param story_ids: ids of stories to render, as list of tuples of (publisher, id)
-        @type story_ids: L{list} of L{tuple} of (L{str}, L{int})
+        @param story_uids: ids of stories to render, as list of story uids
+        @type story_uids: L{list} of L{int}
         """
-        assert isinstance(story_ids, (list, tuple))
-        assert isinstance(story_ids[0], tuple)
-        assert isinstance(story_ids[0][0], str)
-        assert isinstance(story_ids[0][1], int)
-        self.story_ids = story_ids
+        assert isinstance(story_uids, (list, tuple))
+        assert isinstance(story_uids[0], int)
+        self.story_uids = story_uids
 
     @property
-    def id(self):
-        if len(self.story_ids) == 0:
+    def name(self):
+        if len(self.story_uids) == 0:
             return "stories_empty"
-        return "stories_{}-{}+{}".format(
-            self.story_ids[0][0],
-            self.story_ids[0][1],
-            len(self.story_ids[0]) - 1,
+        return "stories_{}+{}".format(
+            self.story_uids[0],
+            len(self.story_uids) - 1,
         )
 
 
@@ -107,144 +104,120 @@ class TagRenderTask(Task):
     """
     A L{Task} for rendering tags.
 
-    @ivar tag_type: type of tag to render
-    @type tag_type: L{str}
-    @ivar tag_name: name of tag to render
-    @type tag_name: L{str}
+    @ivar uid: uid of tag to render
+    @type uid: L{int}
     """
     type = "tag"
 
-    def __init__(self, tag_type, tag_name):
+    def __init__(self, uid):
         """
         The default constructor.
 
-        @param tag_type: type of tag to render
-        @type tag_type: L{str}
-        @param tag_name: name of tag to render
-        @type tag_name: L{str}
+        @param uid: uid of tag to render
+        @type uid: L{int}
         """
-        assert isinstance(tag_type, str)
-        assert isinstance(tag_name, str)
-        self.tag_type = tag_type
-        self.tag_name = tag_name
+        assert isinstance(uid, int)
+        self.uid = uid
 
     @property
-    def id(self):
-        return "tag_{}_{}".format(self.tag_type, self.tag_name)
+    def name(self):
+        return "tag_{}".format(self.uid)
 
 
 class AuthorRenderTask(Task):
     """
     A L{Task} for rendering authors.
 
-    @ivar publisher: publisher this author is from
-    @type publisher: L{str}
-    @ivar name: name of the author to render
-    @type name: L{str}
+    @ivar uid: uid of author to render
+    @type uid: L{int}
     """
     type = "author"
 
-    def __init__(self, publisher, name):
+    def __init__(self, uid):
         """
         The default constructor.
 
-        @param publisher: publisher this author is from
-        @type publisher: L{str}
-        @param name: name of the author to render
-        @type name: L{str}
+        @param uid: uid of author to render
+        @type uid: L{int}
         """
-        assert isinstance(publisher, str)
-        assert isinstance(name, str)
-        self.publisher = publisher
-        self.name = name
+        assert isinstance(uid, int)
+        self.uid = uid
 
     @property
-    def id(self):
-        return "author_{}_{}".format(self.publisher, self.name)
+    def name(self):
+        return "author_{}".format(self.uid)
 
 
 class CategoryRenderTask(Task):
     """
     A L{Task} for rendering categories.
 
-    @ivar publisher: publisher this category is from
-    @type publisher: L{str}
-    @ivar name: name of the category to render
-    @type name: L{str}
+    @ivar uid: uid of category to render
+    @type uid: L{int}
     """
     type = "category"
 
-    def __init__(self, publisher, name):
+    def __init__(self, uid):
         """
         The default constructor.
 
-        @param publisher: publisher this category is from
-        @type publisher: L{str}
-        @param name: name of the category to render
-        @type name: L{str}
+        @param uid: uid of category to render
+        @type uid: L{int}
         """
-        assert isinstance(publisher, str)
-        assert isinstance(name, str)
-        self.publisher = publisher
-        self.name = name
+        assert isinstance(uid, int)
+        self.uid = uid
 
     @property
-    def id(self):
-        return "category_{}_{}".format(self.publisher, self.name)
+    def name(self):
+        return "category_{}".format(self.uid)
 
 
 class SeriesRenderTask(Task):
     """
     A L{Task} for rendering series.
 
-    @ivar publisher: publisher this series is from
-    @type publisher: L{str}
-    @ivar name: name of the series to render
-    @type name: L{str}
+    @ivar uid: uid of series to render
+    @type uid: L{int}
     """
     type = "series"
 
-    def __init__(self, publisher, name):
+    def __init__(self, uid):
         """
         The default constructor.
 
-        @param publisher: publisher this series is from
-        @type publisher: L{str}
-        @param name: name of the series to render
-        @type name: L{str}
+        @param uid: uid of series to render
+        @type uid: L{int}
         """
-        assert isinstance(publisher, str)
-        assert isinstance(name, str)
-        self.publisher = publisher
-        self.name = name
+        assert isinstance(uid, int)
+        self.uid = uid
 
     @property
-    def id(self):
-        return "series_{}_{}".format(self.publisher, self.name)
+    def name(self):
+        return "series_{}".format(self.uid)
 
 
 class PublisherRenderTask(Task):
     """
     A L{Task} for rendering publishers.
 
-    @ivar publisher: publisher to render
-    @type publisher: L{str}
+    @ivar uid: uid of publisher to render
+    @type uid: L{int}
     """
     type = "publisher"
 
-    def __init__(self, publisher):
+    def __init__(self, uid):
         """
         The default constructor.
 
-        @param publisher: name of publisher to render
-        @type publisher: L{str}
+        @param uid: uid of publisher to render
+        @type uid: L{int}
         """
-        assert isinstance(publisher, str)
-        self.publisher = publisher
+        assert isinstance(uid, int)
+        self.uid = uid
 
     @property
-    def id(self):
-        return "publisher_{}".format(self.publisher)
+    def name(self):
+        return "publisher_{}".format(self.uid)
 
 
 class EtcRenderTask(Task):
@@ -401,8 +374,7 @@ class Worker(object):
         running = True
         while running:
             task = self.inqueue.get(block=True)
-            self.log("Received task '{}'".format(task.id))
-
+            self.log("Received task '{}'".format(task.name))
             with self.get_task_processing_context(task=task):
                 if task.type == "stop":
                     # stop the worker
@@ -468,7 +440,7 @@ class Worker(object):
                 raise ImportError("Could not import package 'memray' required for memory profiling!")
             file_name = os.path.join(
                 self.options.memprofile_directory,
-                "mp_{}_{}.bin".format(self.id, normalize_tag(task.id))
+                "mp_{}_{}.bin".format(self.id, normalize_tag(task.name))
             )
             return memray.Tracker(
                 destination=memray.FileDestination(
@@ -490,12 +462,12 @@ class Worker(object):
         @param task: task to process
         @type task: L{StoryRenderTask}
         """
-        for publisher, story_id in task.story_ids:
+        for story_uid in task.story_uids:
             # get the story
             self.log("Retrieving story...")
             story = self.session.scalars(
                 select(Story)
-                .where(Story.publisher_name == publisher, Story.id == story_id)
+                .where(Story.uid == story_uid)
                 .options(
                     # eager loading options
                     # as it turns out, lazyloading is simply the fastest... This seems wrong...
@@ -524,10 +496,9 @@ class Worker(object):
         # count stories in tag
         self.log("Counting non-implied stories in tag...")
         count_stmt = (
-            select(func.count(StoryTagAssociation.story_id))
+            select(func.count(StoryTagAssociation.story_uid))
             .where(
-                StoryTagAssociation.tag_type == task.tag_type,
-                StoryTagAssociation.tag_name == task.tag_name,
+                StoryTagAssociation.tag_uid == task.uid,
                 StoryTagAssociation.implied == False,
             )
         )
@@ -557,20 +528,17 @@ class Worker(object):
         stmt = (
             select(Tag)
             .where(
-                Tag.type == task.tag_type,
-                Tag.name == task.tag_name,
+                Tag.uid == task.uid,
             ).join(
                 StoryTagAssociation,
                 and_(
-                    StoryTagAssociation.tag_type == Tag.type,
-                    StoryTagAssociation.tag_name == Tag.name,
+                    StoryTagAssociation.tag_uid == Tag.uid,
                     StoryTagAssociation.implied == False,
                 ),
             ).join(
                 Story,
                 and_(
-                    StoryTagAssociation.story_publisher == Story.publisher_name,
-                    StoryTagAssociation.story_id == Story.id,
+                    StoryTagAssociation.story_uid == Story.uid,
                     StoryTagAssociation.implied == False,
                 ),
             ).options(
@@ -600,7 +568,7 @@ class Worker(object):
         self.log("Retrieving author...")
         author = self.session.scalars(
             select(Author)
-            .where(Author.publisher_name == task.publisher, Author.name == task.name)
+            .where(Author.uid == task.uid)
             .options(
                 # eager loading options
                 joinedload(Author.stories).undefer(Story.summary),
@@ -622,10 +590,9 @@ class Worker(object):
         # count stories in category
         self.log("Counting non-implied stories in category...")
         count_stmt = (
-            select(func.count(StoryCategoryAssociation.story_id))
+            select(func.count(StoryCategoryAssociation.story_uid))
             .where(
-                StoryCategoryAssociation.category_publisher == Category.publisher_name,
-                StoryCategoryAssociation.category_name == Category.name,
+                StoryCategoryAssociation.category_uid == task.uid,
                 StoryCategoryAssociation.implied == False,
             )
         )
@@ -655,20 +622,17 @@ class Worker(object):
         stmt = (
             select(Category)
             .where(
-                Category.publisher_name == task.publisher,
-                Category.name == task.name,
+                Category.uid == task.uid,
             ).join(
                 StoryCategoryAssociation,
                 and_(
-                    StoryCategoryAssociation.category_publisher == Category.publisher_name,
-                    StoryCategoryAssociation.category_name == Category.name,
+                    StoryCategoryAssociation.category_uid == Category.uid,
                     StoryCategoryAssociation.implied == False,
                 ),
             ).join(
                 Story,
                 and_(
-                    StoryCategoryAssociation.story_publisher == Story.publisher_name,
-                    StoryCategoryAssociation.story_id == Story.id,
+                    StoryCategoryAssociation.story_uid == Story.uid,
                     StoryCategoryAssociation.implied == False,
                 ),
             ).options(
@@ -698,7 +662,7 @@ class Worker(object):
         self.log("Retrieving series...")
         series = self.session.scalars(
             select(Series)
-            .where(Series.publisher_name == task.publisher, Series.name == task.name)
+            .where(Series.uid == task.uid)
             .options(
                 # eager loading options
                 joinedload(Series.story_associations),
@@ -722,7 +686,7 @@ class Worker(object):
         self.log("Retrieving publisher...")
         publisher = self.session.scalars(
             select(Publisher)
-            .where(Publisher.name == task.publisher)
+            .where(Publisher.uid == task.uid)
             .options(
                 # eager loading options
                 joinedload(Publisher.categories),
