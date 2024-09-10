@@ -436,7 +436,14 @@ class HtmlRenderer(object):
                 is_front=False
             )
         )
-        items_in_result += 1
+        result.add(
+            JsonObject(
+                path="tag/{}/{}/storyupdates.json".format(tag.type, normalize_tag(tag.name)),
+                title="",
+                content=stats.timeline,
+            ),
+        )
+        items_in_result += 2
         # add search
         if include_search:
             search_header_data = search_creator.get_search_header()
@@ -522,6 +529,13 @@ class HtmlRenderer(object):
                     is_front=False,
                 ),
             )
+        result.add(
+            JsonObject(
+                path="author/{}/{}/storyupdates.json".format(author.publisher.name, normalize_tag(author.name)),
+                title="",
+                content=stats.timeline,
+            )
+        )
         return result
 
 
@@ -606,7 +620,14 @@ class HtmlRenderer(object):
                 is_front=False
             )
         )
-        items_in_result += 1
+        result.add(
+            JsonObject(
+                path="category/{}/{}/storyupdates.json".format(category.publisher.name, normalize_tag(category.name)),
+                title="",
+                content=stats.timeline,
+            )
+        )
+        items_in_result += 2
         # add search
         if include_search:
             search_header_data = search_creator.get_search_header()
@@ -646,17 +667,24 @@ class HtmlRenderer(object):
         series_template = self.environment.get_template("series.html.jinja")
         stats = StoryListStatCreator.get_stats_from_iterable(series.stories)
         page = series_template.render(
-            to_root="../..",
+            to_root="../../..",
             series=series,
             stats=stats,
         )
         result.add(
             HtmlPage(
-                path="series/{}/{}".format(series.publisher.name, normalize_tag(series.name)),
+                path="series/{}/{}/".format(series.publisher.name, normalize_tag(series.name)),
                 content=self.minify_html(page),
                 title="Series: '{}' on {}".format(series.name, series.publisher.name),
                 is_front=True,
             ),
+        )
+        result.add(
+            JsonObject(
+                path="series/{}/{}/storyupdates.json".format(series.publisher.name, normalize_tag(series.name)),
+                title="",
+                content=stats.timeline,
+            )
         )
         return result
 
@@ -690,7 +718,13 @@ class HtmlRenderer(object):
                 is_front=True,
             ),
         )
-
+        result.add(
+            JsonObject(
+                path="publisher/{}/storyupdates.json".format(publisher.name),
+                title="",
+                content=stats.timeline,
+            )
+        )
         # category pages
         bucketmaker = BucketMaker(CATEGORIES_PER_PAGE)
         categories = []
@@ -771,6 +805,13 @@ class HtmlRenderer(object):
                 is_front=True,
             ),
         )
+        result.add(
+            JsonObject(
+                path="storyupdates.json",
+                title="",
+                content=stats.timeline,
+            )
+        )
         return result
 
     def render_search_script(self):
@@ -789,6 +830,78 @@ class HtmlRenderer(object):
                 path="scripts/search.js",
                 content=script,
                 title="Search script",
+            ),
+        )
+        return result
+
+    def render_chart_scripts(self):
+        """
+        Generate the chart scripts.
+
+        @return: the rendered pages and redirects
+        @rtype: L{RenderResult}
+        """
+        result = RenderResult()
+        # chartjs
+        path = get_resource_file_path("chartjs", "chart.js")
+        with open(path, "r", encoding="utf-8") as fin:
+            script = fin.read()
+        result.add(
+            Script(
+                path="scripts/chart.js",
+                content=script,
+                title="Chart.js",
+            ),
+        )
+        # storytimechart
+        path = get_resource_file_path("storytimechart.js")
+        with open(path, "r", encoding="utf-8") as fin:
+            script = fin.read()
+        result.add(
+            Script(
+                path="scripts/storytimechart.js",
+                content=script,
+                title="storytimechart.js",
+            ),
+        )
+        return result
+
+    def render_info_pages(self):
+        """
+        Render the info pages.
+
+        @return: the rendered pages and redirects
+        @rtype: L{RenderResult}
+        """
+        result = RenderResult()
+        # general info page
+        info_template = self.environment.get_template("info.html.jinja")
+        info_page = info_template.render(
+            to_root="..",
+        )
+        result.add(
+            HtmlPage(
+                path="info/index.html",
+                content=self.minify_html(info_page),
+                title="Informations",
+                is_front=True,
+            ),
+        )
+        # acknowledgements
+        ack_template = self.environment.get_template("acknowledgements.html.jinja")
+        licenses = {}
+        with open(get_resource_file_path("chartjs", "LICENSE.md")) as fin:
+            licenses["chart.js"] = fin.read()
+        ack_page = ack_template.render(
+            to_root="..",
+            licenses=licenses,
+        )
+        result.add(
+            HtmlPage(
+                path="info/acknowledgements.html",
+                content=self.minify_html(ack_page),
+                title="Acknowledgements",
+                is_front=True,
             ),
         )
         return result

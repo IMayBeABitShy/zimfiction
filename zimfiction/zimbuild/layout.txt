@@ -7,6 +7,15 @@ This file describes the ZIM layout.
 +---index.html
 |   The main page.
 |
++-+-info/
+| | Info files
+| |
+| +---index.html
+| |   index page of info
+| |
+| +---acknowledgments.html
+|     Acknowledgments
+|
 +---statistics.html
 |   Global content statistics
 |
@@ -40,6 +49,8 @@ This file describes the ZIM layout.
 |   +-+-NAME
 |     | The page for this author
 |     |
+|     +-[chart data]
+|     |
 |     +-PAGENUM
 |       A page of the list of stories created by this author
 |
@@ -58,6 +69,8 @@ This file describes the ZIM layout.
 |     +-stats
 |     | The statistics about stories in this tag
 |     |
+|     +-[chart data]
+|     |
 |     +-[search metadata]
 |
 +-+-category/
@@ -75,6 +88,8 @@ This file describes the ZIM layout.
 |     +-stats
 |     | The statistic about stories in this category
 |     |
+|     +-[chart data]
+|     |
 |     +-[search metadata]
 |
 +-+-series/
@@ -83,8 +98,10 @@ This file describes the ZIM layout.
 | +-+-PUBLISHER/
 |   | Series from this publisher
 |   |
-|   +-NAME
-|     A page containing all stories in this series
+|   +-+-NAME/
+|     | A page containing all stories in this series. NOTE the slash
+|     |
+|     +-[chart data]
 |
 +-+-publisher/
 | | The pages for publishers
@@ -93,19 +110,27 @@ This file describes the ZIM layout.
 |   | A page for a publisher, showing some available categories
 |   |
 |   +-+-categories/
-|     | categories in this publisher
-|     |
-|     +-PAGENUM
-|       A page of categories
+|   | | categories in this publisher
+|   | |
+|   | +-PAGENUM
+|   |   A page of categories
+|   |
+|   +-[chart data]
 |
 +-+-scripts/
 | | Script files
 | |
 | +---search.js
-|     The search script
+| |   The search script
+| |
+| +---chart.js
+| |    The chart.js script
+| |
+| +---storytimechart.js
+| |    A script for creating a chart for the story updates.
 
 
-SEARCH METADATA LAYOUT
+--- SEARCH METADATA LAYOUT ---
 
 files:
 - search_header.json - header data
@@ -141,3 +166,13 @@ content:
     },
     ...
 ]
+
+--- CHART DATA LAYOUT ---
+
+storyupdates.json:
+
+{
+    months: [...],
+    published: [...],
+    updated: [...],
+}

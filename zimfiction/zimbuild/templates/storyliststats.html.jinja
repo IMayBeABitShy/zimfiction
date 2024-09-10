@@ -1,4 +1,4 @@
-{# This is a template for rendering statistics about a list of stories. Expects "to_root", "stats" as arguments #}
+{# This is a template for rendering statistics about a list of stories. Expects "to_root", "stats", "with_cart" as arguments #}
 
 <DIV class="stats">
     <TABLE class="statstable storyliststatstable">
@@ -59,3 +59,9 @@
         {% endfor %}
     </TABLE>
 </DIV>
+
+{% if with_chart|default(true) %}
+    <DIV class="storyupdatechart-container">
+        <CANVAS id="storyupdatechart"></CANVAS>
+    </DIV>
+{% endif %}

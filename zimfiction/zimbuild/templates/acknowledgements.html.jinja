@@ -1,0 +1,20 @@
+{# This is the acknowledgment page. Expects "to_root", "licenses" argument.#}
+{% extends "base.html.jinja" %}
+
+{% block title %}
+    <TITLE>ZimFiction - Acknowledgements!</TITLE>
+{% endblock %}
+
+{% block content %}
+    <H1>Acknowledgements</H1>
+    <HR>
+    <DIV class="acknowledgement">
+        <H2>Chart.js</H2>
+        <P>ZimFiction uses Chart.js to render timeline charts.</P>
+        <DIV class="license">
+            {{ licenses["chart.js"]|render_storytext }}
+        </DIV>
+    </DIV>
+    <HR>
+    <A class="info_back_link" href="..">Home</A>
+{% endblock %}

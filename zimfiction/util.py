@@ -216,16 +216,16 @@ def normalize_relationship(tag):
     return tag
 
 
-def get_resource_file_path(name):
+def get_resource_file_path(*names):
     """
     Return the path to the specified resource file.
 
-    @param name: name of the resource file to get path for
-    @type name: L{str}
+    @param names: name(s) of the resource file to get path for. If multiple are specified, they are interpeted as a sequence of path segments.
+    @type names: L{str}
     @return: path to the resource file
     @rtype: L{str}
     """
-    p = os.path.join(os.path.dirname(__file__), "resources", name)
+    p = os.path.join(os.path.dirname(__file__), "resources", *names)
     return p
 
 

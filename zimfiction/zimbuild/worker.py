@@ -782,8 +782,16 @@ class Worker(object):
             result = self.renderer.render_global_stats(stats)
         elif task.subtask == "search":
             # The search script
-            self.log("Renderign search script...")
+            self.log("Rendering search script...")
             result = self.renderer.render_search_script()
+        elif task.subtask == "chartscripts":
+            # the chart.js script
+            self.log("Including chart.js script...")
+            result = self.renderer.render_chart_scripts()
+        elif task.subtask == "info":
+            # the info pages
+            self.log("Rendering info pages...")
+            result = self.renderer.render_info_pages()
         else:
             raise ValueError("Unknown etc subtask: '{}'!".format(task.subtask))
         self.log("Submitting result...")

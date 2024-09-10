@@ -5,6 +5,11 @@
     <TITLE>ZimFiction - {{ publisher.name }}</TITLE>
 {% endblock %}
 
+{% block scripts %}
+    <script src="{{ to_root }}/scripts/chart.js"></script>
+    <script src="{{ to_root }}/scripts/storytimechart.js"></script>
+{% endblock %}
+
 {% block content %}
     <H1>{{ publisher.name }}</H1>
     <HR>

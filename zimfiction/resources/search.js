@@ -697,7 +697,7 @@ class ZimfictionSearch {
             var normalized_seriesname = normalize_tag(seriesname);
             var escaped_seriesname = escapeHtml(seriesname);
             var seriesindex = series[1];
-            serieslist += `<B>Part</B> ${seriesindex} <B>of</B> <A class="serieslink" href="${TO_ROOT}/series/${publisher}/${normalized_seriesname}">${escaped_seriesname} </A>`;
+            serieslist += `<B>Part</B> ${seriesindex} <B>of</B> <A class="serieslink" href="${TO_ROOT}/series/${publisher}/${normalized_seriesname}/">${escaped_seriesname} </A>`;
         }
         var args = [
             ["publisher", preview["publisher"]],

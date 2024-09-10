@@ -472,6 +472,49 @@ HR {
     margin-left: 1em;
 }
 
+/* info page */
+.infobullet {
+  background: lightgray;
+  border: 1px solid darkgray;
+  border-radius: 1.5em;
+  padding: 1em;
+  margin-bottom: 1em;
+}
+
+.infobullet h2 {
+  margin-top: 0em;
+}
+
+.info_back_link {
+  text-decoration: none;
+  color: black;
+  background: darkgray;
+  border: 1px solid gray;
+  border-radius: 0.3125em;
+  padding: 0.5em;
+  margin-left: 1.25em
+}
+
+/* acknowledgement page */
+.acknowledgement {
+  background: lightgray;
+  border: 1px solid darkgray;
+  border-radius: 1.5em;
+  padding: 1em;
+  margin-bottom: 1em;
+}
+
+.acknowledgement h2 {
+  margin-top: 0em;
+}
+
+.acknowledgement .license {
+  background: darkgray;
+  padding: 0.8em;
+  padding-top: 0.05em;
+  border-radius: 0.5em;
+}
+
 /* css code for autocomplete from https://www.w3schools.com/howto/howto_js_autocomplete.asp */
 
 .autocomplete {

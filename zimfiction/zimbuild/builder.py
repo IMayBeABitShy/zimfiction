@@ -753,7 +753,7 @@ class ZimBuilder(object):
             self._send_publisher_tasks()
         # --- etc ---
         self.reporter.msg(" -> Adding miscelaneous pages...")
-        n_misc_pages = 3
+        n_misc_pages = 5
         with self._run_stage(
             creator=creator,
             options=options,
@@ -1039,3 +1039,7 @@ class ZimBuilder(object):
         self.inqueue.put(statstask)
         searchtask = EtcRenderTask("search")
         self.inqueue.put(searchtask)
+        chartjstask = EtcRenderTask("chartscripts")
+        self.inqueue.put(chartjstask)
+        infotask = EtcRenderTask("info")
+        self.inqueue.put(infotask)

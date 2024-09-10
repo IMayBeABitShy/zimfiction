@@ -3,6 +3,8 @@ Module for evaluating statistics.
 """
 import datetime
 
+from .util import set_or_increment
+
 
 def zerodiv(a, b):
     """
@@ -116,13 +118,21 @@ class UniqueCounter(Counter):
 
 class DatetimeCounter(Counter):
     """
-    An extension of L{Counter} for gathering min, max and average datetime-.
+    An extension of L{Counter} for gathering min, max and average datetimes
+    as well as keeping track of developments over time.
+
+    @cvar IGNORE_BEFORE: all dates before this one will be ignored
+    @type IGNORE_BEFORE: L{datetime.datetime}
     """
+
+    IGNORE_BEFORE = datetime.datetime(year=1980, month=1, day=1)
+
     def __init__(self):
         Counter.__init__(self)
         self.min = None
         self.max = None
         self.sum = 0
+        self._buckets = {}
 
     def feed(self, element):
         """
@@ -132,11 +142,56 @@ class DatetimeCounter(Counter):
         @type element: L{datetime.datetime}
         """
         assert isinstance(element, datetime.datetime)
+        if element < self.IGNORE_BEFORE:
+            # ignore this datetime
+            return
         Counter.feed(self, element)
         timestamp = element.timestamp()
         self.sum += timestamp
         self.min = (element if self.min is None else min(self.min, element))
         self.max = (element if self.max is None else max(self.max, element))
+        bucket = self._date_to_bucket(element)
+        set_or_increment(self._buckets, bucket, 1)
+
+    def _date_to_bucket(self, date):
+        """
+        Take a date and generate a key for a bucket for grouping.
+
+        @param date: date to get bucket for
+        @type date: L{datetime.datetime}
+        @return: a key identifying the bucket to use for grouping
+        @rtype: L{tuple}
+        """
+        return (date.year, date.month)
+
+    def get_timeline(self):
+        """
+        Return a 'timeline' of the datapoints, describing the occurence over time.
+
+        Absent dates are filled in as 0 values.
+
+        @return: a list of (identifier, occurences) ordered by date
+        @rtype: L{list} of L{tuple} of (L{str}, L{int})
+        """
+        if self.count == 0:
+            # not data
+            return []
+        timestamp2id = lambda t: "{}-{:02d}".format(t[0], t[1])
+        timestamps = list(self._buckets.keys())
+        timestamps.sort()
+        min_timestamp, max_timestamp = timestamps[0], timestamps[-1]
+        cur_timestamp = min_timestamp
+        ret = []
+        while cur_timestamp <= max_timestamp:
+            if cur_timestamp in self._buckets:
+                ret.append((timestamp2id(cur_timestamp), self._buckets[cur_timestamp]))
+            else:
+                ret.append((timestamp2id(cur_timestamp), 0))
+            if cur_timestamp[1] == 12:
+                cur_timestamp = (cur_timestamp[0] + 1, 1)
+            else:
+                cur_timestamp = (cur_timestamp[0], cur_timestamp[1]+1)
+        return ret
 
     @property
     def average(self):
@@ -271,6 +326,9 @@ class StoryListStats(_Stats):
     @type max_date_updated: L{datetime.datetime}
     @ivar average_date_updated: average day of story update
     @type average_date_updated: L{datetime.datetime}
+
+    @ivar timeline: a dictionary describing the number of published and updated stories over time
+    @type timeline: L{dict}
     """
     def __init__(
         self,
@@ -305,6 +363,8 @@ class StoryListStats(_Stats):
         min_date_updated,
         max_date_updated,
         average_date_updated,
+
+        timeline,
     ):
         """
         The default constructor.
@@ -364,6 +424,9 @@ class StoryListStats(_Stats):
         @type max_date_updated: L{datetime.datetime}
         @param average_date_updated: average day of story update
         @type average_date_updated: L{datetime.datetime}
+
+        @param timeline: a dictionary describing the number of published and updated stories over time
+        @type timeline: L{dict}
         """
         self.story_count = story_count
         self.total_words = total_words
@@ -404,6 +467,8 @@ class StoryListStats(_Stats):
         self.max_date_updated = max_date_updated
         self.average_date_updated = average_date_updated
 
+        self.timeline = timeline
+
 
 
 class StoryListStatCreator(_StatCreator):
@@ -420,6 +485,48 @@ class StoryListStatCreator(_StatCreator):
         self._series_counter = UniqueCounter()
         self._published_counter = DatetimeCounter()
         self._updated_counter = DatetimeCounter()
+
+    def _get_timeline_data(self):
+        """
+        Generate a dict containing the data described over time.
+
+        The result is a dict of the form:
+
+            {
+                month: list of identifiers for the month,
+                published: list of number of published stories,
+                updated: list of number of updated stories,
+            }
+
+        Where each tuple created by zipping (month, published, updated) is a datapoint.
+
+        @return: the dictionary described above
+        @rtype: L{dict}
+        """
+        published_timeline = self._published_counter.get_timeline()
+        updated_timeline = self._updated_counter.get_timeline()
+        data = {}
+        for point in published_timeline:
+            data[point[0]] = {
+                "published": point[1],
+                "updated": 0,
+            }
+        for point in updated_timeline:
+            if point[0] not in data:
+                data[point[0]] = {
+                    "published": 0,
+                    "updated": point[1],
+                }
+            else:
+                data[point[0]]["updated"] = point[1]
+        months = list(data.keys())
+        months.sort()
+        ret = {
+            "months": months,
+            "published": [data[m]["published"] for m in months],
+            "updated": [data[m]["updated"] for m in months]
+        }
+        return ret
 
     def feed(self, element):
         """
@@ -452,6 +559,7 @@ class StoryListStatCreator(_StatCreator):
         @return: the collected statistics
         @rtype: L{StoryListStats}
         """
+        timeline_data = self._get_timeline_data()
         stats = StoryListStats(
             story_count=self._story_word_counter.count,
             total_words=self._story_word_counter.sum,
@@ -477,12 +585,14 @@ class StoryListStatCreator(_StatCreator):
             series_count=self._series_counter.unique_count,
             total_series_count=self._series_counter.count,
 
-            min_date_published = self._published_counter.min,
-            max_date_published = self._published_counter.max,
-            average_date_published = self._published_counter.average,
+            min_date_published=self._published_counter.min,
+            max_date_published=self._published_counter.max,
+            average_date_published=self._published_counter.average,
 
-            min_date_updated = self._updated_counter.min,
-            max_date_updated = self._updated_counter.max,
-            average_date_updated = self._updated_counter.average,
+            min_date_updated=self._updated_counter.min,
+            max_date_updated=self._updated_counter.max,
+            average_date_updated=self._updated_counter.average,
+
+            timeline=timeline_data,
         )
         return stats
