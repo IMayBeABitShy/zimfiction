@@ -1,7 +1,7 @@
 """
 This module contains the L{Implicator}, which manages the implication detection.
 """
-from sqlalchemy import select, delete, tuple_
+from sqlalchemy import select, delete
 from sqlalchemy.orm import subqueryload
 
 from ..db.models import Story, StoryCategoryAssociation, StoryTagAssociation, Tag, Publisher, Category
@@ -84,7 +84,7 @@ class Implicator(object):
         @type story: L{zimfiction.db.models.Story}
         """
         existing_tags = [(t.type, t.name) for t in story.tags]
-        existing_categories = [(c.publisher_name, c.name) for c in story.categories]
+        existing_categories = [(c.publisher.name, c.name) for c in story.categories]
         new_tags = []
         new_categories = []
 
@@ -161,28 +161,28 @@ def add_all_implications(session, implicator, reporter=None):
 
     # find story ids
     reporter.msg("Loading storiy ids... ", end="")
-    id_bucket_maker = BucketMaker(maxsize=STORIES_PER_QUERY)
-    select_story_ids_stmt = select(Story.publisher_name, Story.id)
-    result = session.execute(select_story_ids_stmt)
+    uid_bucket_maker = BucketMaker(maxsize=STORIES_PER_QUERY)
+    select_story_uids_stmt = select(Story.uid)
+    result = session.execute(select_story_uids_stmt)
     n_stories = 0
-    story_id_groups = []
+    story_uid_groups = []
     for story in result:
         n_stories += 1
-        bucket = id_bucket_maker.feed((story.publisher_name, story.id))
+        bucket = uid_bucket_maker.feed(story.uid)
         if bucket is not None:
-            story_id_groups.append(bucket)
-    bucket = id_bucket_maker.finish()
+            story_uid_groups.append(bucket)
+    bucket = uid_bucket_maker.finish()
     if bucket is not None:
-        story_id_groups.append(bucket)
+        story_uid_groups.append(bucket)
     reporter.msg("Done.")
 
     # process stories
     with reporter.with_progress("Finding implications... ", max=n_stories, unit="stories") as bar:
-        for story_id_group in story_id_groups:
+        for story_uid_group in story_uid_groups:
             # load stories group-wise
             stories = session.scalars(
                 select(Story)
-                .where(tuple_(Story.publisher_name, Story.id).in_(story_id_group))
+                .where(Story.uid.in_(story_uid_group))
                 .options(
                     # eager loading options
                     # as it turns out, lazyloading is simply the fastest... This seems wrong...

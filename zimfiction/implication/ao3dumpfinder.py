@@ -141,7 +141,7 @@ class Ao3MergerFinder(ImplicationFinder):
         self.category_implications = category_implications
 
     def get_implied_tags(self, story, implied_tags):
-        if story.publisher_name != AO3_PUBLISHER:
+        if story.publisher.name != AO3_PUBLISHER:
             # ignore non-ao3 stories
             return []
         new_tags = []
@@ -169,7 +169,7 @@ class Ao3MergerFinder(ImplicationFinder):
         return new_tags
 
     def get_implied_categories(self, story, implied_categories):
-        if story.publisher_name != AO3_PUBLISHER:
+        if story.publisher.name != AO3_PUBLISHER:
             # ignore non-ao3 stories
             return []
         new_categories = []
