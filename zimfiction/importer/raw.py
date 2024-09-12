@@ -506,7 +506,7 @@ class RawStory(object):
                 )
                 for sa in story.series_associations
             ],
-            categories=[c.name for c in story.categories],
+            categories=[c.name for c in story.explicit_categories],
             genres=[tag.name for tag in story.genres],
             language=story.language,
             is_done=story.is_done,
