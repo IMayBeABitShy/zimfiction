@@ -5,50 +5,12 @@ import datetime
 import re
 
 from .raw import RawStory, RawChapter, RawSeriesMembership
+from .raw import id_from_url, split_categories, split_tags, is_done_from_status
 from ..util import add_to_dict_list
 from ..exceptions import ParseError
 
 
 CHAPTER_TITLE_REGEX = re.compile(r"\t[0-9]+\. .+")
-
-
-def _split_tags(s):
-    """
-    Split all tags from a string.
-
-    @param s: comma separated list of tags to split
-    @type s: L{str}
-    @return:: the list of tags
-    @rtype: L{list} of L{str}
-    """
-    tags = []
-    splitted = s.split(",")
-    for e in splitted:
-        e = e.strip()
-        if e and (e not in tags):
-            tags.append(e)
-    return tags
-
-
-def _split_categories(s):
-    """
-    Split all categories from a string.
-
-    @param s: string of categories to split
-    @type s: L{str}
-    @return:: the list of categories
-    @rtype: L{list} of L{str}
-    """
-    categories = []
-    splitted = s.split(",")
-    for e in splitted:
-        e = e.strip()
-        subsplit = e.split(" > ")  # some sites use a hierarchy
-        for i in range(len(subsplit)):
-            c = " > ".join(subsplit[:i+1])
-            if c and (c not in categories):
-                categories.append(c)
-    return categories
 
 
 def parse_txt_story(session, fin):
@@ -166,19 +128,19 @@ def parse_txt_story(session, fin):
             elif key == "Status":
                 meta["is_done"] = is_done_from_status(value)
             elif key in ("Genre", "Genres", "Erotica Tags"):
-                for tag in _split_tags(value):
+                for tag in split_tags(value):
                     add_to_dict_list(tags, "genres", tag)
             elif key == "Warnings":
-                for tag in _split_tags(value):
+                for tag in split_tags(value):
                     add_to_dict_list(tags, "warnings", tag)
             elif key == "Characters":
-                for tag in _split_tags(value):
+                for tag in split_tags(value):
                     add_to_dict_list(tags, "characters", tag)
             elif key == "Relationships":
-                for tag in _split_tags(value):
+                for tag in split_tags(value):
                     add_to_dict_list(tags, "relationships", tag)
             elif key in ("Chars/Pairs", "Characters/Pairing"):
-                for tag in _split_tags(value):
+                for tag in split_tags(value):
                     if ("&" in tag) or ("/" in tag):
                         add_to_dict_list(tags, "relationships", tag)
                     else:
@@ -254,7 +216,7 @@ def parse_txt_story(session, fin):
         # We instead put it in a special one
         meta["category"] = "No Category"
     # split categories
-    meta["categories"] = _split_categories(meta["category"])
+    meta["categories"] = split_categories(meta["category"])
     del meta["category"]
     if "summary" not in meta:
         meta["summary"] = ""
@@ -292,59 +254,6 @@ def parse_txt_story(session, fin):
         **meta,
     )
     return story
-
-
-def is_done_from_status(status):
-    """
-    Check if a story is done depending on the status.
-
-    @param status: status of the story
-    @type status: l{str}
-    @return: True if the story is finished, otherwise False
-    @rtype: L{bool}
-    """
-    lstatus = status.lower().strip()
-    if lstatus in (
-        "in-progress",
-    ):
-        return False
-    elif lstatus in (
-        "complete",
-        "completed",
-    ):
-        return True
-    raise ParseError("Unknown story status: '{}'".format(status))
-
-
-def id_from_url(url):
-    """
-    Parse the URL of a story and return the story ID.
-
-    @param url: url of the story
-    @type url: L{str}
-    @return: the story id
-    @rtype: L{int}
-    """
-    if "fanfiction.net" in url:
-        part = url[url.find("/s/") + 3:]
-        if "/" in part:
-            part = part[:part.find("/")]
-        return int(part)
-    elif "fictionpress.com" in url:
-        part = url[url.find("/s/") + 3:]
-        if "/" in part:
-            part = part[:part.find("/")]
-        return int(part)
-    elif "archiveofourown.org" in url:
-        part = url[url.find("/works/") + 7:]
-        if "/" in part:
-            part = part[:part.find("/")]
-        return int(part)
-    elif "adult-fanfiction.org" in url:
-        start = url.find("?no=") + 4
-        return int(url[start:])
-    else:
-        raise ParseError("Unknown story URL format: '{}'".format(url))
 
 
 def is_chapter_title_line(line):

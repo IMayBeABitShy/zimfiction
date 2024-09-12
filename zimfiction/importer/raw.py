@@ -3,9 +3,102 @@ This module contains classes for raw (non-db) stories.
 """
 import datetime
 
-from ..util import count_words
+from ..util import count_words, add_to_dict_list
 from ..db.models import Chapter, Story, Author, Category, Tag, Series, Publisher
 from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation
+from ..exceptions import ParseError
+
+
+def id_from_url(url):
+    """
+    Parse the URL of a story and return the story ID.
+
+    @param url: url of the story
+    @type url: L{str}
+    @return: the story id
+    @rtype: L{int}
+    """
+    if "fanfiction.net" in url:
+        part = url[url.find("/s/") + 3:]
+        if "/" in part:
+            part = part[:part.find("/")]
+        return int(part)
+    elif "fictionpress.com" in url:
+        part = url[url.find("/s/") + 3:]
+        if "/" in part:
+            part = part[:part.find("/")]
+        return int(part)
+    elif "archiveofourown.org" in url:
+        part = url[url.find("/works/") + 7:]
+        if "/" in part:
+            part = part[:part.find("/")]
+        return int(part)
+    elif "adult-fanfiction.org" in url:
+        start = url.find("?no=") + 4
+        return int(url[start:])
+    else:
+        raise ParseError("Unknown story URL format: '{}'".format(url))
+
+
+def split_categories(s):
+    """
+    Split all categories from a string.
+
+    @param s: string of categories to split
+    @type s: L{str}
+    @return:: the list of categories
+    @rtype: L{list} of L{str}
+    """
+    categories = []
+    splitted = s.split(",")
+    for e in splitted:
+        e = e.strip()
+        subsplit = e.split(" > ")  # some sites use a hierarchy
+        for i in range(len(subsplit)):
+            c = " > ".join(subsplit[:i+1])
+            if c and (c not in categories):
+                categories.append(c)
+    return categories
+
+
+def split_tags(s):
+    """
+    Split all tags from a string.
+
+    @param s: comma separated list of tags to split
+    @type s: L{str}
+    @return:: the list of tags
+    @rtype: L{list} of L{str}
+    """
+    tags = []
+    splitted = s.split(",")
+    for e in splitted:
+        e = e.strip()
+        if e and (e not in tags):
+            tags.append(e)
+    return tags
+
+
+def is_done_from_status(status):
+    """
+    Check if a story is done depending on the status.
+
+    @param status: status of the story
+    @type status: l{str}
+    @return: True if the story is finished, otherwise False
+    @rtype: L{bool}
+    """
+    lstatus = status.lower().strip()
+    if lstatus in (
+        "in-progress",
+    ):
+        return False
+    elif lstatus in (
+        "complete",
+        "completed",
+    ):
+        return True
+    raise ParseError("Unknown story status: '{}'".format(status))
 
 
 class RawChapter(object):
@@ -527,3 +620,94 @@ class RawStory(object):
             ],
         )
         return ins
+
+    @staticmethod
+    def convert_metadata(metadata):
+        """
+        Convert dict containing metadata keys and values as written by
+        fanficfare into a dict that could be passed to L{RawStory.__init__}.
+
+        This method can not populate the returned dict with the following keys:
+
+            - title
+            - author
+            - summary (unless metadata 'Summary' is correctly set)
+            - chapters
+
+        This method may initialize some values with defaults. It is recommended
+        to update the returned dict by the actual values
+
+        @param metadata: a dict mapping fanficfare keys to fanficfare values
+        @type metadata: L{dict}
+        @return: a dict that could be passed as **kwargs to __init__
+        @rtype: L{dict}
+        """
+        ret = {
+            "genres": [],
+            "characters": [],
+            "relationships": [],
+            "warnings": [],
+        }
+        series = []
+        if "Story URL" in metadata:
+            ret["url"] = metadata["Story URL"]
+            ret["id"] = id_from_url(metadata["Story URL"])
+        if "Summary" in metadata:
+            ret["summary"] = metadata["Summary"]
+        if "Publisher" in metadata:
+            publisher = metadata["Publisher"]
+            ret["publisher"] = publisher.strip()
+        if "Series" in metadata:
+            value = metadata["Series"]
+            series_index = int(value[value.rfind("[")+1: value.rfind("]")])
+            series_name = value[:value.rfind("[") - 1]
+            # ensure that we don't add a series twice - because apparently
+            # some fics contain the data multiple times
+            if not any([e.name == series_name for e in series]):
+                series.append(RawSeriesMembership(publisher, series_name, series_index))
+        ret["series"] = series
+        if "Category" in metadata:
+            ret["categories"] = split_categories(metadata["Category"])
+        for key in ("Genre", "Genres", "Erotica Tags"):
+            if key in metadata:
+                for tag in split_tags(metadata[key]):
+                    add_to_dict_list(ret, "genres", tag)
+        if "Warnings" in metadata:
+            for tag in split_tags(metadata["Warnings"]):
+                add_to_dict_list(ret, "warnings", tag)
+        if "Characters" in metadata:
+            for tag in split_tags(metadata["Characters"]):
+                add_to_dict_list(ret, "characters", tag)
+        if "Relationships" in metadata:
+            for tag in split_tags(metadata["Relationships"]):
+                add_to_dict_list(ret, "relationships", tag)
+        for key in ("Chars/Pairs", "Characters/Pairing"):
+            if key in metadata:
+                for tag in split_tags(metadata[key]):
+                    if ("&" in tag) or ("/" in tag):
+                        add_to_dict_list(ret, "relationships", tag)
+                    else:
+                        add_to_dict_list(ret, "characters", tag)
+        if "Language" in metadata:
+            ret["language"] = metadata["Language"].strip()
+        if "Published" in metadata:
+            ret["published"] = datetime.datetime.fromisoformat(metadata["Published"])
+        if "Updated" in metadata:
+            ret["updated"] = datetime.datetime.fromisoformat(metadata["Updated"])
+        elif "published" in ret:
+            # default to updated=published
+            ret["updated"] = ret["published"]
+        if "Packaged" in metadata:
+            ret["packaged"] = datetime.datetime.fromisoformat(metadata["Packaged"])
+        if "Rating" in metadata:
+            ret["rating"] = metadata["Rating"].strip()
+        if "Comments" in metadata:
+            ret["num_comments"] = int(metadata["Comments"].strip())
+        for key in ("Kudos", "Favorites"):
+            if key in metadata:
+                ret["score"] = int(metadata[key].strip())
+        if "Status" in metadata:
+            ret["is_done"] = is_done_from_status(metadata["Status"])
+        if "Author URL" in metadata:
+            ret["author_url"] = metadata["Author URL"].strip()
+        return ret

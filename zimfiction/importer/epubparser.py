@@ -4,10 +4,8 @@ This module contains the epub story parse logic.
 @var EPUB_ENCODING: encoding to use to decode epub pages
 @type EPUB_ENCODING: L{str}
 """
-import argparse
 import re
 import tempfile
-import io
 import os
 
 from html import unescape as html_unescape
@@ -16,8 +14,8 @@ import html2text
 import ebooklib
 from ebooklib import epub
 
+from .raw import RawStory, RawChapter
 from ..exceptions import ParseError
-from .txtparser import parse_txt_story
 
 
 EPUB_ENCODING = "utf-8"
@@ -29,16 +27,16 @@ CHAPTER_TITLE_REGEX = re.compile(r"class=\"fff_chapter_title\">(.+?)</")
 
 def convert_epub(path):
     """
-    Convert an epub story into a txt/markdown story
+    Convert an epub story into a raw story.
 
     @param path: path of epub to read
     @type path: L{str}
     @return: the converted story
-    @rtype: L{str}
+    @rtype: L{zimfiction.importer.raw.RawStory}
     """
     book = epub.read_epub(path)
-    text = ""
-    pages = []  # tuples of (chapter index, chapter title, content)
+    chapters = []
+    metadata = {}
     for document in book.get_items_of_type(ebooklib.ITEM_DOCUMENT):
         document_name = document.file_name[:document.file_name.rfind(".")]
         document_name = document_name[document_name.rfind("/")+1:]
@@ -87,10 +85,10 @@ def convert_epub(path):
                     # this is likely the title line
                     title_start_i = TITLE_START_REGEX.search(line).end()
                     title = line[title_start_i:]
-                    title = title[:title.find("</")]
+                    metadata["title"] = title[:title.find("</")]
                     author_start_i = AUTHOR_START_REGEX.search(line).end()
                     author = line[author_start_i:]
-                    author = author[:author.find("</")]
+                    metadata["author"] = author[:author.find("</")]
                     got_title = True
                 elif not in_summary:
                     # metadata
@@ -130,14 +128,6 @@ def convert_epub(path):
             # fill in other required values that we can't extract
             if not any([h.startswith("Author URL: ") for h in header]):
                 header.append("Author URL: .")
-
-            # we are done parsing, create the template
-            text = "\n\n\n{title}\n\nby {author}\n\n\n\n{meta}\nSummary: {summary}\n\n\n\n\n".format(
-                title=title,
-                author=author,
-                meta="\n".join(header),
-                summary=summary,
-            )
         else:
             # chapter page
             chapter_index_match = CHAPTER_INDEX_REGEX.search(document_name)
@@ -145,24 +135,33 @@ def convert_epub(path):
             html = document.get_body_content().decode(EPUB_ENCODING)
             chapter_text = html2text.html2text(html)
             if 'class="fff_chapter_title"/>' in html:
-                # chapter withot title (title is self-closing)
+                # chapter without title (title is self-closing)
                 chapter_title = "Chapter {}".format(chapter_index)
             else:
                 chapter_title_match = CHAPTER_TITLE_REGEX.search(html)
                 chapter_title = html_unescape(chapter_title_match.group(1))
-            pages.append((chapter_index, chapter_title, chapter_text))
+            chapters.append(
+                RawChapter(
+                    index=chapter_index,
+                    title=chapter_title,
+                    text=chapter_text,
+                )
+            )
 
-    # parsing complete, output txt
-    pages.sort(key=lambda x: x[0])
-    for chapter_index, chapter_title, chapter_text in pages:
-        text += "\n\n\t{}. {}\n\n{}".format(
-            chapter_index,
-            chapter_title,
-            chapter_text,
+    metadata.update(
+        RawStory.convert_metadata(
+            {
+                h[:h.find(":")]: h[h.find(":") + 1:].strip()
+                for h in header
+            }
         )
-        if not text.endswith("\n"):
-            text += "\n"
-    return text
+    )
+    metadata["summary"] = summary
+    metadata["chapters"] = chapters
+    story = RawStory(
+        **metadata,
+    )
+    return story
 
 
 def parse_epub_story(session, fin):
@@ -185,38 +184,8 @@ def parse_epub_story(session, fin):
         tf.close()
         path = tf.name
         # convert to txt
-        txt = convert_epub(path)
+        story = convert_epub(path)
         # clean up temp file
         os.remove(path)
-        # import from txt
-        storyfile = io.StringIO(txt)
-        return parse_txt_story(session, storyfile)
+        return story
 
-
-def main():
-    """
-    A main function used for testing the conversion.
-    """
-    parser = argparse.ArgumentParser(description="convert epub fanfics to markdown fanfics")
-    parser.add_argument(
-        "inpath",
-        help="path to read from",
-    )
-    parser.add_argument(
-        "outpath",
-        nargs="?",
-        default="-",
-        help="path to write to",
-    )
-    ns = parser.parse_args()
-    text = convert_epub(ns.inpath)
-    if ns.outpath == "-":
-        # print to stoud
-        print(text)
-    else:
-        with open(ns.outpath, "w", encoding="utf-8") as fout:
-            fout.write(text)
-
-
-if __name__ == "__main__":
-    main()
