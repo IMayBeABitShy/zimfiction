@@ -699,6 +699,9 @@ class RawStory(object):
             ret["updated"] = ret["published"]
         if "Packaged" in metadata:
             ret["packaged"] = datetime.datetime.fromisoformat(metadata["Packaged"])
+        elif "updated" in ret:
+            # default to packaged=updated
+            ret["packaged"] = ret["updated"]
         if "Rating" in metadata:
             ret["rating"] = metadata["Rating"].strip()
         if "Comments" in metadata:
