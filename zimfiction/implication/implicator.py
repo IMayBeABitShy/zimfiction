@@ -160,7 +160,7 @@ def add_all_implications(session, implicator, reporter=None):
         reporter = VoidReporter()
 
     # find story ids
-    reporter.msg("Loading storiy ids... ", end="")
+    reporter.msg("Loading story ids... ", end="")
     uid_bucket_maker = BucketMaker(maxsize=STORIES_PER_QUERY)
     select_story_uids_stmt = select(Story.uid)
     result = session.execute(select_story_uids_stmt)
