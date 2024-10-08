@@ -741,6 +741,8 @@ class Worker(object):
                     # joinedload(Story.series_associations, StorySeriesAssociation.series),
                     subqueryload(Story.category_associations),
                     subqueryload(Story.category_associations, StoryCategoryAssociation.category),
+                ).execution_options(
+                    yield_per=STORY_LIST_YIELD,
                 )
             ).all()
             self.log("Generating stats...")
