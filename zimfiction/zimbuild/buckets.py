@@ -50,5 +50,7 @@ class BucketMaker(object):
         @rtype: L{list} or L{None}
         """
         if self._cur_bucket:
-            return self._cur_bucket
+            bucket = self._cur_bucket
+            self._cur_bucket = []
+            return bucket
         return None
