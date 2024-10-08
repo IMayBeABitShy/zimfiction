@@ -815,22 +815,29 @@ class HtmlRenderer(object):
         )
         return result
 
-    def render_publisher(self, publisher):
+    def render_publisher(self, publisher, stories=None):
         """
         Render a publisher.
 
+        If stories is specified, it should be an iterable of stories
+        in this publisher. It defaults to publisher.stories
+
         @param publisher: publisher to render
         @type publisher: L{zimfiction.db.models.Publisher}
+        @param stories: stories in this publisher
+        @type stories: iterable of L{zimfiction.db.models.Story}
         @return: the rendered pages and redirects
         @rtype: L{RenderResult}
         """
+        if stories is None:
+            stories = publisher.stories
         # NOTE: also not keeping track of items in result here
         # -> items in publisher depend on number of categories, which
         #    individually should not take enough RAM to cause memory
         #    problems in mass
         result = RenderResult()
         publisher_template = self.environment.get_template("publisher.html.jinja")
-        stats = StoryListStatCreator.get_stats_from_iterable(publisher.stories)
+        stats = StoryListStatCreator.get_stats_from_iterable(stories)
         page = publisher_template.render(
             to_root="../..",
             publisher=publisher,

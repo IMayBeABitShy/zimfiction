@@ -149,7 +149,7 @@ class Category(UniqueMixin, Base):
             Category.name == name,
         )
 
-    @property
+    @hybrid_property
     def num_stories(self):
         """
         The number of stories in this category.
@@ -158,6 +158,17 @@ class Category(UniqueMixin, Base):
         @rtype: L{int}
         """
         return len(self.stories)
+
+    @num_stories.inplace.expression
+    @classmethod
+    def _num_stories_expression(cls):
+        return (
+            select(func.count(StoryCategoryAssociation))
+            .where(
+                StoryCategoryAssociation.category_uid == cls.uid,
+            )
+            .label("num_stories")
+        )
 
 Index("category_name_index", Category.publisher_uid, Category.name, unique=True)
 

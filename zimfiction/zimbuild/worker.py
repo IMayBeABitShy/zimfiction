@@ -693,13 +693,22 @@ class Worker(object):
             .options(
                 # eager loading options
                 joinedload(Publisher.categories),
-                joinedload(Publisher.categories, Category.story_associations),
-                joinedload(Publisher.categories, Category.story_associations, StoryCategoryAssociation.story),
+                # joinedload(Publisher.categories, Category.story_associations),
+                # joinedload(Publisher.categories, Category.story_associations, StoryCategoryAssociation.story),
             )
         ).first()
+        self.log("Starting to fetch stories in publisher...")
+        stories = self.session.scalars(
+            select(Story)
+            .where(Story.publisher_uid == task.uid)
+            .execution_options(
+                yield_per=STORY_LIST_YIELD,
+            )
+        )
         self.log("Rendering publisher...")
         result = self.renderer.render_publisher(
             publisher=publisher,
+            stories=stories,
         )
         self.log("Submitting result...")
         self.handle_result(result)
