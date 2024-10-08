@@ -4,6 +4,7 @@ The renderer generates HTML pages.
 import urllib.parse
 import json
 import datetime
+import math
 
 import htmlmin
 import mistune
@@ -355,23 +356,37 @@ class HtmlRenderer(object):
         )
         return result
 
-    def render_tag(self, tag):
+    def render_tag(self, tag, stories=None, num_stories=None):
         """
         Render a tag.
 
+        If stories is specified, it should be an iterable yielding lists
+        of stories sorted by (score, total_words) descending. If it is
+        not specified, it will be generated from tag.stories
+
         @param tag: tag to render
         @type tag: L{zimfiction.db.models.Tag}
+        @param stories: an iterable yielding the stories in the tag in a sorted order as described above
+        @type stories: iterable yielding L{zimfiction.db.models.Story} or L{None}
+        @param num_pages: number of stories in this tag
+        @type num_pages: L{int} or L{None}
         @return: the rendered pages and redirects
         @rtype: L{RenderResult}
         """
+        # general preparations
+        if stories is None:
+            num_stories = len(tag.stories)
+            stories = sorted(tag.stories, key=lambda x: (x.score, x.total_words), reverse=True)
+        else:
+            assert num_stories is not None
         result = RenderResult()
         items_in_result = 0
-        bucketmaker = BucketMaker(STORIES_PER_PAGE)
-        # check if tag has no stories, in which case we exit early
-        # this can happen if a tag is only implied
-        # we are only looking for stories that explicitly feature this tag
-        if (tag.stories is None) or (len(tag.stories) == 0):
+        if num_stories == 0:
+            # tag has no stories
+            # this can happen if a tag is only implied
+            # we do not return any page in this case
             return result
+        # default redirect to page 1
         result.add(
             Redirect(
                 "tag/{}/{}/".format(tag.type, normalize_tag(tag.name)),
@@ -380,41 +395,48 @@ class HtmlRenderer(object):
                 is_front=True,
             ),
         )
-        items_in_result = +1
+        items_in_result += 1
+        # prepare rendering the story list pages
         list_page_template = self.environment.get_template("storylistpage.html.jinja")
-        pages = []
-        num_stories = 0
         stat_creator = StoryListStatCreator()
-        search_creator = SearchMetadataCreator(max_page_size=SEARCH_ITEMS_PER_FILE)
-        for story in sorted(tag.stories, key=lambda x: (x.score, x.total_words), reverse=True):
-            num_stories += 1
+        include_search = (num_stories >= MIN_STORIES_FOR_SEARCH) and (num_stories <= MAX_STORIES_FOR_SEARCH)
+        num_pages = math.ceil(num_stories / STORIES_PER_PAGE)
+        bucketmaker = BucketMaker(STORIES_PER_PAGE)
+        if include_search:
+            search_creator = SearchMetadataCreator(max_page_size=SEARCH_ITEMS_PER_FILE)
+        # render the story list pages
+        page_index = 1
+        for story in stories:
             stat_creator.feed(story)
-            search_creator.feed(story)
+            if include_search:
+                search_creator.feed(story)
             bucket = bucketmaker.feed(story)
             if bucket is not None:
-                pages.append(bucket)
+                items_in_result += self._render_tag_page(
+                    tag=tag,
+                    stories=bucket,
+                    page_index=page_index,
+                    num_pages=num_pages,
+                    template=list_page_template,
+                    result=result,
+                    include_search=include_search,
+                )
+                if items_in_result >= MAX_ITEMS_PER_RESULT:
+                    yield result
+                    result = RenderResult()
+                    items_in_result = 0
+                page_index += 1
         bucket = bucketmaker.finish()
         if bucket is not None:
-            pages.append(bucket)
-        include_search = (num_stories >= MIN_STORIES_FOR_SEARCH) and (num_stories <= MAX_STORIES_FOR_SEARCH);
-        for i, stories in enumerate(pages, start=1):
-            page = list_page_template.render(
-                to_root="../../..",
-                title="Stories tagged '{}' [{}]".format(tag.name, tag.type),
-                stories=stories,
-                include_search=(include_search and (i == 1 or not SEARCH_ONLY_ON_FIRST_PAGE)),
-                num_pages=len(pages),
-                cur_page=i,
+            items_in_result += self._render_tag_page(
+                tag=tag,
+                stories=bucket,
+                page_index=page_index,
+                num_pages=num_pages,
+                template=list_page_template,
+                result=result,
+                include_search=include_search,
             )
-            result.add(
-                HtmlPage(
-                    path="tag/{}/{}/{}".format(tag.type, normalize_tag(tag.name), i),
-                    content=self.minify_html(page),
-                    title="Stories tagged '{}' [{}]".format(tag.name, tag.type),
-                    is_front=False,
-                ),
-            )
-            items_in_result += 1
             if items_in_result >= MAX_ITEMS_PER_RESULT:
                 yield result
                 result = RenderResult()
@@ -469,6 +491,48 @@ class HtmlRenderer(object):
                     result = RenderResult()
                     items_in_result = 0
         yield result
+
+    def _render_tag_page(self, tag, stories, page_index, num_pages, template, result, include_search):
+        """
+        Helper function for rendering a tag page of stories.
+
+        This function renders a page of stories in the tag and adds the
+        rendered page to the result.
+
+        @param tag: tag this page is for
+        @type tag: L{zimfiction.db.models.Tag}
+        @param stories: list of stories that should be listed on this page
+        @type stories: L{list} of L{zimfiction.db.models.Story}
+        @param page_index: index of current page (1-based)
+        @type page_index: L{int}
+        @param num_pages: total number of pages
+        @type num_pages: L{int}
+        @param template: template that should be rendered
+        @type template: L{jinja2.Template}
+        @param result: result the rendered page should be added to
+        @type result: L{RenderResult}
+        @param include_search: whether search should be included for this tag
+        @type include_search: L{bool}
+        @return: the number of items added to the render result
+        @rtype: L{int}
+        """
+        page = template.render(
+            to_root="../../..",
+            title="Stories tagged '{}' [{}]".format(tag.name, tag.type),
+            stories=stories,
+            include_search=(include_search and (page_index == 1 or not SEARCH_ONLY_ON_FIRST_PAGE)),
+            num_pages=num_pages,
+            cur_page=page_index,
+        )
+        result.add(
+            HtmlPage(
+                path="tag/{}/{}/{}".format(tag.type, normalize_tag(tag.name), page_index),
+                content=self.minify_html(page),
+                title="Stories tagged '{}' [{}]".format(tag.name, tag.type),
+                is_front=False,
+            ),
+        )
+        return 1  # 1 item added
 
     def render_author(self, author):
         """

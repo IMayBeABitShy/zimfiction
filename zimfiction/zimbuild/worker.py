@@ -13,12 +13,14 @@ take the results and add them to the creator.
 
 @var MAX_STORY_EAGERLOAD: when loading tags and categories, do not eagerload if more than this number of stories are in said object
 @type MAX_STORY_EAGERLOAD: L{int}
+@var STORY_LIST_YIELD: number of story to fetch at once when rendering tags, categories, ...
+@type STORY_LIST_YIELD: L{int}
 """
 import contextlib
 import os
 import time
 
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, desc
 from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, lazyload, contains_eager, undefer
 
 try:
@@ -37,6 +39,7 @@ MARKER_WORKER_STOPPED = "stopped"
 MARKER_TASK_COMPLETED = "completed"
 
 MAX_STORY_EAGERLOAD = 10000
+STORY_LIST_YIELD = 2000
 
 
 class Task(object):
@@ -504,55 +507,55 @@ class Worker(object):
         )
         n_stories_in_tag = self.session.execute(count_stmt).scalar_one()
         self.log("Found {} stories.".format(n_stories_in_tag))
-        # get the tag
-        should_eagerload = (n_stories_in_tag <= MAX_STORY_EAGERLOAD)
-        # setup options
-        if should_eagerload:
-            self.log("-> Utilizing eagerloading.")
-            options = (
-                contains_eager(Tag.story_associations),
-                contains_eager(Tag.story_associations, StoryTagAssociation.story),
-                selectinload(Tag.story_associations, StoryTagAssociation.story, Story.chapters),
-                undefer(Tag.story_associations, StoryTagAssociation.story, Story.summary),
-            )
-        else:
-            # like above, but don't undefer summary nor eager load chapters
-            self.log("-> Not utilizing eagerloading.")
-            options = (
-                contains_eager(Tag.story_associations),
-                contains_eager(Tag.story_associations, StoryTagAssociation.story),
-                lazyload(Tag.story_associations, StoryTagAssociation.story, Story.chapters),
-            )
-        # only load non-implied tag associations
+        # load tag
         self.log("Loading tag...")
-        stmt = (
+        tag_stmt = (
             select(Tag)
             .where(
                 Tag.uid == task.uid,
-            ).join(
-                StoryTagAssociation,
-                and_(
-                    StoryTagAssociation.tag_uid == Tag.uid,
-                    StoryTagAssociation.implied == False,
-                ),
-            ).join(
-                Story,
-                and_(
-                    StoryTagAssociation.story_uid == Story.uid,
-                    StoryTagAssociation.implied == False,
-                ),
-            ).options(
-                *options,
+            )
+            .options(
+                raiseload(Tag.story_associations),
             )
         )
-        tag = self.session.scalars(stmt).first()
+        tag = self.session.scalars(tag_stmt).first()
         self.log("Tag loaded.")
         if tag is None:
             self.log("-> Tag not found!")
+            self.log("Submitting empty result...")
             result = RenderResult()
-        else:
-            self.log("Rendering tag...")
-            result = self.renderer.render_tag(tag)
+            self.handle_result(result)
+            self.log("Done.")
+            return
+
+        # load non-implied stories
+        self.log("Starting to load stories...")
+        story_stmt = (
+            select(Story)
+            .join(
+                StoryTagAssociation,
+                and_(
+                    StoryTagAssociation.story_uid == Story.uid,
+                    StoryTagAssociation.tag_uid == task.uid,
+                    StoryTagAssociation.implied == False,
+                )
+            )
+            .order_by(desc(Story.score), desc(Story.total_words))
+            .options(
+                selectinload(Story.chapters),
+                undefer(Story.summary),
+            )
+            .execution_options(
+                yield_per=STORY_LIST_YIELD,
+            )
+        )
+        stories = self.session.scalars(story_stmt)
+        self.log("Rendering tag...")
+        result = self.renderer.render_tag(
+            tag=tag,
+            stories=stories,
+            num_stories=n_stories_in_tag,
+        )
         self.log("Submitting result...")
         self.handle_result(result)
         self.log("Done.")
