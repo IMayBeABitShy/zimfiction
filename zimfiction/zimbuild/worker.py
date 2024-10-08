@@ -21,7 +21,7 @@ import os
 import time
 
 from sqlalchemy import select, and_, func, desc
-from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, lazyload, contains_eager, undefer
+from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, undefer
 
 try:
     import memray
@@ -601,55 +601,55 @@ class Worker(object):
         )
         n_stories_in_category = self.session.execute(count_stmt).scalar_one()
         self.log("Found {} stories.".format(n_stories_in_category))
-        # get the tag
-        should_eagerload = (n_stories_in_category <= MAX_STORY_EAGERLOAD)
-        # setup options
-        if should_eagerload:
-            self.log("-> Utilizing eagerloading.")
-            options = (
-                contains_eager(Category.story_associations),
-                contains_eager(Category.story_associations, StoryCategoryAssociation.story),
-                selectinload(Category.story_associations, StoryCategoryAssociation.story, Story.chapters),
-                undefer(Category.story_associations, StoryCategoryAssociation.story, Story.summary),
-            )
-        else:
-            # same as above, but don't undefer story summaries not eager load chapters
-            self.log("-> Not utilizing eagerloading.")
-            options = (
-                contains_eager(Category.story_associations),
-                contains_eager(Category.story_associations, StoryCategoryAssociation.story),
-                lazyload(Category.story_associations, StoryCategoryAssociation.story, Story.chapters),
-            )
-        # get the category
+        # load category
         self.log("Loading category...")
-        stmt = (
+        category_stmt = (
             select(Category)
             .where(
                 Category.uid == task.uid,
-            ).join(
-                StoryCategoryAssociation,
-                and_(
-                    StoryCategoryAssociation.category_uid == Category.uid,
-                    StoryCategoryAssociation.implied == False,
-                ),
-            ).join(
-                Story,
-                and_(
-                    StoryCategoryAssociation.story_uid == Story.uid,
-                    StoryCategoryAssociation.implied == False,
-                ),
-            ).options(
-                *options,
+            )
+            .options(
+                raiseload(Category.story_associations),
             )
         )
-        category = self.session.scalars(stmt).first()
+        category = self.session.scalars(category_stmt).first()
         self.log("Category loaded.")
         if category is None:
             self.log("-> Category not found!")
+            self.log("Submitting empty result...")
             result = RenderResult()
-        else:
-            self.log("Rendering category...")
-            result = self.renderer.render_category(category)
+            self.handle_result(result)
+            self.log("Done.")
+            return
+
+        # load non-implied stories
+        self.log("Starting to load stories...")
+        story_stmt = (
+            select(Story)
+            .join(
+                StoryCategoryAssociation,
+                and_(
+                    StoryCategoryAssociation.story_uid == Story.uid,
+                    StoryCategoryAssociation.category_uid == task.uid,
+                    StoryCategoryAssociation.implied == False,
+                )
+            )
+            .order_by(desc(Story.score), desc(Story.total_words))
+            .options(
+                selectinload(Story.chapters),
+                undefer(Story.summary),
+            )
+            .execution_options(
+                yield_per=STORY_LIST_YIELD,
+            )
+        )
+        stories = self.session.scalars(story_stmt)
+        self.log("Rendering category...")
+        result = self.renderer.render_category(
+            category=category,
+            stories=stories,
+            num_stories=n_stories_in_category,
+        )
         self.log("Submitting result...")
         self.handle_result(result)
         self.log("Done.")
@@ -734,13 +734,14 @@ class Worker(object):
                 .options(
                     # eager loading options
                     # as it turns out, lazyloading is simply the fastest... This seems wrong...
-                    # joinedload(Story.chapters),
-                    # selectinload(Story.tags),
-                    # joinedload(Story.author),
-                    # joinedload(Story.series_associations),
-                    # joinedload(Story.series_associations, StorySeriesAssociation.series),
-                    subqueryload(Story.category_associations),
-                    subqueryload(Story.category_associations, StoryCategoryAssociation.category),
+                    selectinload(Story.chapters),
+                    joinedload(Story.author),
+                    selectinload(Story.series_associations),
+                    joinedload(Story.series_associations, StorySeriesAssociation.series),
+                    selectinload(Story.category_associations),
+                    joinedload(Story.category_associations, StoryCategoryAssociation.category),
+                    selectinload(Story.tag_associations),
+                    joinedload(Story.tag_associations, StoryTagAssociation.tag),
                 ).execution_options(
                     yield_per=STORY_LIST_YIELD,
                 )
