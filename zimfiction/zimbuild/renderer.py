@@ -518,7 +518,7 @@ class HtmlRenderer(object):
         """
         page = template.render(
             to_root="../../..",
-            title="Stories tagged '{}' [{}]".format(tag.name, tag.type),
+            title="Stories tagged '{}' [{}] - Page {}".format(tag.name, tag.type, page_index),
             stories=stories,
             include_search=(include_search and (page_index == 1 or not SEARCH_ONLY_ON_FIRST_PAGE)),
             num_pages=num_pages,
@@ -528,7 +528,7 @@ class HtmlRenderer(object):
             HtmlPage(
                 path="tag/{}/{}/{}".format(tag.type, normalize_tag(tag.name), page_index),
                 content=self.minify_html(page),
-                title="Stories tagged '{}' [{}]".format(tag.name, tag.type),
+                title="Stories tagged '{}' [{}] - Page {}".format(tag.name, tag.type, page_index),
                 is_front=False,
             ),
         )
@@ -764,6 +764,7 @@ class HtmlRenderer(object):
         """
         page = template.render(
             to_root="../../..",
+            title="{} fanfiction on {} - Page {}".format(category.name, category.publisher.name, page_index),
             category=category,
             stories=stories,
             include_search=(include_search and (page_index == 1 or not SEARCH_ONLY_ON_FIRST_PAGE)),
