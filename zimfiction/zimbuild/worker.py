@@ -542,8 +542,17 @@ class Worker(object):
             )
             .order_by(desc(Story.score), desc(Story.total_words))
             .options(
-                selectinload(Story.chapters),
                 undefer(Story.summary),
+                selectinload(Story.chapters),
+                joinedload(Story.author),
+                selectinload(Story.series_associations),
+                joinedload(Story.series_associations, StorySeriesAssociation.series),
+                selectinload(Story.tag_associations),
+                joinedload(Story.tag_associations, StoryTagAssociation.tag),
+                raiseload(Story.tag_associations, StoryTagAssociation.tag, Tag.story_associations),
+                selectinload(Story.category_associations),
+                joinedload(Story.category_associations, StoryCategoryAssociation.category),
+                raiseload(Story.category_associations, StoryCategoryAssociation.category, Category.story_associations),
             )
             .execution_options(
                 yield_per=STORY_LIST_YIELD,
@@ -636,8 +645,17 @@ class Worker(object):
             )
             .order_by(desc(Story.score), desc(Story.total_words))
             .options(
-                selectinload(Story.chapters),
                 undefer(Story.summary),
+                selectinload(Story.chapters),
+                joinedload(Story.author),
+                selectinload(Story.series_associations),
+                joinedload(Story.series_associations, StorySeriesAssociation.series),
+                selectinload(Story.tag_associations),
+                joinedload(Story.tag_associations, StoryTagAssociation.tag),
+                raiseload(Story.tag_associations, StoryTagAssociation.tag, Tag.story_associations),
+                selectinload(Story.category_associations),
+                joinedload(Story.category_associations, StoryCategoryAssociation.category),
+                raiseload(Story.category_associations, StoryCategoryAssociation.category, Category.story_associations),
             )
             .execution_options(
                 yield_per=STORY_LIST_YIELD,
