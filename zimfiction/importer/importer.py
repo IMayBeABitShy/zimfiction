@@ -100,7 +100,7 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher
                         Story.id == story.id,
                     )
                 ).scalar()
-                if n_new_words > n_old_words:
+                if n_new_words >= n_old_words:
                     if verbose:
                         print(
                             "Story {}-{} already exists in DB, replacing it...".format(
