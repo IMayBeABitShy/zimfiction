@@ -142,7 +142,7 @@ def process_path(path, db_url, parallel=False):
             threads.append(thr)
             thr.start()
         else:
-            process_file(path, db_url=db_url, parallel=parallel)
+            process_file(path, db_url=db_url)
     else:
         print("Neither directory nor archive: '{}', skipping.".format(path))
     for thr in threads:
