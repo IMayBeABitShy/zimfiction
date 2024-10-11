@@ -11,6 +11,7 @@ from ..zimbuild.buckets import BucketMaker
 from .finder import ImplicationFinder
 from .relationships import RelationshipCharactersFinder
 from .ao3dumpfinder import Ao3MergerFinder
+from .exclamationtagfinder import ExclamationTagFinder
 
 
 STORIES_PER_QUERY = 1000
@@ -133,6 +134,7 @@ def get_default_implicator(session, ao3_merger_path=None):
     @rtype: L{Implicator}
     """
     finders = []
+    finders.append(ExclamationTagFinder())
     finders.append(RelationshipCharactersFinder())
     if ao3_merger_path is not None:
         finders.append(Ao3MergerFinder(ao3_merger_path))
