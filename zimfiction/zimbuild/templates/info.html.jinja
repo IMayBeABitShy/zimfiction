@@ -17,6 +17,34 @@
         <P>ZimFiction is a ZIM file containing fanfiction collected from various sources, organized by the publisher.</P>
     </DIV>
     <DIV class="infobullet">
+        <H2>Search Tips</h2>
+        <H3>Overview</H3>
+        <P>ZimFiction comes with two ways to search for content:</P>
+        <UL>
+            <LI>The <B>Xapian Search</B> is backed into the ZIM file itself. Your ZIM reader (e.g. kiwix) usually includes a search function, which should use the xapian search automatically. This search provides a fulltext search across all stories and also a quick way to find tags, categories, authors and so on. It is quite powerful. However, current technical limitations make it unfit for finding/filtering stories based on tags/... and sorting.</LI>
+            <LI>The <B>Javascript Search</B> requires javascript (nearly all browsers support this unless you use some plugin blocking js). You can find it at the <B>first page</B> of tags and categories hidden under the <I>Search Options</I> button, provided the number of stories in the tag/category falls inside a specific range. It can't be used to find stories by title nor can it be used to navigate to tags, authors and so on. However, it provides you with the ability to filter and sort stories in a tag or categories by criteria like tags.</LI>
+        </UL>
+        <P>So, you'll want to use the xapian search to navigate to stories/authors/tags/categories/... you know the title/name of or if you want to search for a story containing a specific text. You'll want to use the javascript search to find stories inside a category/tag fitting certain criterias.</P>
+        <H3>Using the javascript search</H3>
+        <P>To use the javascript search, go to a tag or category. On the first page, you should find a button labeled <I>"Search Options"</I>. This button is not available if a tag/category contains too many or not enough stories. Press said button.</P>
+        <P>You should now see a menu with a couple of text fields (e.g. Publisher, Language, Tags, ...). Find the field you want to filter by (e.g. Tags) and enter the tag name (e.g. Romance). The text input is case insensitive, so it should not matter whether you write uppercase or lowercase letters. The search should show you suggestions that start with the text you've inputed. The number of stories <B>currently</B> matching this criteria should be displayed next to the suggestion. <B>Press any of the suggestions to add it as a search criteria</B>. If you don't press it, no criteria will be added to the search.</P>
+        <P>Following this action, you should now see the criteria added below the text field. On larger screen sizes (where the search options are shown in two columns) It is possible that the criteria may be wrapped arround and instead appear near the top right of the search form. There should be three buttons next to the search criteria:</P>
+        <UL>
+            <LI><B>Include/Exclude:</B> This button is used to toggle whether stories containing this tag/character/... should be included or excluded. Press the button to toggle. The text on the button shows the current state.</LI>
+            <LI><B>I/E:</B> ZimFiction differentiates between <I>implicit</I> and <I>explicit</I> tags/categories/... . Explicit tags are those directly listed by the story. Implicit tags are thos that are otherwise implied. This can be potential tags found in the summary (e.g. OP!character), characters mentioned in pairings but not as a tag, aliases of tags. ...). By default (button shows <I>I</I>), both explicit and implicit tags will be searched. Press the button to toggle it. If it shows <I>E</I>, only explicit tags will be searched.</LI>
+            <LI><B>X:</B> Press this button to remove the search criteria.</LI>
+        </UL>
+        <P>You can specify the sort order with the drop-down menu.</P>
+        <P>Press the <I>Search</I>-button to start the search. Depending on the amount of stories, this may take some time. You can see the progress next to the search button.</P>
+        <P>ZimFiction tries to minimalize RAM usage, but there's a lot of metadata that may need to be searched. ZimFiction tries to fetch search data in parts, so expect a couple of network requests to be made during the search. If the page crashes because it does not have enough RAM, try to start the search from a different tag.</P>
+        <P>The javascript search can only find stories matching the current tag/category/... explicitly.</P>
+        <P>Also, ZimFiction will try to "normalize" relationship tags. This means that the relationships "a/b", "a / b" and "b/a" are all referenced as "a/b" in the search. All members of a relationship will be sorted alphabetically, upper case first. In some rare instances, this normalizing may result in bugs should a character in a pairing contain a pairing symbol.</P>
+        <H3>Using the Xapian Search</H3>
+        <P>The usage of the Xapian search depends on the ZIM reader you use. Not all ZIM readers support Xapian, but the most important ones do. Simply look for a search function and check if it works.</P>
+        <H3>Using an external search</H3>
+        <P>We can not provide you with instructions on how to setup you own external search engine, but ZimFiction sets HTML metadata fields for some pages like stories, which may be a helpful information for you.</P>
+    </DIV>
+    <DIV class="infobullet">
         <H2>Further resources</H2>
         <UL class="infolinklist">
             <LI><A href="acknowledgements.html">Acknowledgements</A></LI>
