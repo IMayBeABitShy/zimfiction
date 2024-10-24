@@ -112,7 +112,7 @@ def run_find_implications(ns):
             reporter.msg("Deleting existing implications... ", end="")
             implicator.delete_implications()
             reporter.msg("Done.")
-        add_all_implications(session, implicator, reporter=reporter)
+        add_all_implications(session, implicator, eager=ns.eager, reporter=reporter)
     reporter.msg("Found {} implied tags.".format(implicator.n_tags_implied))
     reporter.msg("Found {} implied categories.".format(implicator.n_categories_implied))
 
@@ -233,6 +233,12 @@ def main():
         action="store_true",
         dest="delete_existing",
         help="delete existing implications",
+    )
+    implication_parser.add_argument(
+        "--lazy",
+        action="store_false",
+        dest="eager",
+        help="Do not eager load stories",
     )
     implication_parser.add_argument(
         "--ao3-mergers",

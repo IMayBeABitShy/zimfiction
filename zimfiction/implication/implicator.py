@@ -2,9 +2,10 @@
 This module contains the L{Implicator}, which manages the implication detection.
 """
 from sqlalchemy import select, delete
-from sqlalchemy.orm import subqueryload
+from sqlalchemy.orm import undefer, selectinload, joinedload, raiseload
 
 from ..db.models import Story, StoryCategoryAssociation, StoryTagAssociation, Tag, Publisher, Category
+from ..db.models import  MAX_STORY_TAG_LENGTH, MAX_CATEGORY_NAME_LENGTH
 from ..reporter import BaseReporter, VoidReporter
 from ..zimbuild.buckets import BucketMaker
 
@@ -92,9 +93,17 @@ class Implicator(object):
         # find implied tags and categories
         for finder in self.finders:
             for tagdef in finder.get_implied_tags(story, new_tags):
+                if len(tagdef[1]) > MAX_STORY_TAG_LENGTH:
+                    # tag to long, probably a bug in the implication finder
+                    # TODO: some warning
+                    continue
                 if (tagdef not in existing_tags) and (tagdef not in new_tags):
                     new_tags.append(tagdef)
             for catdef in finder.get_implied_categories(story, new_categories):
+                if len(catdef[1]) > MAX_CATEGORY_NAME_LENGTH:
+                    # category to long, probably a bug in the implication finder
+                    # TODO: some warning
+                    continue
                 if (catdef not in existing_categories) and (catdef not in new_categories):
                     new_categories.append(catdef)
 
@@ -145,14 +154,16 @@ def get_default_implicator(session, ao3_merger_path=None):
     return implicator
 
 
-def add_all_implications(session, implicator, reporter=None):
+def add_all_implications(session, implicator, eager=True, reporter=None):
     """
     Find and add all implications for all stories in the database.
 
-    @ivar session: session used to interact with the db
+    @param session: session used to interact with the db
     @type session: L{sqlalchemy.orm.Session}
     @param implicator: implicator to use
     @type implicator: L{Implicator}
+    @param eager: eager load stories
+    @type eager: L{bool}
     @param reporter: reporter to use for progress report
     @type reporter: L{zimfiction.reporter.BaseReporter}
     """
@@ -178,6 +189,26 @@ def add_all_implications(session, implicator, reporter=None):
         story_uid_groups.append(bucket)
     reporter.msg("Done.")
 
+    # setup eager loading options
+    if eager:
+        options = (
+            undefer(Story.summary),
+            # selectinload(Story.chapters),
+            # joinedload(Story.author),
+            # selectinload(Story.series_associations),
+            # joinedload(Story.series_associations, StorySeriesAssociation.series),
+            selectinload(Story.tag_associations),
+            joinedload(Story.tag_associations, StoryTagAssociation.tag),
+            raiseload(Story.tag_associations, StoryTagAssociation.tag, Tag.story_associations),
+            selectinload(Story.category_associations),
+            joinedload(Story.category_associations, StoryCategoryAssociation.category),
+            raiseload(Story.category_associations, StoryCategoryAssociation.category, Category.story_associations),
+        )
+    else:
+        options = (
+            undefer(Story.summary),
+        )
+
     # process stories
     with reporter.with_progress("Finding implications... ", max=n_stories, unit="stories") as bar:
         for story_uid_group in story_uid_groups:
@@ -186,10 +217,7 @@ def add_all_implications(session, implicator, reporter=None):
                 select(Story)
                 .where(Story.uid.in_(story_uid_group))
                 .options(
-                    # eager loading options
-                    # as it turns out, lazyloading is simply the fastest... This seems wrong...
-                    subqueryload(Story.category_associations),
-                    subqueryload(Story.category_associations, StoryCategoryAssociation.category),
+                    *options,
                 )
             ).all()
             # feed stories to the implicator

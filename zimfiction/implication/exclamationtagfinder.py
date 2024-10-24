@@ -10,10 +10,15 @@ the tags:
     - a!c
     - b!c
 
+@var MAX_COMBINATIONS: do not imply more than this many combinations of modifiers
+@type MAX_COMBINATIONS: L{int}
 """
 import itertools
 
 from .finder import ImplicationFinder
+
+
+MAX_COMBINATIONS = 512
 
 
 class ExclamationTagFinder(ImplicationFinder):
@@ -34,12 +39,20 @@ class ExclamationTagFinder(ImplicationFinder):
             # if word does not still contain at least one exclamation mark, skip it
             if word.count("!") == 0:
                 continue
+            # some summaries contain words such as "READ!![20 more !]!:)"
+            # these words can lead to a huge amount of combinations of modifiers
+            # while they are also clearly not tags. Skip them.
+            if word.count("!!") > 0:
+                continue
             tags.append(word)
             splitted = word.split("!")
             modifiers, base = splitted[:-1], splitted[-1]
-            for c in self._all_combinations(modifiers):
+            for i, c in enumerate(self._all_combinations(modifiers)):
                 tag = "!".join(sorted(c)) + "!" + base
                 tags.append(tag)
+                if i >= MAX_COMBINATIONS:
+                    # safety limit - do not imply more than this many combinations
+                    break
 
         implied_tags = [("genre", t) for t in tags]
         return implied_tags
