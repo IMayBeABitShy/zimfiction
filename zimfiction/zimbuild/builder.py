@@ -347,6 +347,8 @@ class BuildOptions(object):
     @ivar log_directory: if not None, enable logging and write logs into this directory
     @type log_directory: L{str} or L{None}
 
+    @ivar eager: if nonzero, eager load objects from database
+    @type eager: L{bool}
     @ivar memprofile_directory: if not None, enable memory profiling and write files into this directory
     @type memprpofile_directory: L{str} or L{None}
 
@@ -376,6 +378,7 @@ class BuildOptions(object):
         num_workers=None,
 
         # worker options
+        eager=True,
         memprofile_directory=None,
 
         # render options
@@ -410,6 +413,8 @@ class BuildOptions(object):
         @param log_directory: if specified, enable logging and write logs into this directory
         @type log_directory: L{str} or L{None}
 
+        @param eager: if nonzero, eager load objects from database
+        @type eager: L{bool}
         @param memprofile_directory: if specified, enable memory profiling and write files into this directory
         @type memprpofile_directory: L{str} or L{None}
 
@@ -435,6 +440,7 @@ class BuildOptions(object):
 
         self.log_directory = log_directory
 
+        self.eager = eager
         self.memprofile_directory = memprofile_directory
 
         self.include_external_links = include_external_links
@@ -478,6 +484,7 @@ class BuildOptions(object):
         @rtype: L{zimfiction.zimbuild.worker.WorkerOptions}
         """
         options = WorkerOptions(
+            eager=self.eager,
             memprofile_directory=self.memprofile_directory,
             log_directory=self.log_directory,
         )
@@ -583,6 +590,7 @@ class ZimBuilder(object):
         self.reporter.msg("        -> Creator Workers:  {}".format(n_creator_workers))
         self.reporter.msg("        -> Render Workers:   {}".format(n_render_workers))
         self.reporter.msg("            -> using: {}".format("threads" if use_threads else "processes"))
+        self.reporter.msg("            -> eagerloading: {}".format("enabled" if options.eager else "disabled"))
         self.reporter.msg("        -> Done.")
 
         self.reporter.msg(" -> Initiating queues...", end="")
@@ -622,9 +630,11 @@ class ZimBuilder(object):
             # add general items
             self.reporter.msg("Adding stylesheet... ", end="")
             creator.add_item(StylesheetItem())
+            set_or_increment(self.num_files_added, "css")
             self.reporter.msg("Done.")
             self.reporter.msg("Adding favicon... ", end="")
             creator.add_item(FaviconItem())
+            set_or_increment(self.num_files_added, "image")
             self.reporter.msg("Done.")
 
             # add content

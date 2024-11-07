@@ -130,6 +130,7 @@ def run_build(ns):
         use_threads=ns.threaded,
         num_workers=ns.workers,
         log_directory=ns.log_directory,
+        eager=ns.eager,
         memprofile_directory=ns.memprofile_directory,
         include_external_links=ns.include_external_links,
         skip_stories=ns.skip_stories,
@@ -280,6 +281,12 @@ def main():
         action="store",
         default=None,
         help="enable logging and write logs into this directory",
+    )
+    build_parser.add_argument(
+        "--lazy",
+        action="store_false",
+        dest="eager",
+        help="Do not eager load stories, tags, ...",
     )
     build_parser.add_argument(
         "--memprofile-directory",

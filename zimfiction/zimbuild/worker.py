@@ -251,15 +251,19 @@ class WorkerOptions(object):
     """
     Options for the worker.
 
+    @ivar eager: eager load objects from database
+    @type eager: L{bool}
     @ivar log_directory: if not None, enable logging and write log here
     @type log_directory: L{str} or L{None}
     @ivar memprofile_directory: if not None, profile memory usage and write files into this directory
     @type memprofile_directory: L{str} or L{None}
     """
-    def __init__(self, log_directory=None, memprofile_directory=None):
+    def __init__(self, eager=True, log_directory=None, memprofile_directory=None):
         """
         The default constructor.
 
+        @param eager: if nonzero, eager load objects from database
+        @type eager: L{bool}
         @param log_directory: if specified, enable logging and write log here
         @type log_directory: L{str} or L{None}
         @param memprofile_directory: if specified, profile memory usage and write files into this directory
@@ -267,6 +271,7 @@ class WorkerOptions(object):
         """
         assert isinstance(log_directory, str) or (log_directory is None)
         assert isinstance(memprofile_directory, str) or (memprofile_directory is None)
+        self.eager = eager
         self.log_directory = log_directory
         self.memprofile_directory = memprofile_directory
 
@@ -465,6 +470,25 @@ class Worker(object):
         @param task: task to process
         @type task: L{StoryRenderTask}
         """
+        # setup load options
+        if self.options.eager:
+            options = (
+                undefer(Story.summary),
+                selectinload(Story.chapters).undefer(Chapter.text),
+                selectinload(Story.tag_associations),
+                selectinload(Story.tag_associations, StoryTagAssociation.tag),
+                joinedload(Story.publisher),
+                joinedload(Story.author),
+                selectinload(Story.series_associations),
+                selectinload(Story.series_associations, StorySeriesAssociation.series),
+                selectinload(Story.category_associations),
+                selectinload(Story.category_associations, StoryCategoryAssociation.category),
+            )
+        else:
+            options = (
+                undefer(Story.summary),
+                selectinload(Story.chapters).undefer(Chapter.text),
+            )
         for story_uid in task.story_uids:
             # get the story
             self.log("Retrieving story...")
@@ -472,15 +496,7 @@ class Worker(object):
                 select(Story)
                 .where(Story.uid == story_uid)
                 .options(
-                    # eager loading options
-                    # as it turns out, lazyloading is simply the fastest... This seems wrong...
-                    joinedload(Story.chapters).undefer(Chapter.text),
-                    # selectinload(Story.tags),
-                    joinedload(Story.author),
-                    joinedload(Story.series_associations),
-                    joinedload(Story.series_associations, StorySeriesAssociation.series),
-                    subqueryload(Story.category_associations),
-                    subqueryload(Story.category_associations, StoryCategoryAssociation.category),
+                    *options,
                 )
             ).first()
             self.log("Retrieved story, rendering...")
