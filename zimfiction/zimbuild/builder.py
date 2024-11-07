@@ -887,7 +887,7 @@ class ZimBuilder(object):
         # main loop - get results from queue and add them to ZIM
         running = True
         n_finished = 0
-        with self.reporter.with_progress(description=task_name, max=n_tasks*task_multiplier, unit=task_unit) as bar:
+        with self.reporter.with_progress(description=task_name, max=n_tasks*task_multiplier, unit=task_unit, secondary_unit="items") as bar:
             while running:
                 render_result = self.outqueue.get(block=True)
                 bar.advance(0)  # redraw
@@ -946,6 +946,7 @@ class ZimBuilder(object):
                             # unknown result object
                             raise RuntimeError("Unknown render result: {}".format(type(rendered_object)))
                         set_or_increment(self.num_files_added, "total")
+                        bar.advance(0, secondary=1)
 
     def _worker_process(self, id, worker_options, render_options):
         """

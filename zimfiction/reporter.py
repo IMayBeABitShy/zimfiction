@@ -25,9 +25,9 @@ class BaseReporter(object):
         pass
 
     @contextmanager
-    def with_progress(self, description, max, unit=None):
+    def with_progress(self, description, max, unit=None, secondary_unit=None):
         """
-        This is a context manager which returns a BaseProgressReporter usable
+        This is a context manager which returns a L{BaseProgressReporter} usable
         to indicate progress.
 
         @param description: description for progress
@@ -36,10 +36,17 @@ class BaseReporter(object):
         @type max: L{int}
         @param unit: unit to use in display
         @type unit: L{str} or L{None}
+        @param secondary_unit: unit to use for secondary counter in display
+        @type secondary_unit: L{str} or L{None}
         @return: a context manager whose value can be used for progress indication.
         @rtype: contextmanager with L{BaseProgressReporter}
         """
-        bpr = BaseProgressReporter(description, max, unit=unit)
+        bpr = BaseProgressReporter(
+            description,
+            max,
+            unit=unit,
+            secondary_unit=secondary_unit,
+        )
         try:
             yield bpr
         except Exception:
@@ -53,8 +60,17 @@ class BaseProgressReporter(object):
     """
     Base class for ProgressReporters.
     This is used as a context value from L{BaseReporter.with_progress}.
+
+    A ProgressReporter tracks progress towards the completion of a goal.
+    An example would be a progress bar. It keeps track of the number of
+    steps that need to be taken as well as the number of steps already
+    performed. Combined with the time passed since start, this will be
+    calculated to a rate and an eta.
+
+    There's also a secondary counter, which can be used to track throughput
+    of something unrelated to the eta and rate.
     """
-    def __init__(self, description, max, unit=None):
+    def __init__(self, description, max, unit=None, secondary_unit=None):
         """
         The default constructor.
 
@@ -64,14 +80,19 @@ class BaseProgressReporter(object):
         @type max: L{int}
         @param unit: unit to use in display
         @type unit: L{str} or L{None}
+        @param secondary_unit: unit to use for secondary counter in display
+        @type secondary_unit: L{str} or L{None}
         """
         assert isinstance(description, str)
         assert isinstance(unit, str) or (unit is None)
+        assert isinstance(secondary_unit, str) or (secondary_unit is None)
         self.description = description
-        self.unit = unit
         self.max = max
+        self.unit = unit
+        self.secondary_unit = secondary_unit
         self.steps = 0
         self.initial_steps = 0
+        self.secondary_steps = 0
         self.start_time = time.time()
 
     def get_eta(self):
@@ -90,17 +111,20 @@ class BaseProgressReporter(object):
         remaining_time = remaining_steps * time_per_step
         return remaining_time
 
-    def advance(self, n):
+    def advance(self, n, secondary=0):
         """
         Advance the progress by n steps.
 
         @param n: number of steps to advance
         @type n: L{int}
+        @param secondary: number of steps to advance the secondary counter
+        @type secondary: L{int}
         """
         if self.steps == 0:
             self.start_time = time.time()
             self.initial_steps = n
         self.steps += n
+        self.secondary_steps += secondary
 
     def finish(self, error=False):
         """
@@ -120,8 +144,8 @@ class VoidReporter(BaseReporter):
         pass
 
     @contextmanager
-    def with_progress(self, description, max, unit=None):
-        yield VoidProgressReporter(description, max, unit=unit)
+    def with_progress(self, description, max, unit=None, secondary_unit=None):
+        yield VoidProgressReporter(description, max, unit=unit, secondary_unit=secondary_unit)
 
 
 class VoidProgressReporter(BaseProgressReporter):
@@ -139,8 +163,13 @@ class StdoutReporter(BaseReporter):
         print(s, end=end, flush=True)
 
     @contextmanager
-    def with_progress(self, description, max, unit=None):
-        spr = StdoutProgressReporter(description, max, unit=unit)
+    def with_progress(self, description, max, unit=None, secondary_unit=None):
+        spr = StdoutProgressReporter(
+            description,
+            max,
+            unit=unit,
+            secondary_unit=secondary_unit,
+        )
         try:
             yield spr
         except Exception:
@@ -165,8 +194,8 @@ class StdoutProgressReporter(BaseProgressReporter):
         BaseProgressReporter.__init__(self, *args, **kwargs)
         self.print_progress()
 
-    def advance(self, steps):
-        BaseProgressReporter.advance(self, steps)
+    def advance(self, steps, secondary=0):
+        BaseProgressReporter.advance(self, steps, secondary=secondary)
         self.print_progress()
 
     def _get_bar(self, progress, error=False):
@@ -203,12 +232,19 @@ class StdoutProgressReporter(BaseProgressReporter):
         @return: a string describing the progress speed. May be empty.
         @rtype: L{str}
         """
+        time_passed = time.time() - self.start_time
         if (self.unit is None) or (not self.DRAW_UNITS):
             unit_str = ""
         else:
-            time_passed = time.time() - self.start_time
             progress_per_second = round(self.steps / max(time_passed, 0.00000000000000001), 2)
             unit_str = "{} {}/s".format(progress_per_second, self.unit)
+        if self.secondary_unit is not None:
+            secondary_progress_per_second = round(self.secondary_steps / max(time_passed, 0.00000000000000001), 2)
+            secondary_unit_str = "{} {}/s".format(secondary_progress_per_second, self.secondary_unit)
+            if unit_str:
+                unit_str = "{}, {}".format(unit_str, secondary_unit_str)
+            else:
+                unit_str = secondary_unit_str
         return unit_str
 
     def print_progress(self):
