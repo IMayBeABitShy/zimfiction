@@ -219,6 +219,7 @@ class StoryCategoryAssociation(Base):
         self.implied = implied
 
 Index("category_implied_index", StoryCategoryAssociation.category_uid, StoryCategoryAssociation.implied)
+Index("story_to_category_index", StoryCategoryAssociation.story_uid)
 
 
 class Tag(UniqueMixin, Base):
@@ -311,6 +312,7 @@ class StoryTagAssociation(Base):
         self.implied = implied
 
 Index("tag_implied_index", StoryTagAssociation.tag_uid, StoryTagAssociation.implied)
+Index("story_to_tag_index", StoryTagAssociation.story_uid)
 
 
 class Series(UniqueMixin, Base):
