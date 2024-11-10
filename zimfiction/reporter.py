@@ -278,9 +278,11 @@ if __name__ == "__main__":
     rep = StdoutReporter()
     rep.msg("Beginning test...")
     try:
-        with rep.with_progress("test", 300, unit="steps") as pb:
+        with rep.with_progress("test", 300, unit="steps", secondary_unit="substeps") as pb:
+            time.sleep(1)
             for i in range(300):
                 pb.advance(1)
+                pb.advance(0, secondary=2)
                 time.sleep(0.02)
                 if i == 250:
                     raise RuntimeError("test")
