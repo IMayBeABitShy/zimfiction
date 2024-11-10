@@ -22,7 +22,7 @@ import math
 import pdb
 import signal
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, distinct
 from sqlalchemy.orm import Session
 from libzim.writer import Creator, Item, StringProvider, FileProvider, Hint
 
@@ -36,7 +36,7 @@ except ImportError:
     setproctitle = None
 
 from ..util import format_timedelta, format_size, get_resource_file_path, format_number, set_or_increment
-from ..db.models import Story, Tag, Author, Category, Series, Publisher
+from ..db.models import Story, Author, Series, Publisher, StoryTagAssociation, StoryCategoryAssociation
 from ..db.unique import set_unique_enabled
 from ..reporter import StdoutReporter
 from .renderer import HtmlPage, Redirect, JsonObject, Script, RenderOptions
@@ -696,9 +696,15 @@ class ZimBuilder(object):
         self.reporter.msg(" -> Adding tags...")
         self.reporter.msg("     -> Finding tags... ", end="")
         n_tags = self.session.execute(
-            select(func.count(Tag.uid))
+            select(
+                func.count(
+                    distinct(StoryTagAssociation.tag_uid)
+                )
+            ).where(
+                StoryTagAssociation.implied == False,
+            )
         ).scalar_one()
-        self.reporter.msg("found {} tags.".format(n_tags))
+        self.reporter.msg("found {} non-implied tags.".format(n_tags))
         with self._run_stage(
             creator=creator,
             options=options,
@@ -726,9 +732,13 @@ class ZimBuilder(object):
         self.reporter.msg(" -> Adding Categories...")
         self.reporter.msg("     -> Finding categories... ", end="")
         n_categories = self.session.execute(
-            select(func.count(Category.uid))
+            select(
+                func.count(distinct(StoryCategoryAssociation.category_uid))
+            ).where(
+                StoryCategoryAssociation.implied == False,
+            )
         ).scalar_one()
-        self.reporter.msg("found {} categories.".format(n_categories))
+        self.reporter.msg("found {} non-implied categories.".format(n_categories))
         with self._run_stage(
             creator=creator,
             options=options,
@@ -1001,10 +1011,11 @@ class ZimBuilder(object):
         """
         Create and send the tasks for the tags to the worker inqueue.
         """
-        select_tags_stmt = select(Tag.uid)
-        result = self.session.execute(select_tags_stmt)
-        for tag in result:
-            task = TagRenderTask(uid=tag.uid)
+        # select from tag association such that we only add non-implied tags
+        select_tags_stmt = select(distinct(StoryTagAssociation.tag_uid)).where(StoryTagAssociation.implied == False)
+        result = self.session.scalars(select_tags_stmt)
+        for tag_uid in result:
+            task = TagRenderTask(uid=tag_uid)
             self.inqueue.put(task)
 
     def _send_author_tasks(self):
@@ -1021,10 +1032,10 @@ class ZimBuilder(object):
         """
         Create and send the tasks for the categories to the worker inqueue.
         """
-        select_categories_stmt = select(Category.uid)
-        result = self.session.execute(select_categories_stmt)
-        for category in result:
-            task = CategoryRenderTask(uid=category.uid)
+        select_categories_stmt = select(distinct(StoryCategoryAssociation.category_uid)).where(StoryCategoryAssociation.implied == False)
+        result = self.session.scalars(select_categories_stmt)
+        for category_uid in result:
+            task = CategoryRenderTask(uid=category_uid)
             self.inqueue.put(task)
 
     def _send_series_tasks(self):
