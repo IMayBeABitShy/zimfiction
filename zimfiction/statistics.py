@@ -543,12 +543,12 @@ class StoryListStatCreator(_StatCreator):
         for chapter in story.chapters:
             self._chapter_word_counter.feed(chapter.num_words)
         for category in story.categories:
-            self._category_counter.feed((category.publisher.name, category.name))
+            self._category_counter.feed(category.uid)
         for tag in story.tags:
-            self._tag_counter.feed((tag.type, tag.name))
-        self._author_counter.feed((story.author.publisher.name, story.author.name))
+            self._tag_counter.feed(tag.uid)
+        self._author_counter.feed(story.author_uid)
         for series in story.series:
-            self._series_counter.feed((story.publisher.name, series.name))
+            self._series_counter.feed(series.uid)
         self._published_counter.feed(story.published)
         self._updated_counter.feed(story.updated)
 
