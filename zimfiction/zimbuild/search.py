@@ -3,7 +3,6 @@ This module contains functionality to create the search metadata.
 """
 import math
 
-from ..util import set_or_increment
 from .buckets import BucketMaker
 
 
@@ -32,9 +31,11 @@ class SearchMetadataCreator(object):
         @type max_page_size: L{int}
         """
         self._max_page_size = max_page_size
-        self._raw_search_metadata = []
-        self._tag_ids = None
-        self._amounts = {}
+        self._num_stories = 0
+        self._cur_tag_id = 0
+        self._tag_ids = {f: {} for f in self._SEARCH_FIELDS if not f.startswith("implied_")}  # field -> {tag -> id}
+        self._amounts = {}  # for RAM optimization purposes, only store amounts > 1
+        self._search_items = []
 
     def feed(self, story):
         """
@@ -43,37 +44,62 @@ class SearchMetadataCreator(object):
         @param story: story to process
         @type story: L{zimfiction.db.models.Story}
         """
+        # the following code is the result of merging three other
+        # methods. It is quite suboptimal, aesthetically speaking. I am sorry.
+        self._num_stories += 1
         searchmeta = story.get_search_data()
-        self._raw_search_metadata.append(searchmeta)
-        self._tag_ids = None
-
-    def _resolve(self):
-        """
-        Resolve the search metadata.
-
-        This is the process of mapping the tags to ids.
-        """
-        cur_i = 0
-        tag_ids = {f: {} for f in self._SEARCH_FIELDS if not f.startswith("implied_")}  # field -> {tag -> id}
-        amounts = {}
-        for item in self._raw_search_metadata:
-            for fieldname in self._SEARCH_FIELDS:
-                outkey = fieldname.replace("implied_", "")
-                tags = item[fieldname]
-                if not isinstance(tags, (list, tuple)):
-                    # for ease of processing, convert single tags
-                    # into a list
-                    tags = [tags]
-                for tag in tags:
-                    if tag not in tag_ids[outkey]:
-                        tag_id = cur_i
-                        cur_i += 1
-                        tag_ids[outkey][tag] = tag_id
+        itemdata = {
+            "publisher": searchmeta["publisher"],
+            "id": searchmeta["id"],
+            "updated": searchmeta["updated"],
+            "words":  searchmeta["words"],
+            "chapters": searchmeta["chapters"],
+            "score": searchmeta["score"],
+            "tags": [],
+            "implied_tags": [],
+            # "rating": searchmeta["rating"],
+            "category_count": searchmeta["category_count"],
+        }
+        # find new tag ids
+        for fieldname in self._SEARCH_FIELDS:
+            outkey = fieldname.replace("implied_", "")
+            tags = searchmeta[fieldname]
+            if not isinstance(tags, (list, tuple)):
+                # for ease of processing, convert single tags
+                # into a list
+                tags = [tags]
+            for tag in tags:
+                if tag not in self._tag_ids[outkey]:
+                    tag_id = self._cur_tag_id
+                    self._cur_tag_id += 1
+                    self._tag_ids[outkey][tag] = tag_id
+                    # do not yet register tag in amounts
+                    # we try to save some RAM by assuming that every
+                    # tag in self._tag_ids and not in self._amounts
+                    # occurs exactly once
+                else:
+                    tag_id = self._tag_ids[outkey][tag]
+                    if tag_id not in self._amounts:
+                        self._amounts[tag_id] = 2
                     else:
-                        tag_id = tag_ids[outkey][tag]
-                    set_or_increment(amounts, tag_id, 1)
-        self._tag_ids = tag_ids
-        self._amounts = amounts
+                        self._amounts[tag_id] += 1
+            # store search tags of story
+            outkey = "tags"
+            resolve_field = fieldname
+            if fieldname.startswith("implied_"):
+                outkey = "implied_tags"
+                resolve_field = resolve_field.replace("implied_", "")
+            if isinstance(searchmeta[fieldname], (list, tuple)):
+                for tag in searchmeta[fieldname]:
+                    resolved_tag = self._tag_ids[resolve_field][tag]
+                    itemdata[outkey].append(resolved_tag)
+            else:
+                # non-list tag
+                resolved_tag = self._tag_ids[resolve_field][searchmeta[fieldname]]
+                itemdata[outkey].append(resolved_tag)
+        itemdata["tags"].sort()
+        itemdata["implied_tags"].sort()
+        self._search_items.append(itemdata)
 
     def get_search_header(self):
         """
@@ -82,13 +108,10 @@ class SearchMetadataCreator(object):
         @return: the search header metadata
         @rtype: L{dict}
         """
-        if self._tag_ids is None:
-            # need to resolve tag ids first
-            self._resolve()
         header = {}
-        header["num_pages"] = math.ceil(len(self._raw_search_metadata) / self._max_page_size)
+        header["num_pages"] = math.ceil(self._num_stories / self._max_page_size)
         header["tag_ids"] = self._tag_ids
-        header["amounts"] = self._amounts
+        header["amounts"] = {tag_id: self._amounts.get(tag_id, 1) for tag_id_group in self._tag_ids.values() for tag_name, tag_id in tag_id_group.items()}
         return header
 
     def iter_search_pages(self):
@@ -98,41 +121,10 @@ class SearchMetadataCreator(object):
         @yields: (pagenum, content)
         @ytype: L{tuple} of (L{int}, L{dict})
         """
-        if self._tag_ids is None:
-            # need to resolve tag ids first
-            self._resolve()
         bucketmaker = BucketMaker(maxsize=self._max_page_size)
         cur_file_i = 0
-        for item in self._raw_search_metadata:
-            itemdata = {
-                "publisher": item["publisher"],
-                "id": item["id"],
-                "updated": item["updated"],
-                "words":  item["words"],
-                "chapters": item["chapters"],
-                "score": item["score"],
-                "tags": [],
-                "implied_tags": [],
-                # "rating": item["rating"],
-                "category_count": item["category_count"],
-            }
-            for field in self._SEARCH_FIELDS:
-                outkey = "tags"
-                resolve_field = field
-                if field.startswith("implied_"):
-                    outkey = "implied_tags"
-                    resolve_field = resolve_field.replace("implied_", "")
-                if isinstance(item[field], (list, tuple)):
-                    for tag in item[field]:
-                        resolved_tag = self._tag_ids[resolve_field][tag]
-                        itemdata[outkey].append(resolved_tag)
-                else:
-                    # non-list tag
-                    resolved_tag = self._tag_ids[resolve_field][item[field]]
-                    itemdata[outkey].append(resolved_tag)
-            itemdata["tags"].sort()
-            itemdata["implied_tags"].sort()
-            bucket = bucketmaker.feed(itemdata)
+        for item in self._search_items:
+            bucket = bucketmaker.feed(item)
             if bucket is not None:
                 yield (cur_file_i, bucket)
                 cur_file_i += 1
