@@ -14,7 +14,8 @@ body {
   min-height: -webkit-fit-available;
 }
 
-.content-container {
+/* content container - use content-cntr to reduce html size */
+.content-cntr {
   padding: 0.625em;
 }
 
@@ -23,7 +24,7 @@ HR {
   margin-bottom: 1.75em;
 }
 
-.navigation {
+.nav {
   background-color: #333399;
   display: flex;
   width: auto;
@@ -31,13 +32,13 @@ HR {
   padding: 0.25em;
 }
 
-.navigation * {
+.nav * {
   color: #ffffff;
 }
 
 /* story summary */
 
-.story_summary_div:not(.story_list_page_item .story_summary_div) {
+.story_summary:not(.story_list_page_item .story_summary) {
   /* story summary that's not part of the story list */
   background: lightgrey;
   border: 1px solid darkgray;
@@ -46,11 +47,11 @@ HR {
   padding-bottom: 0em;
 }
 
-.story_summary_footer P {
+.story_summary .summary_footer P {
   text-align: right;
 }
 
-.story_summary_meta TH {
+.story_summary .summary_meta TH {
   text-align: left;
   padding-right: 2.5em;
 }
@@ -69,7 +70,7 @@ HR {
   background: #eee;
 }
 
-.story_summary_title {
+.story_summary .summary_title {
   margin-bottom: 0.625em;
   font-weight: bolder;
   font-size: 132%
@@ -82,14 +83,14 @@ HR {
   font-size:initial;
 }
 
-.story_short_categories {
+.short_categories {
   font-size: initial;
   font-weight: initial;
   margin-bottom: 1em;
   margin-left: 1em;
 }
 
-.story_short_tags {
+.short_tags {
     margin-left: 1em;
 }
 
@@ -554,7 +555,7 @@ HR {
 /* mobile */
 
 @media only screen and (max-width: 920px) {
-  .story_summary_div:not(.story_list_page_item .story_summary_div) {
+  .story_summary:not(.story_list_page_item .story_summary) {
     padding: 0.4em;
     margin: initial;
   }
