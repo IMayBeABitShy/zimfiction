@@ -20,8 +20,8 @@ import contextlib
 import os
 import time
 
-from sqlalchemy import select, and_, func, desc
-from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, undefer
+from sqlalchemy import select, and_, func, desc, literal_column
+from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, undefer, noload
 
 try:
     import memray
@@ -535,6 +535,7 @@ class Worker(object):
             )
         )
         tag = self.session.scalars(tag_stmt).first()
+        self.session.expunge(tag)  # prevent tag from being modified and storing objects
         self.log("Tag loaded.")
         if tag is None:
             self.log("-> Tag not found!")
@@ -546,6 +547,23 @@ class Worker(object):
 
         # load non-implied stories
         self.log("Starting to load stories...")
+        # always use eager loading, lazy is horrible for performance here
+        options = (
+            selectinload(Story.chapters),
+            joinedload(Story.author),
+            selectinload(Story.series_associations),
+            joinedload(Story.series_associations, StorySeriesAssociation.series),
+            # raiseload(Story.series_associations, StorySeriesAssociation.series, Series.stories),
+            noload(Story.series_associations, StorySeriesAssociation.series, Series.story_associations),
+            selectinload(Story.tag_associations),
+            joinedload(Story.tag_associations, StoryTagAssociation.tag),
+            # raiseload(Story.tag_associations, StoryTagAssociation.tag, Tag.story_associations),
+            noload(Story.tag_associations, StoryTagAssociation.tag, Tag.story_associations),
+            selectinload(Story.category_associations),
+            joinedload(Story.category_associations, StoryCategoryAssociation.category),
+            # raiseload(Story.category_associations, StoryCategoryAssociation.category, Category.story_associations),
+            noload(Story.category_associations, StoryCategoryAssociation.category, Category.story_associations),
+        )
         story_stmt = (
             select(Story)
             .join(
@@ -556,19 +574,28 @@ class Worker(object):
                     StoryTagAssociation.implied == False,
                 )
             )
-            .order_by(desc(Story.score), desc(Story.total_words))
+            .join(
+                # calculate total words (avoid Story.total_words, subqueries are inefficient!)
+                select(
+                    Chapter.story_uid.label("chapter_story_uid"), func.sum(Chapter.num_words).label("total_words")
+                )
+                .join(
+                    # join with story has tag so we can limit the chapters we count
+                    StoryTagAssociation,
+                    StoryTagAssociation.story_uid == Chapter.story_uid,
+                )
+                .where(StoryTagAssociation.tag_uid == task.uid)
+                .group_by("chapter_story_uid").subquery(),
+                Story.uid == literal_column("chapter_story_uid"),
+            )
+            # .order_by(desc(Story.score), desc(Story.total_words))
+            .order_by(
+                desc(Story.score),
+                desc("total_words"),
+            )
             .options(
                 undefer(Story.summary),
-                selectinload(Story.chapters),
-                joinedload(Story.author),
-                selectinload(Story.series_associations),
-                joinedload(Story.series_associations, StorySeriesAssociation.series),
-                selectinload(Story.tag_associations),
-                joinedload(Story.tag_associations, StoryTagAssociation.tag),
-                raiseload(Story.tag_associations, StoryTagAssociation.tag, Tag.story_associations),
-                selectinload(Story.category_associations),
-                joinedload(Story.category_associations, StoryCategoryAssociation.category),
-                raiseload(Story.category_associations, StoryCategoryAssociation.category, Category.story_associations),
+                *options,
             )
             .execution_options(
                 yield_per=STORY_LIST_YIELD,
@@ -659,13 +686,33 @@ class Worker(object):
                     StoryCategoryAssociation.implied == False,
                 )
             )
-            .order_by(desc(Story.score), desc(Story.total_words))
+            .join(
+                # calculate total words (avoid Story.total_words, subqueries are inefficient!)
+                select(
+                    Chapter.story_uid.label("chapter_story_uid"), func.sum(Chapter.num_words).label("total_words")
+                )
+                .join(
+                    # join with story has category so we can limit the chapters we count
+                    StoryCategoryAssociation,
+                    StoryCategoryAssociation.story_uid == Chapter.story_uid,
+                )
+                .where(StoryCategoryAssociation.category_uid == task.uid)
+                .group_by("chapter_story_uid").subquery(),
+                Story.uid == literal_column("chapter_story_uid"),
+            )
+            # .order_by(desc(Story.score), desc(Story.total_words))
+            .order_by(
+                desc(Story.score),
+                desc("total_words"),
+            )
             .options(
                 undefer(Story.summary),
                 selectinload(Story.chapters),
                 joinedload(Story.author),
                 selectinload(Story.series_associations),
                 joinedload(Story.series_associations, StorySeriesAssociation.series),
+                # raiseload(Story.series_associations, StorySeriesAssociation.series, Series.stories),
+                noload(Story.series_associations, StorySeriesAssociation.series, Series.story_associations),
                 selectinload(Story.tag_associations),
                 joinedload(Story.tag_associations, StoryTagAssociation.tag),
                 raiseload(Story.tag_associations, StoryTagAssociation.tag, Tag.story_associations),
