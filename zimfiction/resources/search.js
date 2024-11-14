@@ -67,7 +67,7 @@ function escapeHtml(unsafe) {
 function normalize_tag(tag) {
     // normalize a tag for usage in urls
     // IMPORTANT: be sure this matches the behavior of the python function
-    return tag.replaceAll(" ", "+").replaceAll("/", "_");
+    return tag.replaceAll(" ", "+").replaceAll("/", "__");
 }
 
 
