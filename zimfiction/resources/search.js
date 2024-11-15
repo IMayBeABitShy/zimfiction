@@ -16,22 +16,22 @@ const MAX_AUTOCOMPLETE = 10;
 
 // preview template
 const PREVIEW_TEMPLATE = `
-<DIV class="story_summary_div">
-    <DIV class="story_summary_title">
-        <A href="${TO_ROOT}/story/{publisher}/{story_id}/" class="story_summary_title_link">{title}</A> by <A class="story_summary_author_link" href="${TO_ROOT}/author/{publisher}/{normalized_author}/">{author}</A>
+<DIV class="story_summary">
+    <DIV class="summary_title">
+        <A href="${TO_ROOT}/story/{publisher}/{story_id}/" class="summary_title_link">{title}</A> by <A class="summary_author_link" href="${TO_ROOT}/author/{publisher}/{normalized_author}/">{author}</A>
         <P class="story_updated_text">{updated}</P>
-        <DIV class="story_short_categories">
+        <DIV class="short_categories">
             {categorylist}
         </DIV>
     </DIV>
-    <DIV class="story_short_tags">
+    <DIV class="short_tags">
         {taglist}
     </DIV>
     <BR>
-    <DIV class="story_summary_text">
+    <DIV class="summary_text">
         {summary}
     </DIV>
-    <DIV class="story_summary_footer">
+    <DIV class="summary_footer">
         <P>
             {serieslist}
             <B>Language:</B> {language} <B>Status:</B> {status} <B>Rating: </B> {rating} <B>Words:</B> {total_words} <B>Chapters:</B> {chapters} <B>Score:</B> {score}

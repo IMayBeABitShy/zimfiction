@@ -1022,6 +1022,14 @@ class HtmlRenderer(object):
                 is_front=True,
             ),
         )
+        result.add(
+            Redirect(
+                "info/",
+                "info/index.html",
+                title="Informations",
+                is_front=False,
+            ),
+        )
         # acknowledgements
         ack_template = self.environment.get_template("acknowledgements.html.jinja")
         licenses = {}

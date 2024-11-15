@@ -1,11 +1,11 @@
 {# This is a div containing the summary of a story. Expects "to_root", "story" and "extended" argument #}
 
-<DIV class="story_summary_div">
-    <DIV class="story_summary_title">
-        <A href="{{ to_root}}/story/{{ story.publisher.name }}/{{ story.id }}/" class="story_summary_title_link">{{ story.title }}</A> by <A class="story_summary_author_link" href="{{ to_root}}/author/{{ story.author.publisher.name }}/{{ story.author.name|normalize_tag }}/">{{ story.author.name }}</A>
+<DIV class="story_summary">
+    <DIV class="summary_title">
+        <A href="{{ to_root}}/story/{{ story.publisher.name }}/{{ story.id }}/" class="summary_title_link">{{ story.title }}</A> by <A class="summary_author_link" href="{{ to_root}}/author/{{ story.author.publisher.name }}/{{ story.author.name|normalize_tag }}/">{{ story.author.name }}</A>
         {% if not extended %}
             <P class="story_updated_text">{{ story.updated|format_date }}</P>
-            <DIV class="story_short_categories">
+            <DIV class="short_categories">
                 {% with categories=story.explicit_categories, to_root=to_root %}
                     {% include "categorylist.html.jinja" %}
                 {% endwith %}
@@ -13,7 +13,7 @@
         {% endif %}
     </DIV>
     {% if extended %}
-        <TABLE class="story_summary_meta">
+        <TABLE class="summary_meta">
             {% if story.categories|length > 0 %}
                 <TR>
                     <TH>Fandom</TH>
@@ -122,18 +122,18 @@
             </TR>
         </TABLE>
     {% else %}
-        <DIV class="story_short_tags">
+        <DIV class="short_tags">
             {% with to_root=to_root, tags=story.ordered_tags %}
                 {% include "taglist.html.jinja" %}
             {% endwith %}
         </DIV>
         <BR>
     {% endif %}
-    <DIV class="story_summary_text">
+    <DIV class="summary_text">
         {{ story.summary|safe }}
     </DIV>
     {% if not extended %}
-        <DIV class="story_summary_footer">
+        <DIV class="summary_footer">
             <P>
                 {% for series_association in story.series_associations  %}
                     <B>Part</B> {{ series_association.index }} <B>of</B> <A class="serieslink" href="{{to_root}}/series/{{ series_association.series.publisher.name }}/{{ series_association.series.name|normalize_tag }}/">{{ series_association.series.name }} </A>
