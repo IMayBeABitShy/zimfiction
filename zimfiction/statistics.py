@@ -671,20 +671,20 @@ def query_story_list_stats(session, condition=None):
     )
     result = session.execute(stats_stmt).one()
     kwargs = {
-        "story_count": result.story_count,
-        "total_words": result.total_words,
-        "min_story_words": result.min_words,
-        "max_story_words": result.max_words,
+        "story_count": int(result.story_count),
+        "total_words": int(result.total_words),
+        "min_story_words": int(result.min_words),
+        "max_story_words": int(result.max_words),
 
-        "chapter_count": result.chapter_count,
-        "min_chapter_count": result.min_chapter_count,
-        "max_chapter_count": result.max_chapter_count,
+        "chapter_count": int(result.chapter_count),
+        "min_chapter_count": int(result.min_chapter_count),
+        "max_chapter_count": int(result.max_chapter_count),
 
-        "min_chapter_words": result.min_chapter_words,
-        "max_chapter_words": result.max_chapter_words,
+        "min_chapter_words": int(result.min_chapter_words),
+        "max_chapter_words": int(result.max_chapter_words),
 
-        "author_count": result.author_count,
-        "total_author_count": result.total_author_count,
+        "author_count": int(result.author_count),
+        "total_author_count": int(result.total_author_count),
     }
     # tag stat subquery
     tag_subquery = (
@@ -734,14 +734,14 @@ def query_story_list_stats(session, condition=None):
     result = session.execute(tcs_stmt).one()
     kwargs.update(
         {
-            "tag_count": result.tag_count,
-            "total_tag_count": result.total_tag_count,
+            "tag_count": int(result.tag_count),
+            "total_tag_count": int(result.total_tag_count),
 
-            "category_count": result.category_count,
-            "total_category_count": result.total_category_count,
+            "category_count": int(result.category_count),
+            "total_category_count": int(result.total_category_count),
 
-            "series_count": result.series_count,
-            "total_series_count": result.total_series_count,
+            "series_count": int(result.series_count),
+            "total_series_count": int(result.total_series_count),
         }
     )
     # timeline and dates
