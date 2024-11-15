@@ -29,7 +29,7 @@ except:
     memray = None
 
 from .renderer import HtmlRenderer, RenderResult
-from ..statistics import StoryListStatCreator
+from ..statistics import query_story_list_stats
 from ..util import ensure_iterable, normalize_tag
 from ..db.models import Story, Chapter, Tag, Author, Category, Publisher
 from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation, Series
@@ -818,26 +818,8 @@ class Worker(object):
             result = self.renderer.render_index(publishers=publishers)
         elif task.subtask == "stats":
             # render the global statistics
-            self.log("Retrieving stories...")
-            stories = self.session.scalars(
-                select(Story)
-                .options(
-                    # eager loading options
-                    # as it turns out, lazyloading is simply the fastest... This seems wrong...
-                    selectinload(Story.chapters),
-                    joinedload(Story.author),
-                    selectinload(Story.series_associations),
-                    joinedload(Story.series_associations, StorySeriesAssociation.series),
-                    selectinload(Story.category_associations),
-                    joinedload(Story.category_associations, StoryCategoryAssociation.category),
-                    selectinload(Story.tag_associations),
-                    joinedload(Story.tag_associations, StoryTagAssociation.tag),
-                ).execution_options(
-                    yield_per=STORY_LIST_YIELD,
-                )
-            ).all()
-            self.log("Generating stats...")
-            stats = StoryListStatCreator.get_stats_from_iterable(stories)
+            self.log("Querying stats...")
+            stats = query_story_list_stats(self.session)
             self.log("Rendering statistics...")
             result = self.renderer.render_global_stats(stats)
         elif task.subtask == "search":

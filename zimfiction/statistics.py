@@ -4,6 +4,9 @@ Module for evaluating statistics.
 import datetime
 
 from .util import set_or_increment
+from .db.models import Story, Chapter, StoryTagAssociation, StoryCategoryAssociation, StorySeriesAssociation
+
+from sqlalchemy import select, func, literal_column, true
 
 
 def zerodiv(a, b):
@@ -490,43 +493,10 @@ class StoryListStatCreator(_StatCreator):
         """
         Generate a dict containing the data described over time.
 
-        The result is a dict of the form:
-
-            {
-                month: list of identifiers for the month,
-                published: list of number of published stories,
-                updated: list of number of updated stories,
-            }
-
-        Where each tuple created by zipping (month, published, updated) is a datapoint.
-
-        @return: the dictionary described above
+        @return: value returned by L{_generate_timeline_data}
         @rtype: L{dict}
         """
-        published_timeline = self._published_counter.get_timeline()
-        updated_timeline = self._updated_counter.get_timeline()
-        data = {}
-        for point in published_timeline:
-            data[point[0]] = {
-                "published": point[1],
-                "updated": 0,
-            }
-        for point in updated_timeline:
-            if point[0] not in data:
-                data[point[0]] = {
-                    "published": 0,
-                    "updated": point[1],
-                }
-            else:
-                data[point[0]]["updated"] = point[1]
-        months = list(data.keys())
-        months.sort()
-        ret = {
-            "months": months,
-            "published": [data[m]["published"] for m in months],
-            "updated": [data[m]["updated"] for m in months]
-        }
-        return ret
+        return _generate_timeline_data(self._published_counter, self._updated_counter)
 
     def feed(self, element):
         """
@@ -596,3 +566,211 @@ class StoryListStatCreator(_StatCreator):
             timeline=timeline_data,
         )
         return stats
+
+
+def _generate_timeline_data(published_counter, updated_counter):
+    """
+    Generate a dict containing the data described over time.
+
+    The result is a dict of the form:
+
+        {
+            month: list of identifiers for the month,
+            published: list of number of published stories,
+            updated: list of number of updated stories,
+        }
+
+    Where each tuple created by zipping (month, published, updated) is a datapoint.
+
+    @param published_counter: counter keeping track of publishing dates
+    @type published_counter: L{DatetimeCounter}
+    @param updated_counter: counter keeping track of last updated dates
+    @type updated_counter: L{DatetimeCounter}
+    @return: the dictionary described above
+    @rtype: L{dict}
+    """
+    published_timeline = published_counter.get_timeline()
+    updated_timeline = updated_counter.get_timeline()
+    data = {}
+    for point in published_timeline:
+        data[point[0]] = {
+            "published": point[1],
+            "updated": 0,
+        }
+    for point in updated_timeline:
+        if point[0] not in data:
+            data[point[0]] = {
+                "published": 0,
+                "updated": point[1],
+            }
+        else:
+            data[point[0]]["updated"] = point[1]
+    months = list(data.keys())
+    months.sort()
+    ret = {
+        "months": months,
+        "published": [data[m]["published"] for m in months],
+        "updated": [data[m]["updated"] for m in months]
+    }
+    return ret
+
+
+def query_story_list_stats(session, condition=None):
+    """
+    Query statistics directly from the database.
+
+    @param session: sqlalachemy session to use for query
+    @type session: L{sqlalchemy.orm.Session}
+    @param condition: condition for selecting stories
+    @type condition: L{None} or a sqlalchemy condition
+    @return: the collected statistics
+    @rtype: L{StoryListStats}
+    """
+    if condition is None:
+        condition = True
+    # chaper stat query
+    chapter_subquery = (
+        select(
+            Chapter.story_uid.label("chapter_story_uid"),
+            func.sum(Chapter.num_words).label("total_words"),
+            func.min(Chapter.num_words).label("min_chapter_words"),
+            func.max(Chapter.num_words).label("max_chapter_words"),
+            func.count(Chapter.uid).label("num_chapters"),
+        )
+        .join(
+            # join with story so we can check the condition
+            Story,
+            Story.uid == Chapter.story_uid,
+        )
+        .where(condition)
+        .group_by(literal_column("chapter_story_uid"))
+        .subquery()
+    )
+    # final stat query
+    stats_stmt = (
+        select(
+            # story stats
+            func.count(Story.uid).label("story_count"),
+            # chapter based stats
+            func.sum(literal_column("total_words")).label("total_words"),
+            func.min(literal_column("total_words")).label("min_words"),
+            func.max(literal_column("total_words")).label("max_words"),
+            func.sum(literal_column("num_chapters")).label("chapter_count"),
+            func.min(literal_column("num_chapters")).label("min_chapter_count"),
+            func.max(literal_column("num_chapters")).label("max_chapter_count"),
+            func.min(literal_column("min_chapter_words")).label("min_chapter_words"),
+            func.max(literal_column("max_chapter_words")).label("max_chapter_words"),
+            # author stats
+            func.count(Story.author_uid.distinct()).label("author_count"),
+            func.count(Story.author_uid).label("total_author_count"),
+        )
+        .join(
+            chapter_subquery,
+            Story.uid == literal_column("chapter_story_uid"),
+        )
+    )
+    result = session.execute(stats_stmt).one()
+    kwargs = {
+        "story_count": result.story_count,
+        "total_words": result.total_words,
+        "min_story_words": result.min_words,
+        "max_story_words": result.max_words,
+
+        "chapter_count": result.chapter_count,
+        "min_chapter_count": result.min_chapter_count,
+        "max_chapter_count": result.max_chapter_count,
+
+        "min_chapter_words": result.min_chapter_words,
+        "max_chapter_words": result.max_chapter_words,
+
+        "author_count": result.author_count,
+        "total_author_count": result.total_author_count,
+    }
+    # tag stat subquery
+    tag_subquery = (
+        select(
+            func.count(StoryTagAssociation.tag_uid.distinct()).label("tag_count"),
+            func.count(StoryTagAssociation.tag_uid).label("total_tag_count"),
+        )
+        .join(
+            # join with story so we can check the condition
+            Story,
+            Story.uid == StoryTagAssociation.story_uid,
+        )
+        .where(condition)
+        .subquery()
+    )
+    # category stat subquery
+    category_subquery = (
+        select(
+            func.count(StoryCategoryAssociation.category_uid.distinct()).label("category_count"),
+            func.count(StoryCategoryAssociation.category_uid).label("total_category_count"),
+        )
+        .join(
+            # join with story so we can check the condition
+            Story,
+            Story.uid == StoryCategoryAssociation.story_uid,
+        )
+        .where(condition)
+        .subquery()
+    )
+    # series stat subquery
+    series_subquery = (
+        select(
+            func.count(StorySeriesAssociation.series_uid.distinct()).label("series_count"),
+            func.count(StorySeriesAssociation.series_uid).label("total_series_count"),
+        )
+        .join(
+            # join with story so we can check the condition
+            Story,
+            Story.uid == StorySeriesAssociation.story_uid,
+        )
+        .where(condition)
+        .subquery()
+    )
+    tcs_stmt = (
+        select(tag_subquery, category_subquery, series_subquery)
+    )
+    result = session.execute(tcs_stmt).one()
+    kwargs.update(
+        {
+            "tag_count": result.tag_count,
+            "total_tag_count": result.total_tag_count,
+
+            "category_count": result.category_count,
+            "total_category_count": result.total_category_count,
+
+            "series_count": result.series_count,
+            "total_series_count": result.total_series_count,
+        }
+    )
+    # timeline and dates
+    published_counter = DatetimeCounter()
+    updated_counter = DatetimeCounter()
+    timeline_stmt = (
+        select(
+            Story.published,
+            Story.updated,
+        )
+        .where(condition)
+    )
+    result = session.execute(timeline_stmt)
+    for story in result:
+        published_counter.feed(story.published)
+        updated_counter.feed(story.updated)
+    timeline_data = _generate_timeline_data(published_counter, updated_counter)
+    kwargs.update(
+        {
+            "min_date_published": published_counter.min,
+            "max_date_published": published_counter.max,
+            "average_date_published": published_counter.average,
+
+            "min_date_updated": updated_counter.min,
+            "max_date_updated": updated_counter.min,
+            "average_date_updated": updated_counter.average,
+            "timeline": timeline_data,
+        }
+    )
+    # done
+    return StoryListStats(**kwargs)
+
