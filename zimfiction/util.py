@@ -195,7 +195,7 @@ def normalize_tag(tag):
     """
     # return ALLOWED_TAG_LETTERS.sub("_", tag)
     # return urllib.parse.quote_plus(tag)
-    return tag.replace(" ", "+").replace("/", "__")  # double underscore to prevent overlap with single underscore
+    return tag.replace("+", "_plus_").replace(" ", "+").replace("/", "_slash_")
 
 
 def normalize_relationship(tag):
