@@ -13,6 +13,8 @@ take the results and add them to the creator.
 
 @var MAX_STORY_EAGERLOAD: when loading tags and categories, do not eagerload if more than this number of stories are in said object
 @type MAX_STORY_EAGERLOAD: L{int}
+@var MIN_STORIES_FOR_EXPLICIT_STATS: when rendering tags and stories, collect stats per SQL if we have at least this number of stories
+@type MIN_STORIES_FOR_EXPLICIT_STATS: L{int}
 @var STORY_LIST_YIELD: number of story to fetch at once when rendering tags, categories, ...
 @type STORY_LIST_YIELD: L{int}
 """
@@ -39,6 +41,8 @@ MARKER_WORKER_STOPPED = "stopped"
 MARKER_TASK_COMPLETED = "completed"
 
 MAX_STORY_EAGERLOAD = 10000
+MIN_STORIES_FOR_EXPLICIT_STATS = 10000
+
 STORY_LIST_YIELD = 2000
 
 
@@ -523,6 +527,19 @@ class Worker(object):
         )
         n_stories_in_tag = self.session.execute(count_stmt).scalar_one()
         self.log("Found {} stories.".format(n_stories_in_tag))
+        # collect statistics
+        if n_stories_in_tag >= MIN_STORIES_FOR_EXPLICIT_STATS:
+            statistics = query_story_list_stats(
+                self.session,
+                Story.tag_associations.any(
+                    and_(
+                        StoryTagAssociation.tag_uid == task.uid,
+                        StoryTagAssociation.implied == False,
+                    )
+                ),
+            )
+        else:
+            statistics = None
         # load tag
         self.log("Loading tag...")
         tag_stmt = (
@@ -607,6 +624,7 @@ class Worker(object):
             tag=tag,
             stories=stories,
             num_stories=n_stories_in_tag,
+            statistics=statistics,
         )
         self.log("Submitting result...")
         self.handle_result(result)
@@ -653,6 +671,19 @@ class Worker(object):
         )
         n_stories_in_category = self.session.execute(count_stmt).scalar_one()
         self.log("Found {} stories.".format(n_stories_in_category))
+        # collect statistics
+        if n_stories_in_category >= MIN_STORIES_FOR_EXPLICIT_STATS:
+            statistics = query_story_list_stats(
+                self.session,
+                Story.category_associations.any(
+                    and_(
+                        StoryCategoryAssociation.category_uid == task.uid,
+                        StoryCategoryAssociation.implied == False,
+                    )
+                ),
+            )
+        else:
+            statistics = None
         # load category
         self.log("Loading category...")
         category_stmt = (
@@ -730,6 +761,7 @@ class Worker(object):
             category=category,
             stories=stories,
             num_stories=n_stories_in_category,
+            statistics=statistics,
         )
         self.log("Submitting result...")
         self.handle_result(result)

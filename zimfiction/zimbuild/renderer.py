@@ -356,7 +356,7 @@ class HtmlRenderer(object):
         )
         return result
 
-    def render_tag(self, tag, stories=None, num_stories=None):
+    def render_tag(self, tag, stories=None, num_stories=None, statistics=None):
         """
         Render a tag.
 
@@ -370,6 +370,8 @@ class HtmlRenderer(object):
         @type stories: iterable yielding L{zimfiction.db.models.Story} or L{None}
         @param num_stories: number of stories in this tag
         @type num_stories: L{int} or L{None}
+        @param statistics: if specified, use these statistics rather than collecting them
+        @type statistics: L{zimfiction.statistics.StoryListStats}
         @return: the rendered pages and redirects
         @rtype: L{RenderResult}
         """
@@ -398,8 +400,11 @@ class HtmlRenderer(object):
         items_in_result += 1
         # prepare rendering the story list pages
         list_page_template = self.environment.get_template("storylistpage.html.jinja")
-        stat_creator = StoryListStatCreator()
         include_search = (num_stories >= MIN_STORIES_FOR_SEARCH) and (num_stories <= MAX_STORIES_FOR_SEARCH)
+        include_stats = True
+        collect_stats = (statistics is None) and include_stats
+        if collect_stats:
+            stat_creator = StoryListStatCreator()
         num_pages = math.ceil(num_stories / STORIES_PER_PAGE)
         bucketmaker = BucketMaker(STORIES_PER_PAGE)
         if include_search:
@@ -407,7 +412,8 @@ class HtmlRenderer(object):
         # render the story list pages
         page_index = 1
         for story in stories:
-            stat_creator.feed(story)
+            if collect_stats:
+                stat_creator.feed(story)
             if include_search:
                 search_creator.feed(story)
             bucket = bucketmaker.feed(story)
@@ -442,30 +448,32 @@ class HtmlRenderer(object):
                 result = RenderResult()
                 items_in_result = 0
         # add statistics
-        stats = stat_creator.get_stats()
-        stats_page_template = self.environment.get_template("storyliststatspage.html.jinja")
-        page = stats_page_template.render(
-            to_root="../../..",
-            title="Stories tagged '{}' [{}] - Statistics".format(tag.name, tag.type),
-            stats=stats,
-            backref="1",
-        )
-        result.add(
-            HtmlPage(
-                path="tag/{}/{}/stats".format(tag.type, normalize_tag(tag.name)),
-                content=self.minify_html(page),
+        if collect_stats:
+            statistics = stat_creator.get_stats()
+        if include_stats:
+            stats_page_template = self.environment.get_template("storyliststatspage.html.jinja")
+            page = stats_page_template.render(
+                to_root="../../..",
                 title="Stories tagged '{}' [{}] - Statistics".format(tag.name, tag.type),
-                is_front=False
+                stats=statistics,
+                backref="1",
             )
-        )
-        result.add(
-            JsonObject(
-                path="tag/{}/{}/storyupdates.json".format(tag.type, normalize_tag(tag.name)),
-                title="",
-                content=stats.timeline,
-            ),
-        )
-        items_in_result += 2
+            result.add(
+                HtmlPage(
+                    path="tag/{}/{}/stats".format(tag.type, normalize_tag(tag.name)),
+                    content=self.minify_html(page),
+                    title="Stories tagged '{}' [{}] - Statistics".format(tag.name, tag.type),
+                    is_front=False
+                )
+            )
+            result.add(
+                JsonObject(
+                    path="tag/{}/{}/storyupdates.json".format(tag.type, normalize_tag(tag.name)),
+                    title="",
+                    content=statistics.timeline,
+                ),
+            )
+            items_in_result += 2
         # add search
         if include_search:
             search_header_data = search_creator.get_search_header()
@@ -603,7 +611,7 @@ class HtmlRenderer(object):
         return result
 
 
-    def render_category(self, category, stories=None, num_stories=None):
+    def render_category(self, category, stories=None, num_stories=None, statistics=None):
         """
         Render an category.
 
@@ -617,6 +625,8 @@ class HtmlRenderer(object):
         @type stories: iterable yielding L{zimfiction.db.models.Story} or L{None}
         @param num_stories: number of stories in this category
         @type num_stories: L{int} or L{None}
+        @param statistics: if specified, use these statistics rather than collecting them
+        @type statistics: L{zimfiction.statistics.StoryListStats}
         @return: the rendered pages and redirects
         @rtype: L{RenderResult}
         """
@@ -645,8 +655,11 @@ class HtmlRenderer(object):
         items_in_result += 1
         # prepare rendering the story list pages
         list_page_template = self.environment.get_template("storylistpage.html.jinja")
-        stat_creator = StoryListStatCreator()
         include_search = (num_stories >= MIN_STORIES_FOR_SEARCH) and (num_stories <= MAX_STORIES_FOR_SEARCH)
+        include_stats = True
+        collect_stats = (statistics is None) and include_stats
+        if collect_stats:
+            stat_creator = StoryListStatCreator()
         num_pages = math.ceil(num_stories / STORIES_PER_PAGE)
         bucketmaker = BucketMaker(STORIES_PER_PAGE)
         if include_search:
@@ -654,7 +667,8 @@ class HtmlRenderer(object):
         # render the story list pages
         page_index = 1
         for story in stories:
-            stat_creator.feed(story)
+            if collect_stats:
+                stat_creator.feed(story)
             if include_search:
                 search_creator.feed(story)
             bucket = bucketmaker.feed(story)
@@ -689,30 +703,32 @@ class HtmlRenderer(object):
                 result = RenderResult()
                 items_in_result = 0
         # add statistics
-        stats = stat_creator.get_stats()
-        stats_page_template = self.environment.get_template("storyliststatspage.html.jinja")
-        page = stats_page_template.render(
-            to_root="../../..",
-            title="{} fanfiction on {} - Statistics".format(category.name, category.publisher.name),
-            stats=stats,
-            backref="1",
-        )
-        result.add(
-            HtmlPage(
-                path="category/{}/{}/stats".format(category.publisher.name, normalize_tag(category.name)),
-                content=self.minify_html(page),
+        if collect_stats:
+            statistics = stat_creator.get_stats()
+        if include_stats:
+            stats_page_template = self.environment.get_template("storyliststatspage.html.jinja")
+            page = stats_page_template.render(
+                to_root="../../..",
                 title="{} fanfiction on {} - Statistics".format(category.name, category.publisher.name),
-                is_front=False
+                stats=statistics,
+                backref="1",
             )
-        )
-        result.add(
-            JsonObject(
-                path="category/{}/{}/storyupdates.json".format(category.publisher.name, normalize_tag(category.name)),
-                title="",
-                content=stats.timeline,
+            result.add(
+                HtmlPage(
+                    path="category/{}/{}/stats".format(category.publisher.name, normalize_tag(category.name)),
+                    content=self.minify_html(page),
+                    title="{} fanfiction on {} - Statistics".format(category.name, category.publisher.name),
+                    is_front=False
+                )
             )
-        )
-        items_in_result += 2
+            result.add(
+                JsonObject(
+                    path="category/{}/{}/storyupdates.json".format(category.publisher.name, normalize_tag(category.name)),
+                    title="",
+                    content=statistics.timeline,
+                )
+            )
+            items_in_result += 2
         # add search
         if include_search:
             search_header_data = search_creator.get_search_header()

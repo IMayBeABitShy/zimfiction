@@ -6,7 +6,7 @@ import datetime
 from .util import set_or_increment
 from .db.models import Story, Chapter, StoryTagAssociation, StoryCategoryAssociation, StorySeriesAssociation
 
-from sqlalchemy import select, func, literal_column
+from sqlalchemy import select, func, literal_column, true
 
 
 def zerodiv(a, b):
@@ -729,7 +729,12 @@ def query_story_list_stats(session, condition=None):
         .subquery()
     )
     tcs_stmt = (
-        select(tag_subquery, category_subquery, series_subquery)
+        select(literal_column("*"))
+        .select_from(
+            tag_subquery
+            .join(category_subquery, true())
+            .join(series_subquery, true())
+        )
     )
     result = session.execute(tcs_stmt).one()
     kwargs.update(
