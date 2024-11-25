@@ -685,26 +685,6 @@ class ZimBuilder(object):
         @type options: L{BuildOptions}
         """
         self.reporter.msg("Adding content...")
-        # --- stories ---
-        if not options.skip_stories:
-            self.reporter.msg(" -> Adding stories...")
-            self.reporter.msg("     -> Finding stories... ", end="")
-            n_stories = session.execute(
-                select(func.count(Story.uid))
-            ).scalar_one()
-            self.reporter.msg("found {} stories.".format(n_stories))
-            n_story_tasks = math.ceil(n_stories / STORIES_PER_TASK)
-            with self._run_stage(
-                creator=creator,
-                options=options,
-                task_name="Adding stories...",
-                n_tasks=n_story_tasks,
-                task_unit="stories",
-                task_multiplier=STORIES_PER_TASK,
-            ):
-                self._send_story_tasks(session)
-        else:
-            self.reporter.msg(" -> Skipping stories!")
         # --- tags ---
         self.reporter.msg(" -> Adding tags...")
         self.reporter.msg("     -> Finding tags... ", end="")
@@ -790,6 +770,30 @@ class ZimBuilder(object):
             task_unit="publishers",
         ):
             self._send_publisher_tasks(session)
+        # --- stories ---
+        # it's a bit counterintuitive to do this so late, but apparently
+        # the ZIM entries themselves use up quite a bit of RAM.
+        # adding the stories late keeps more RAM available for tags/
+        # categories/publishers/... which need more RAM
+        if not options.skip_stories:
+            self.reporter.msg(" -> Adding stories...")
+            self.reporter.msg("     -> Finding stories... ", end="")
+            n_stories = session.execute(
+                select(func.count(Story.uid))
+            ).scalar_one()
+            self.reporter.msg("found {} stories.".format(n_stories))
+            n_story_tasks = math.ceil(n_stories / STORIES_PER_TASK)
+            with self._run_stage(
+                creator=creator,
+                options=options,
+                task_name="Adding stories...",
+                n_tasks=n_story_tasks,
+                task_unit="stories",
+                task_multiplier=STORIES_PER_TASK,
+            ):
+                self._send_story_tasks(session)
+        else:
+            self.reporter.msg(" -> Skipping stories!")
         # --- etc ---
         self.reporter.msg(" -> Adding miscelaneous pages...")
         n_misc_pages = 5
