@@ -6,7 +6,7 @@ import datetime
 from .util import set_or_increment
 from .db.models import Story, Chapter, StoryTagAssociation, StoryCategoryAssociation, StorySeriesAssociation
 
-from sqlalchemy import select, func, literal_column, true
+from sqlalchemy import select, func, literal_column
 
 
 def zerodiv(a, b):

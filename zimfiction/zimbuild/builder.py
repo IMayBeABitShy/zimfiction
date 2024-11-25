@@ -511,10 +511,8 @@ class ZimBuilder(object):
     @type inqueue: L{multiprocessing.Queue} or L{queue.Queue}
     @ivar outqueue: the queue containing the task results
     @type outqueue: L{multiprocessing.Queue} or L{queue.Queue}
-    @ivar engine: engine used for database connection
-    @type engine: L{sqlalchemy.engine.Engine}
-    @ivar session: database session
-    @type session: L{sqlalchemy.orm.Session}
+    @ivar connection_config: configuration for database connection
+    @type connection_config: L{zimfiction.db.connection.ConnectionConfig}
     @ivar reporter: reporter used for status reports
     @type reporter: L{zimfiction.reporter.BaseReporter}
     @ivar num_files_added: a dict mapping a filetype to the number of files of that type
@@ -522,21 +520,20 @@ class ZimBuilder(object):
     @ivar next_worker_id: ID to give next worker
     @type next_worker_id: L{int}
     """
-    def __init__(self, engine):
+    def __init__(self, connection_config):
         """
         The default constructor.
 
-        @param engine: engine used for database connection
-        @type engine: L{sqlalchemy.engine.Engine}
+        @param connection_config: configuration for database connection
+        @type connection_config: L{zimfiction.db.connection.ConnectionConfig}
         """
-        self.engine = engine
+        self.connection_config = connection_config
 
         self.inqueue = None
         self.outqueue = None
         self.num_files_added = {}
         self.next_worker_id = 0
 
-        self.session = Session(engine)
         self.reporter = StdoutReporter();
 
     def _init_queues(self, options):
@@ -557,8 +554,9 @@ class ZimBuilder(object):
         """
         Perform clean up tasks.
         """
-        self.session.close()
-        self.engine.dispose()
+        pass
+        # self.session.close()
+        # self.engine.dispose()
 
     def build(self, outpath, options):
         """
@@ -573,8 +571,9 @@ class ZimBuilder(object):
         self.reporter.msg("Preparing build...")
 
         start = time.time()
-        set_unique_enabled(False)
+        set_unique_enabled(False)  # disable unique caches to save RAM
 
+        # find and report options for the build
         self.reporter.msg(" -> Generating ZIM creation config...")
         compression = "zstd"
         # clustersize = 8 * 1024 * 1024  # 8 MiB
@@ -590,9 +589,21 @@ class ZimBuilder(object):
         self.reporter.msg("        -> Creator Workers:  {}".format(n_creator_workers))
         self.reporter.msg("        -> Render Workers:   {}".format(n_render_workers))
         self.reporter.msg("            -> using: {}".format("threads" if use_threads else "processes"))
+        if not use_threads:
+            self.reporter.msg("            -> started using: {}".format(multiprocessing.get_start_method()))
         self.reporter.msg("            -> eagerloading: {}".format("enabled" if options.eager else "disabled"))
         self.reporter.msg("        -> Done.")
 
+        # connect to database
+        # initially, we did this in __init__ and set the engine+session
+        # as attributes, but as the engine is not pickable, this prevents
+        # the use of "forkserver" for multiprocessing
+        self.reporter.msg(" -> Establishing database connection... ", end="")
+        engine = self.connection_config.connect()
+        session = Session(engine)
+        self.reporter.msg("Done.")
+
+        # initailize queues
         self.reporter.msg(" -> Initiating queues...", end="")
         self._init_queues(options)
         self.reporter.msg("Done.")
@@ -638,7 +649,7 @@ class ZimBuilder(object):
             self.reporter.msg("Done.")
 
             # add content
-            self._add_content(creator, options=options)
+            self._add_content(creator, session, options=options)
 
             # finish up
             self.reporter.msg("Finalizing ZIM...")
@@ -647,6 +658,7 @@ class ZimBuilder(object):
         self.cleanup()
         self.reporter.msg("Done.")
 
+        # We're done, find and report some stats about the build
         final_size = os.stat(outpath).st_size
         end = time.time()
         time_elapsed = end - start
@@ -661,22 +673,23 @@ class ZimBuilder(object):
         self.reporter.msg("    total: {} ({})".format(total_amount, format_number(total_amount)))
 
 
-    def _add_content(self, creator, options):
+    def _add_content(self, creator, session, options):
         """
         Add the content of the ZIM file.
 
         @param creator: the ZIM creator
         @type creator: L{zimfiction.writer.Creator}
+        @param session: sqlalchemy session for data querying
+        @type session: L{sqlalchemy.orm.Session}
         @param options: build options for the ZIM
         @type options: L{BuildOptions}
-
         """
         self.reporter.msg("Adding content...")
         # --- stories ---
         if not options.skip_stories:
             self.reporter.msg(" -> Adding stories...")
             self.reporter.msg("     -> Finding stories... ", end="")
-            n_stories = self.session.execute(
+            n_stories = session.execute(
                 select(func.count(Story.uid))
             ).scalar_one()
             self.reporter.msg("found {} stories.".format(n_stories))
@@ -689,13 +702,13 @@ class ZimBuilder(object):
                 task_unit="stories",
                 task_multiplier=STORIES_PER_TASK,
             ):
-                self._send_story_tasks()
+                self._send_story_tasks(session)
         else:
             self.reporter.msg(" -> Skipping stories!")
         # --- tags ---
         self.reporter.msg(" -> Adding tags...")
         self.reporter.msg("     -> Finding tags... ", end="")
-        n_tags = self.session.execute(
+        n_tags = session.execute(
             select(
                 func.count(
                     distinct(StoryTagAssociation.tag_uid)
@@ -712,11 +725,11 @@ class ZimBuilder(object):
             n_tasks=n_tags,
             task_unit="tags",
         ):
-            self._send_tag_tasks()
+            self._send_tag_tasks(session)
         # --- authors ---
         self.reporter.msg(" -> Adding Authors...")
         self.reporter.msg("     -> Finding authors... ", end="")
-        n_authors = self.session.execute(
+        n_authors = session.execute(
             select(func.count(Author.uid))
         ).scalar_one()
         self.reporter.msg("found {} authors.".format(n_authors))
@@ -727,11 +740,11 @@ class ZimBuilder(object):
             n_tasks=n_authors,
             task_unit="authors",
         ):
-            self._send_author_tasks()
+            self._send_author_tasks(session)
         # --- categories ---
         self.reporter.msg(" -> Adding Categories...")
         self.reporter.msg("     -> Finding categories... ", end="")
-        n_categories = self.session.execute(
+        n_categories = session.execute(
             select(
                 func.count(distinct(StoryCategoryAssociation.category_uid))
             ).where(
@@ -746,11 +759,11 @@ class ZimBuilder(object):
             n_tasks=n_categories,
             task_unit="categories",
         ):
-            self._send_category_tasks()
+            self._send_category_tasks(session)
         # --- series ---
         self.reporter.msg(" -> Adding Series...")
         self.reporter.msg("     -> Finding series... ", end="")
-        n_series = self.session.execute(
+        n_series = session.execute(
             select(func.count(Series.uid))
         ).scalar_one()
         self.reporter.msg("found {} series.".format(n_series))
@@ -761,11 +774,11 @@ class ZimBuilder(object):
             n_tasks=n_series,
             task_unit="series",
         ):
-            self._send_series_tasks()
+            self._send_series_tasks(session)
         # --- publisher ---
         self.reporter.msg(" -> Adding Publishers...")
         self.reporter.msg("     -> Finding publishers... ", end="")
-        n_publishers = self.session.execute(
+        n_publishers = session.execute(
             select(func.count(Publisher.uid))
         ).scalar_one()
         self.reporter.msg("found {} publishers.".format(n_publishers))
@@ -776,7 +789,7 @@ class ZimBuilder(object):
             n_tasks=n_publishers,
             task_unit="publishers",
         ):
-            self._send_publisher_tasks()
+            self._send_publisher_tasks(session)
         # --- etc ---
         self.reporter.msg(" -> Adding miscelaneous pages...")
         n_misc_pages = 5
@@ -787,7 +800,7 @@ class ZimBuilder(object):
             n_tasks=n_misc_pages,
             task_unit="pages",
         ):
-            self._send_etc_tasks()
+            self._send_etc_tasks(session)
 
     @contextlib.contextmanager
     def _run_stage(self, options, **kwargs):
@@ -819,6 +832,7 @@ class ZimBuilder(object):
                 target=self._worker_process,
                 kwargs={
                     "id": worker_id,
+                    "connection_config": self.connection_config,
                     "worker_options": worker_options,
                     "render_options": render_options,
                 },
@@ -958,7 +972,7 @@ class ZimBuilder(object):
                         set_or_increment(self.num_files_added, "total")
                         bar.advance(0, secondary=1)
 
-    def _worker_process(self, id, worker_options, render_options):
+    def _worker_process(self, id, connection_config, worker_options, render_options):
         """
         This method will be executed as a worker process.
 
@@ -967,33 +981,36 @@ class ZimBuilder(object):
 
         @param id: id of the worker
         @type id: L{int}
+        @param connection_config: database connection configuration
+        @type connection_config: L{zimfiction.db.connection.ConnectionConfig}
         @param worker_options: options for the worker
         @type worker_options: L{zimfiction.zimbuild.worker.WorkerOptions}
         @param render_options: options for the renderer
         @type render_options: L{zimfiction.zimbuild.renderer.RenderOptions}
         """
-        # before starting the worker, clean up engine connections
-        self.engine.dispose(close=False)
-        # also, prepare the process priority
+        # prepare the process priority
         config_process(name="ZF worker {}".format(id), nice=10, ionice=5)
         # start the worker
         worker = Worker(
             id=id,
             inqueue=self.inqueue,
             outqueue=self.outqueue,
-            engine=self.engine,
+            engine=connection_config.connect(),
             options=worker_options,
             render_options=render_options,
         )
         worker.run()
 
-    def _send_story_tasks(self):
+    def _send_story_tasks(self, session):
         """
         Create and send the tasks for the stories to the worker inqueue.
+
+        @param session: sqlalchemy session for data querying
+        @type session: L{sqlalchemy.orm.Session}
         """
         story_bucket_maker = BucketMaker(maxsize=STORIES_PER_TASK)
         select_story_ids_stmt = select(Story.uid)
-        result = self.session.execute(select_story_ids_stmt)
+        result = session.execute(select_story_ids_stmt)
         # create buckets and turn them into tasks
         for story in result:
             bucket = story_bucket_maker.feed(story.uid)
@@ -1007,60 +1024,78 @@ class ZimBuilder(object):
             task = StoryRenderTask(bucket)
             self.inqueue.put(task)
 
-    def _send_tag_tasks(self):
+    def _send_tag_tasks(self, session):
         """
         Create and send the tasks for the tags to the worker inqueue.
+
+        @param session: sqlalchemy session for data querying
+        @type session: L{sqlalchemy.orm.Session}
         """
         # select from tag association such that we only add non-implied tags
         select_tags_stmt = select(distinct(StoryTagAssociation.tag_uid)).where(StoryTagAssociation.implied == False)
-        result = self.session.scalars(select_tags_stmt)
+        result = session.scalars(select_tags_stmt)
         for tag_uid in result:
             task = TagRenderTask(uid=tag_uid)
             self.inqueue.put(task)
 
-    def _send_author_tasks(self):
+    def _send_author_tasks(self, session):
         """
         Create and send the tasks for the authors to the worker inqueue.
+
+        @param session: sqlalchemy session for data querying
+        @type session: L{sqlalchemy.orm.Session}
         """
         select_authors_stmt = select(Author.uid)
-        result = self.session.execute(select_authors_stmt)
+        result = session.execute(select_authors_stmt)
         for author in result:
             task = AuthorRenderTask(uid = author.uid)
             self.inqueue.put(task)
 
-    def _send_category_tasks(self):
+    def _send_category_tasks(self, session):
         """
         Create and send the tasks for the categories to the worker inqueue.
+
+        @param session: sqlalchemy session for data querying
+        @type session: L{sqlalchemy.orm.Session}
         """
         select_categories_stmt = select(distinct(StoryCategoryAssociation.category_uid)).where(StoryCategoryAssociation.implied == False)
-        result = self.session.scalars(select_categories_stmt)
+        result = session.scalars(select_categories_stmt)
         for category_uid in result:
             task = CategoryRenderTask(uid=category_uid)
             self.inqueue.put(task)
 
-    def _send_series_tasks(self):
+    def _send_series_tasks(self, session):
         """
         Create and send the tasks for the series to the worker inqueue.
+
+        @param session: sqlalchemy session for data querying
+        @type session: L{sqlalchemy.orm.Session}
         """
         select_series_stmt = select(Series.uid)
-        result = self.session.execute(select_series_stmt)
+        result = session.execute(select_series_stmt)
         for series in result:
             task = SeriesRenderTask(uid=series.uid)
             self.inqueue.put(task)
 
-    def _send_publisher_tasks(self):
+    def _send_publisher_tasks(self, session):
         """
         Create and send the tasks for the publishers to the worker inqueue.
+
+        @param session: sqlalchemy session for data querying
+        @type session: L{sqlalchemy.orm.Session}
         """
         select_publishers_stmt = select(Publisher.uid)
-        result = self.session.execute(select_publishers_stmt)
+        result = session.execute(select_publishers_stmt)
         for publisher in result:
             task = PublisherRenderTask(uid=publisher.uid)
             self.inqueue.put(task)
 
-    def _send_etc_tasks(self):
+    def _send_etc_tasks(self, session):
         """
         Create and send the tasks for the miscelaneous pages to the worker inqueue.
+
+        @param session: sqlalchemy session for data querying
+        @type session: L{sqlalchemy.orm.Session}
         """
         indextask = EtcRenderTask("index")
         self.inqueue.put(indextask)

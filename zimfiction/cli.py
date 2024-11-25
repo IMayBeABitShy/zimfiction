@@ -3,8 +3,13 @@ CLI code for the importer.
 """
 import argparse
 
-from sqlalchemy import create_engine, event
-from sqlalchemy.engine import Engine
+try:
+    import multiprocessing
+    multiprocessing.set_start_method("forkserver")
+except Exception:
+    # multiprocessing may not be available
+    multiprocessing = None
+
 from sqlalchemy.orm import Session
 from fs import open_fs
 
@@ -15,53 +20,23 @@ from .zimbuild.builder import ZimBuilder, BuildOptions
 from .implication.implicator import get_default_implicator, add_all_implications
 from .exporter.exporter import Exporter, get_dumper
 from .db.models import mapper_registry
+from .db.connection import ConnectionConfig
 
 
-def enable_foreign_keys(dbapi_conn):
+def _connection_config_from_ns(ns):
     """
-    Enable foreign key constraints for this connection.
+    Generate a connection configuration from the argparse namespace.
 
-    @param dbapi_conn: database connection
-    @type dbapi_conn: L{sqlalchemy.engine.interfaces.DBAPIConnection}
-    """
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
-
-
-@event.listens_for(Engine, "connect")
-def enable_foreign_keys_on_connect(dbapi_connection, connection_record):
-    """
-    Enable foreign keys if a sqlite connection has been made.
-
-    @param dbapi_conn: database connection
-    @type dbapi_conn: L{sqlalchemy.engine.interfaces.DBAPIConnection}
-    @param connection_record: database connection record info
-    @type connection_record: L{sqlalchemy.pool.ConnectionPoolEntry}
-    """
-    # Check if the connection URL is SQLite
-    if "sqlite" in str(connection_record.driver_connection):
-        enable_foreign_keys(dbapi_connection)
-
-
-def connect_to_db(ns):
-    """
-    Create a database connection.
-
-    @param ns: namespace containing connection args
+    @param ns: namespace containing arguments
     @type ns: L{argparse.Namespace}
-    @return: the connected sqlalchemy engine
-    @rtype: L{sqlalchemy.engine.Engine}
+    @return: the connection config
+    @rtype: L{zimfiction.db.connection.ConnectionConfig}
     """
-    if ns.verbose:
-        print("Connecting to database...")
-    engine = create_engine(
-        ns.database,
-        echo=(ns.verbose >= 2),
+    config = ConnectionConfig(
+        url=ns.database,
+        verbose=(ns.verbose >= 2),
     )
-    if ns.verbose:
-        print("Connected.")
-    return engine
+    return config
 
 
 def run_import(ns):
@@ -71,7 +46,7 @@ def run_import(ns):
     @param ns: namespace containing arguments
     @type ns: L{argparse.Namespace}
     """
-    engine = connect_to_db(ns)
+    engine = _connection_config_from_ns(ns).connect()
     if ns.verbose:
         print("Creating tables...")
     mapper_registry.metadata.create_all(engine)
@@ -105,7 +80,7 @@ def run_find_implications(ns):
         reporter = StdoutReporter()
     else:
         reporter = VoidReporter()
-    engine = connect_to_db(ns)
+    engine = _connection_config_from_ns(ns).connect()
     with Session(engine) as session:
         implicator = get_default_implicator(session, ao3_merger_path=ns.ao3_merger_path)
         if ns.delete_existing:
@@ -124,8 +99,8 @@ def run_build(ns):
     @param ns: namespace containing arguments
     @type ns: L{argparse.Namespace}
     """
-    engine = connect_to_db(ns)
-    builder = ZimBuilder(engine)
+    connection_config = _connection_config_from_ns(ns)
+    builder = ZimBuilder(connection_config)
     build_options = BuildOptions(
         use_threads=ns.threaded,
         num_workers=ns.workers,
@@ -150,7 +125,7 @@ def run_export(ns):
     else:
         reporter = VoidReporter()
     dumper = get_dumper(ns.format)
-    engine = connect_to_db(ns)
+    engine = _connection_config_from_ns(ns).connect()
     with Session(engine) as session:
         exporter = Exporter(session, dumper=dumper, grouped=ns.grouped, reporter=reporter)
         exporter.export_to(ns.directory, criteria=True)
