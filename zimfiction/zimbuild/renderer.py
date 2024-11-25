@@ -832,7 +832,7 @@ class HtmlRenderer(object):
         )
         return result
 
-    def render_publisher(self, publisher, stories=None):
+    def render_publisher(self, publisher, stories=None, statistics=None):
         """
         Render a publisher.
 
@@ -843,6 +843,8 @@ class HtmlRenderer(object):
         @type publisher: L{zimfiction.db.models.Publisher}
         @param stories: stories in this publisher
         @type stories: iterable of L{zimfiction.db.models.Story}
+        @param statistics: if specified, use these statistics rather than collecting them
+        @type statistics: L{zimfiction.statistics.StoryListStats}
         @return: the rendered pages and redirects
         @rtype: L{RenderResult}
         """
@@ -854,11 +856,14 @@ class HtmlRenderer(object):
         #    problems in mass
         result = RenderResult()
         publisher_template = self.environment.get_template("publisher.html.jinja")
-        stats = StoryListStatCreator.get_stats_from_iterable(stories)
+        include_stats = True
+        collect_stats = (statistics is None) and include_stats
+        if collect_stats:
+            statistics = StoryListStatCreator.get_stats_from_iterable(stories)
         page = publisher_template.render(
             to_root="../..",
             publisher=publisher,
-            stats=stats,
+            stats=statistics,
             n_categories=CATEGORIES_ON_PUBLISHER_PAGE,
         )
         result.add(
@@ -869,13 +874,14 @@ class HtmlRenderer(object):
                 is_front=True,
             ),
         )
-        result.add(
-            JsonObject(
-                path="publisher/{}/storyupdates.json".format(publisher.name),
-                title="",
-                content=stats.timeline,
+        if include_stats:
+            result.add(
+                JsonObject(
+                    path="publisher/{}/storyupdates.json".format(publisher.name),
+                    title="",
+                    content=statistics.timeline,
+                )
             )
-        )
         # category pages
         bucketmaker = BucketMaker(CATEGORIES_PER_PAGE)
         categories = []

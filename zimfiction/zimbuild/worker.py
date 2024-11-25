@@ -529,6 +529,7 @@ class Worker(object):
         self.log("Found {} stories.".format(n_stories_in_tag))
         # collect statistics
         if n_stories_in_tag >= MIN_STORIES_FOR_EXPLICIT_STATS:
+            self.log("Collecting statistics...")
             statistics = query_story_list_stats(
                 self.session,
                 Story.tag_associations.any(
@@ -673,6 +674,7 @@ class Worker(object):
         self.log("Found {} stories.".format(n_stories_in_category))
         # collect statistics
         if n_stories_in_category >= MIN_STORIES_FOR_EXPLICIT_STATS:
+            self.log("Collecting statistics...")
             statistics = query_story_list_stats(
                 self.session,
                 Story.category_associations.any(
@@ -810,6 +812,12 @@ class Worker(object):
                 # joinedload(Publisher.categories, Category.story_associations, StoryCategoryAssociation.story),
             )
         ).first()
+        # collect statistics
+        self.log("Collecting statistics...")
+        statistics = query_story_list_stats(
+            self.session,
+            Story.publisher_uid == task.uid,
+        )
         self.log("Starting to fetch stories in publisher...")
         stories = self.session.scalars(
             select(Story)
@@ -822,6 +830,7 @@ class Worker(object):
         result = self.renderer.render_publisher(
             publisher=publisher,
             stories=stories,
+            statistics=statistics,
         )
         self.log("Submitting result...")
         self.handle_result(result)
