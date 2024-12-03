@@ -854,6 +854,10 @@ class HtmlRenderer(object):
         # -> items in publisher depend on number of categories, which
         #    individually should not take enough RAM to cause memory
         #    problems in mass
+        # TODO: currently, we avoid empty category pages by having the
+        # worker only load  categories having at least one story for
+        # which the category is not implied. This is quite ugly, we
+        # should replace this behavior in the future
         result = RenderResult()
         publisher_template = self.environment.get_template("publisher.html.jinja")
         include_stats = True

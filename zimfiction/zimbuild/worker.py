@@ -23,7 +23,7 @@ import os
 import time
 
 from sqlalchemy import select, and_, func, desc, literal_column
-from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, undefer, noload
+from sqlalchemy.orm import Session, joinedload, subqueryload, selectinload, raiseload, undefer, noload, contains_eager
 
 try:
     import memray
@@ -802,14 +802,34 @@ class Worker(object):
         """
         # get the categories in the series
         self.log("Retrieving publisher...")
+        # TODO: only load categories which have at least one non-implied story
+        non_implied_categories_stmt = (
+            select(Category.uid.distinct())
+            .join(
+                StoryCategoryAssociation,
+                and_(
+                    Category.uid == StoryCategoryAssociation.category_uid,
+                    StoryCategoryAssociation.implied == False,
+                ),
+            )
+            .where(
+                Category.publisher_uid == task.uid,
+            )
+            #.subquery()
+        )
         publisher = self.session.scalars(
             select(Publisher)
-            .where(Publisher.uid == task.uid)
+            .join(
+                Category,
+                Category.uid.in_(non_implied_categories_stmt),
+            )
             .options(
                 # eager loading options
-                joinedload(Publisher.categories),
                 # joinedload(Publisher.categories, Category.story_associations),
                 # joinedload(Publisher.categories, Category.story_associations, StoryCategoryAssociation.story),
+            )
+            .options(
+                contains_eager(Publisher.categories),
             )
         ).first()
         # collect statistics
