@@ -714,6 +714,7 @@ class Story(Base):
         return data
 
 Index("story_id_index", Story.publisher_uid, Story.id, unique=True)
+Index("story_author_uid_index", Story.author_uid, unique=False)
 
 
 class Chapter(Base):
