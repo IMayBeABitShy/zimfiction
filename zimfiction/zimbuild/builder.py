@@ -684,7 +684,43 @@ class ZimBuilder(object):
         @param options: build options for the ZIM
         @type options: L{BuildOptions}
         """
+        # the order in which we add the content may look a bit strange,
+        # but it is actually optimized for RAM usage. Basically, some
+        # tasks require significantly more RAM to complete and adding
+        # items to the ZIM create causes a permament RAM usage increase.
+        # For example, rendering stories requires nearly no RAM, but the
+        # high amount of items added will reduce available RAM for the
+        # rest of the build, thus it is advisable to add the stories
+        # late, whereas tags require quite a bit of RAM while also adding
+        # quite a few items, thus it is better to render tags somewhere
+        # in the middle
         self.reporter.msg("Adding content...")
+        # --- miscelaneous pages ---
+        self.reporter.msg(" -> Adding miscelaneous pages...")
+        n_misc_pages = 5
+        with self._run_stage(
+            creator=creator,
+            options=options,
+            task_name="Adding miscelaneous pages...",
+            n_tasks=n_misc_pages,
+            task_unit="pages",
+        ):
+            self._send_etc_tasks(session)
+        # --- publisher ---
+        self.reporter.msg(" -> Adding Publishers...")
+        self.reporter.msg("     -> Finding publishers... ", end="")
+        n_publishers = session.execute(
+            select(func.count(Publisher.uid))
+        ).scalar_one()
+        self.reporter.msg("found {} publishers.".format(n_publishers))
+        with self._run_stage(
+            creator=creator,
+            options=options,
+            task_name="Adding publishers...",
+            n_tasks=n_publishers,
+            task_unit="publishers",
+        ):
+            self._send_publisher_tasks(session)
         # --- tags ---
         self.reporter.msg(" -> Adding tags...")
         self.reporter.msg("     -> Finding tags... ", end="")
@@ -706,21 +742,6 @@ class ZimBuilder(object):
             task_unit="tags",
         ):
             self._send_tag_tasks(session)
-        # --- authors ---
-        self.reporter.msg(" -> Adding Authors...")
-        self.reporter.msg("     -> Finding authors... ", end="")
-        n_authors = session.execute(
-            select(func.count(Author.uid))
-        ).scalar_one()
-        self.reporter.msg("found {} authors.".format(n_authors))
-        with self._run_stage(
-            creator=creator,
-            options=options,
-            task_name="Adding Authors...",
-            n_tasks=n_authors,
-            task_unit="authors",
-        ):
-            self._send_author_tasks(session)
         # --- categories ---
         self.reporter.msg(" -> Adding Categories...")
         self.reporter.msg("     -> Finding categories... ", end="")
@@ -755,26 +776,22 @@ class ZimBuilder(object):
             task_unit="series",
         ):
             self._send_series_tasks(session)
-        # --- publisher ---
-        self.reporter.msg(" -> Adding Publishers...")
-        self.reporter.msg("     -> Finding publishers... ", end="")
-        n_publishers = session.execute(
-            select(func.count(Publisher.uid))
+        # --- authors ---
+        self.reporter.msg(" -> Adding Authors...")
+        self.reporter.msg("     -> Finding authors... ", end="")
+        n_authors = session.execute(
+            select(func.count(Author.uid))
         ).scalar_one()
-        self.reporter.msg("found {} publishers.".format(n_publishers))
+        self.reporter.msg("found {} authors.".format(n_authors))
         with self._run_stage(
             creator=creator,
             options=options,
-            task_name="Adding publishers...",
-            n_tasks=n_publishers,
-            task_unit="publishers",
+            task_name="Adding Authors...",
+            n_tasks=n_authors,
+            task_unit="authors",
         ):
-            self._send_publisher_tasks(session)
+            self._send_author_tasks(session)
         # --- stories ---
-        # it's a bit counterintuitive to do this so late, but apparently
-        # the ZIM entries themselves use up quite a bit of RAM.
-        # adding the stories late keeps more RAM available for tags/
-        # categories/publishers/... which need more RAM
         if not options.skip_stories:
             self.reporter.msg(" -> Adding stories...")
             self.reporter.msg("     -> Finding stories... ", end="")
@@ -794,17 +811,6 @@ class ZimBuilder(object):
                 self._send_story_tasks(session)
         else:
             self.reporter.msg(" -> Skipping stories!")
-        # --- etc ---
-        self.reporter.msg(" -> Adding miscelaneous pages...")
-        n_misc_pages = 5
-        with self._run_stage(
-            creator=creator,
-            options=options,
-            task_name="Adding miscelaneous pages...",
-            n_tasks=n_misc_pages,
-            task_unit="pages",
-        ):
-            self._send_etc_tasks(session)
 
     @contextlib.contextmanager
     def _run_stage(self, options, **kwargs):
