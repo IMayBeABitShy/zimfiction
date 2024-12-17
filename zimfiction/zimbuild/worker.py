@@ -802,7 +802,6 @@ class Worker(object):
         """
         # get the categories in the series
         self.log("Retrieving publisher...")
-        # TODO: only load categories which have at least one non-implied story
         non_implied_categories_stmt = (
             select(Category.uid.distinct())
             .join(
@@ -823,16 +822,16 @@ class Worker(object):
                 Category,
                 Category.uid.in_(non_implied_categories_stmt),
             )
+            .where(Publisher.uid == task.uid)
             .options(
                 # eager loading options
                 # joinedload(Publisher.categories, Category.story_associations),
                 # joinedload(Publisher.categories, Category.story_associations, StoryCategoryAssociation.story),
-            )
-            .options(
                 contains_eager(Publisher.categories),
             )
         ).first()
         # collect statistics
+        # TODO: make the stats only include non-implied stories
         self.log("Collecting statistics...")
         statistics = query_story_list_stats(
             self.session,
