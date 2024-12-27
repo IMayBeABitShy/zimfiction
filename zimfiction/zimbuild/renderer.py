@@ -316,7 +316,7 @@ class HtmlRenderer(object):
                     path="story/{}/{}/{}".format(story.publisher.name, story.id, chapter.index),
                     title="{} by {} - Chapter {} - {}".format(story.title, story.author.name, chapter.index, chapter.title),
                     content=self.minify_html(chapter_page),
-                    is_front=True,
+                    is_front=False,  # redirect to first chapter will be front
                 ),
             )
             # keep track of lowest chapter index so we can redirect to it
