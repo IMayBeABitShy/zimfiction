@@ -8,7 +8,7 @@ import math
 
 import htmlmin
 import mistune
-from jinja2 import Environment, PackageLoader, select_autoescape
+from jinja2 import Environment, PackageLoader, select_autoescape, Undefined
 
 # optional optimization dependencies
 try:
@@ -262,6 +262,7 @@ class HtmlRenderer(object):
         self.environment.filters["normalize_tag"] = self._normalize_tag
         self.environment.filters["format_date"] = self._format_date
         self.environment.filters["first_elements"] = self._first_elements
+        self.environment.filters["default_index"] = self._default_index
 
         # configure tests
         self.environment.tests["date"] = self._is_date
@@ -896,11 +897,25 @@ class HtmlRenderer(object):
         bucket = bucketmaker.finish()
         if bucket is not None:
             categories.append(bucket)
+        # find first letter of first category on each page
+        startletters = [cl[0].name[0] for cl in categories]
+        # find first page each letter occurs on
+        seen_startletters = []
+        startletters_first_occurrences = []  # list of (key, value) tuples to preserve order
+        for pagenum, categorylist in enumerate(categories, start=1):
+            for category in categorylist:
+                start_letter = category.name[0]
+                if start_letter not in seen_startletters:
+                    seen_startletters.append(start_letter)
+                    startletters_first_occurrences.append((start_letter, pagenum))
+        # render category pages
         category_page_template = self.environment.get_template("category_long_list_page.html.jinja")
         for i, categorylist in enumerate(categories, start=1):
             page = category_page_template.render(
                 to_root="../../..",
                 categories=categorylist,
+                startletters=startletters,
+                startletters_first_occurrences=startletters_first_occurrences,
                 title="Categories - Page {} of {}".format(i, len(categories)),
                 cur_page=i,
                 num_pages=len(categories),
@@ -1122,6 +1137,26 @@ class HtmlRenderer(object):
         @rtype: L{list}
         """
         return list(value)[:n]
+
+    def _default_index(self, value, i, default):
+        """
+        Return value[i] if value is defined and value[i] exists, otherwise default.
+
+        @param value: element to get i-th element of
+        @type value: any indexable or L{jinja2.Undefined}
+        @param i: index/key to get
+        @type i: any
+        @param default: default value to return
+        @type default: any
+        @return: value[i] if value is defined and value[i] exists, otherwise default
+        @rtype: type of value[i] or default
+        """
+        if isinstance(value, Undefined):
+            return default
+        try:
+            return value[i]
+        except (KeyError, IndexError):
+            return default
 
     # =========== tests ===============
 

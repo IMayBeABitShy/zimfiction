@@ -1,9 +1,9 @@
-{# This file contains a single page button. Expects "to_root", "pagenum" and optional "fragment" arguments. #}
+{# This file contains a single page button. Expects "to_root", "pagenum" and optional "label" and "fragment" arguments. #}
 
 <DIV class="page_button">
     <P>
         {% block button_content %}
-            <A class="page_button_link" href="{{ pagenum }}{{ fragment|default("") }}">{{ pagenum }}</A>
+            <A class="page_button_link" href="{{ pagenum }}{{ fragment|default("") }}">{{ label|default(pagenum) }}</A>
         {% endblock %}
     </P>
 </DIV>

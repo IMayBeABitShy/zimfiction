@@ -249,6 +249,13 @@ HR {
   color: gray;
 }
 
+.category_list_quicknav {
+  background: 1px lightgray;
+  border: 1px solid gray;
+  padding: 0.625em;
+  padding-left: 2.5em;
+}
+
 /* category page */
 
 .category_story_count {
@@ -564,6 +571,14 @@ HR {
     columns: 1;
     -webkit-columns: 1;
     -moz-columns: 1;
+  }
+
+  .category_list_quicknav {
+    font-size: large;
+  }
+
+  .category_list_quicknav a {
+    padding: 0.25em;
   }
 
   .search_input_list {
