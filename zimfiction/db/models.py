@@ -15,7 +15,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.ext.hybrid import hybrid_property
 
-from ..util import format_date, format_number, normalize_relationship
+from ..util import format_date, format_number
 from .unique import UniqueMixin
 
 
@@ -698,8 +698,8 @@ class Story(Base):
             "implied_tags": [t.name.lower() for t in self.implied_genres],
             "warnings": [t.name for t in self.warnings],
             "implied_warnings": [t.name for t in self.implied_warnings],
-            "relationships": [normalize_relationship(t.name) for t in self.relationships],
-            "implied_relationships": [normalize_relationship(t.name) for t in self.implied_relationships],
+            "relationships": [t.name for t in self.relationships],
+            "implied_relationships": [t.name for t in self.implied_relationships],
             "characters": [t.name for t in self.characters],
             "implied_characters": [t.name for t in self.implied_characters],
             "published": format_date(self.published),

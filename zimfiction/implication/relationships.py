@@ -9,6 +9,7 @@ A relationship A/B/C will imply:
 import itertools
 
 from .finder import ImplicationFinder
+from ..util import normalize_relationship
 
 
 class RelationshipCharactersFinder(ImplicationFinder):
@@ -37,6 +38,6 @@ class RelationshipCharactersFinder(ImplicationFinder):
                     # has subrelationships
                     splitted_relationship = [e.strip() for e in relationship.split(sep)]
                     for sr in itertools.combinations(splitted_relationship, 2):
-                        subrelationships.append(sep.join(sr))
+                        subrelationships.append(normalize_relationship(sep.join(sr)))
         found_implied_tags = [("character", c) for c in characters] + [("relationship", sr) for sr in subrelationships]
         return found_implied_tags

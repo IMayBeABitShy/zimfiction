@@ -8,6 +8,7 @@ from ..db.models import Story, StoryCategoryAssociation, StoryTagAssociation, Ta
 from ..db.models import  MAX_STORY_TAG_LENGTH, MAX_CATEGORY_NAME_LENGTH
 from ..reporter import BaseReporter, VoidReporter
 from ..zimbuild.buckets import BucketMaker
+from ..util import normalize_category, normalize_relationship
 
 from .finder import ImplicationFinder
 from .relationships import RelationshipCharactersFinder
@@ -97,6 +98,8 @@ class Implicator(object):
                     # tag to long, probably a bug in the implication finder
                     # TODO: some warning
                     continue
+                if tagdef[0] == "relationship":
+                    tagdef = (taged[0], normalize_relationship(tagdef[1]))
                 if (tagdef not in existing_tags) and (tagdef not in new_tags):
                     new_tags.append(tagdef)
             for catdef in finder.get_implied_categories(story, new_categories):
@@ -104,6 +107,7 @@ class Implicator(object):
                     # category to long, probably a bug in the implication finder
                     # TODO: some warning
                     continue
+                catdef = (catdef[0], normalize_category(catdef[1]))
                 if (catdef not in existing_categories) and (catdef not in new_categories):
                     new_categories.append(catdef)
 

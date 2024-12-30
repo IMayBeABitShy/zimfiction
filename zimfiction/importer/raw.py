@@ -3,7 +3,7 @@ This module contains classes for raw (non-db) stories.
 """
 import datetime
 
-from ..util import count_words, add_to_dict_list
+from ..util import count_words, add_to_dict_list, normalize_category, normalize_relationship, remove_duplicates
 from ..db.models import Chapter, Story, Author, Category, Tag, Series, Publisher
 from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation
 from ..exceptions import ParseError
@@ -345,6 +345,10 @@ class RawStory(object):
         """
         The default constructor.
 
+        WARNING: this constructor does not automatically normalize
+        tags, relationships, ...! Be sure to normalize them first
+        or use L{RawStory.convert_metadata}.
+
         @param id: id of the story
         @type id: L{int}
         @param title: title of this story
@@ -634,8 +638,9 @@ class RawStory(object):
             - summary (unless metadata 'Summary' is correctly set)
             - chapters
 
+        This method takes care of normalizing relationships, categories, and so on.
         This method may initialize some values with defaults. It is recommended
-        to update the returned dict by the actual values
+        to update the returned dict by the actual values.
 
         @param metadata: a dict mapping fanficfare keys to fanficfare values
         @type metadata: L{dict}
@@ -667,7 +672,8 @@ class RawStory(object):
                 series.append(RawSeriesMembership(publisher, series_name, series_index))
         ret["series"] = series
         if "Category" in metadata:
-            ret["categories"] = split_categories(metadata["Category"])
+            splitted_categories = split_categories(metadata["Category"])
+            ret["categories"] = [normalize_category(c) for c in splitted_categories]
         for key in ("Genre", "Genres", "Erotica Tags"):
             if key in metadata:
                 for tag in split_tags(metadata[key]):
@@ -680,7 +686,7 @@ class RawStory(object):
                 add_to_dict_list(ret, "characters", tag)
         if "Relationships" in metadata:
             for tag in split_tags(metadata["Relationships"]):
-                add_to_dict_list(ret, "relationships", tag)
+                add_to_dict_list(ret, "relationships", normalize_relationship(tag))
         for key in ("Chars/Pairs", "Characters/Pairing"):
             if key in metadata:
                 for tag in split_tags(metadata[key]):
@@ -713,4 +719,8 @@ class RawStory(object):
             ret["is_done"] = is_done_from_status(metadata["Status"])
         if "Author URL" in metadata:
             ret["author_url"] = metadata["Author URL"].strip()
+        # remove duplicate tags/categories/relationships
+        for key in ("genres", "warnings", "characters", "relationships", "categories"):
+            if key in ret:
+                ret[key] = remove_duplicates(ret[key])
         return ret

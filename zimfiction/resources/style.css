@@ -249,7 +249,7 @@ HR {
   color: gray;
 }
 
-.category_list_quicknav {
+.category_list_quicknav_links {
   background: 1px lightgray;
   border: 1px solid gray;
   padding: 0.625em;
@@ -573,11 +573,11 @@ HR {
     -moz-columns: 1;
   }
 
-  .category_list_quicknav {
+  .category_list_quicknav_links {
     font-size: large;
   }
 
-  .category_list_quicknav a {
+  .category_list_quicknav_links a {
     padding: 0.25em;
   }
 

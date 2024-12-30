@@ -284,7 +284,8 @@ class HtmlRenderer(object):
                 remove_comments=True,
                 remove_empty_space=True,
                 reduce_boolean_attributes=True,
-                remove_optional_attribute_quotes=True,
+                # remove_optional_attribute_quotes=True,
+                remove_optional_attribute_quotes=False,  # firefox complains for some tags
             )
         else:
             return minify_html.minify(

@@ -211,9 +211,44 @@ def normalize_relationship(tag):
     for sep in ("/", "&"):
         if sep in tag:
             tag = tag.replace(" {} ".format(sep), sep)
-        splitted = tag.split(sep)
+        splitted = [e.strip() for e in tag.split(sep)]
         tag = " {} ".format(sep).join(sorted(splitted))
     return tag
+
+
+def normalize_category(category):
+    """
+    Normalize a category in order to merge very similiar categories together.
+
+    @param category: name of category to normalize
+    @type category: L{str}
+    @return: the normalized category name
+    @rtype: L{str}
+    """
+    # remove starting #
+    # while there are probably categories using the #, most of them are
+    # wrong
+    while category.startswith("#"):
+        category = category[1:]
+    # remove "
+    # for the same reason as above
+    category = category.replace('"', "").replace("'", "")
+    # remove "- Fandom", as we do not need this differentiation
+    category = category.replace("- Fandom", "")
+    # replace "<" and ">" - they mess with HTML
+    category = category.replace("<", "").replace(">", "")
+    # remove various special characters
+    category = category.replace("\n", "").replace("\\", "").replace("\x00", "").replace("\r", "")
+    # strip non-printable start and end characters
+    category = category.strip()
+    # at this time, the category name may be empty (it really shouldn't)
+    # in this case, fall back to a new, catch-all name
+    if not category:
+        category = "[Unknown category]"
+    # ensure first letter is upper case
+    category = category[0].upper() + category[1:]
+    # done
+    return category
 
 
 def get_resource_file_path(*names):
@@ -294,6 +329,24 @@ def ensure_iterable(obj):
         return obj
     else:
         return (obj, )
+
+
+def remove_duplicates(l):
+    """
+    Copy a list such that the order of elements is preserved but only
+    the first occurrence of each element preserved.
+
+    @param l: list to sort
+    @type l: L{list}
+    @return: a copy of the list with some elements potentially removed
+    @rtype: L{list}
+    """
+    ret = []
+    for e in l:
+        if e not in ret:
+            ret.append(e)
+    return ret
+
 
 if __name__ == "__main__":
     # test code
