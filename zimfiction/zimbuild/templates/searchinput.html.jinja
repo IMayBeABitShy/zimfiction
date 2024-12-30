@@ -35,7 +35,7 @@
                     <DIV class="search_field_div">
                         <LABEL for="search_sort_select" id="search_sort_select_label">Sort by</LABEL>
                         <SELECT name="search_sort_select" id="search_sort_select">
-                            {% for value in ["updated", "words", "chapters", "score", "random"] %}
+                            {% for value in ["published", "updated", "words", "chapters", "score", "random"] %}
                                 <OPTION value="{{ value }}">{{ value|title }}</OPTION>
                             {% endfor %}
                         </SELECT>

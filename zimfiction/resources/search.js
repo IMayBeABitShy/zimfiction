@@ -739,6 +739,16 @@ class ZimfictionSearch {
                 }
                 return 0;
             });
+        } else if (sort_order == "published") {
+            this.results.sort((a, b) => {
+                if (a["published"] < b["published"]) {
+                    return 1;
+                }
+                if (a["published"] > b["published"]) {
+                    return -1;
+                }
+                return 0;
+            });
         } else if (sort_order == "words") {
             this.results.sort((a, b) => (b["words"] - a["words"]));
         } else if (sort_order == "chapters") {

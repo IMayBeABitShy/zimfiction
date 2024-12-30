@@ -702,6 +702,7 @@ class Story(Base):
             "implied_relationships": [normalize_relationship(t.name) for t in self.implied_relationships],
             "characters": [t.name for t in self.characters],
             "implied_characters": [t.name for t in self.implied_characters],
+            "published": format_date(self.published),
             "updated": format_date(self.updated),
             "language": self.language,
             "status": self.status,

@@ -52,6 +52,7 @@ class SearchMetadataCreator(object):
             "publisher": searchmeta["publisher"],
             "id": searchmeta["id"],
             "updated": searchmeta["updated"],
+            "published": searchmeta["published"],
             "words":  searchmeta["words"],
             "chapters": searchmeta["chapters"],
             "score": searchmeta["score"],
