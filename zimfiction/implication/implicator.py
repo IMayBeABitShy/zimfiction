@@ -99,7 +99,7 @@ class Implicator(object):
                     # TODO: some warning
                     continue
                 if tagdef[0] == "relationship":
-                    tagdef = (taged[0], normalize_relationship(tagdef[1]))
+                    tagdef = (tagdef[0], normalize_relationship(tagdef[1]))
                 if (tagdef not in existing_tags) and (tagdef not in new_tags):
                     new_tags.append(tagdef)
             for catdef in finder.get_implied_categories(story, new_categories):

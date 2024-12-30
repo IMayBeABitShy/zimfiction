@@ -4,8 +4,8 @@
 {% block htmlmeta %}
     {{ super() }}
     <META name="description" content="{{ chapter.story.summary|striptags }}">
-    <META name="author" content="{{ chapter.story.author.name }}">
-    <META name="keywords" content="Chapters: {{ chapter.story.chapters|length }}, Type: Story, Words: {{ chapter.story.total_words }}, {{ chapter.story.explicit_tags|join(", ", attribute="name") }}">
+    <META name="author" content="{{ chapter.story.author.name|escape }}">
+    <META name="keywords" content="Chapters: {{ chapter.story.chapters|length }}, Type: Story, Words: {{ chapter.story.total_words }}, {{ chapter.story.explicit_tags|join(", ", attribute="name")|escape }}">
 {% endblock %}
 
 {% block title %}
@@ -23,8 +23,8 @@
     <HR>
     {% block storytext %}
         <CENTER>
-            <H1 class="storytitle">{{ chapter.story.title }}</H1>
-            <H2 class="chaptertitle">{{ chapter.index }}. {{ chapter.title }}</H2>
+            <H1 class="storytitle">{{ chapter.story.title|escape }}</H1>
+            <H2 class="chaptertitle">{{ chapter.index }}. {{ chapter.title|escape }}</H2>
         </CENTER>
         <DIV class="storytext" id="storytext">
             {{ chapter.text|render_storytext }}

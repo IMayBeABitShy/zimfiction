@@ -4,12 +4,12 @@
 {% block htmlmeta %}
     {{ super.super() }}
     <META name="description" content="{{ story.summary|striptags }}">
-    <META name="author" content="{{ story.author.name }}">
-    <META name="keywords" content="Chapters: {{ story.chapters|length }}, Words: {{ story.total_words }}, {{ story.explicit_tags|join(", ", attribute="name") }}">
+    <META name="author" content="{{ story.author.name|escape }}">
+    <META name="keywords" content="Chapters: {{ story.chapters|length }}, Words: {{ story.total_words }}, {{ story.explicit_tags|join(", ", attribute="name")|escape }}">
 {% endblock %}
 
 {% block title %}
-    <TITLE>ZimFiction - {{story.title}} - Index</TITLE>
+    <TITLE>ZimFiction - {{ story.title|escape }} - Index</TITLE>
 {% endblock %}
 
 {% block content %}
@@ -21,7 +21,7 @@
         <DIV class="storytext index" id="storytext">
             <UL class="chapter_index_list">
                 {% for chapter in story.chapters|sort(attribute="index") %}
-                    <LI class="chapterlink"><A href="{{ chapter.index }}">{{ chapter.index }}. {{ chapter.title }} ({{ chapter.num_words|format_number }} words)</A></LI>
+                    <LI class="chapterlink"><A href="{{ chapter.index }}">{{ chapter.index }}. {{ chapter.title|escape }} ({{ chapter.num_words|format_number }} words)</A></LI>
                 {% endfor %}
             </UL>
         </DIV>

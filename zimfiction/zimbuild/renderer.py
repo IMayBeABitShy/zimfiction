@@ -16,7 +16,7 @@ try:
 except ImportError:
     minify_html = None
 
-from ..util import format_size, format_number, normalize_tag, get_resource_file_path
+from ..util import format_size, format_number, normalize_tag, get_resource_file_path, repair_html
 from ..statistics import StoryListStatCreator
 from .buckets import BucketMaker
 from .search import SearchMetadataCreator
@@ -263,6 +263,7 @@ class HtmlRenderer(object):
         self.environment.filters["format_date"] = self._format_date
         self.environment.filters["first_elements"] = self._first_elements
         self.environment.filters["default_index"] = self._default_index
+        self.environment.filters["repair_html"] = repair_html
 
         # configure tests
         self.environment.tests["date"] = self._is_date

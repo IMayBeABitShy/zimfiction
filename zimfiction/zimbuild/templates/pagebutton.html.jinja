@@ -3,7 +3,7 @@
 <DIV class="page_button">
     <P>
         {% block button_content %}
-            <A class="page_button_link" href="{{ pagenum }}{{ fragment|default("") }}">{{ label|default(pagenum) }}</A>
+            <A class="page_button_link" href="{{ pagenum }}{{ fragment|default("") }}">{{ label|default(pagenum)|escape }}</A>
         {% endblock %}
     </P>
 </DIV>

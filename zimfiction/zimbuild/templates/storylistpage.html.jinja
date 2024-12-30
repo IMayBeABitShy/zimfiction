@@ -2,7 +2,7 @@
 {% extends "base.html.jinja" %}
 
 {% block title %}
-    <TITLE>ZimFiction - {{ title }}</TITLE>
+    <TITLE>ZimFiction - {{ title|escape }}</TITLE>
 {% endblock %}
 
 {% block scripts %}
@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-    <H1>{{ title }}</H1>
+    <H1>{{ title|escape }}</H1>
     <A class="statslink" href="stats">View statistics</A>
     <HR>
     {% if include_search %}

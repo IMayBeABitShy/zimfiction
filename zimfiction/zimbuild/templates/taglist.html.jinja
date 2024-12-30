@@ -2,7 +2,7 @@
 
 <DIV class="taglist">
     {% for tag in tags %}
-        <A class="taglink taglink-{{ tag.type }}" href="{{ to_root }}/tag/{{ tag.type }}/{{ tag.name|normalize_tag }}/">{{ tag.name }}</A>{% if not loop.last -%}
+        <A class="taglink taglink-{{ tag.type }}" href="{{ to_root }}/tag/{{ tag.type }}/{{ tag.name|normalize_tag }}/">{{ tag.name|escape }}</A>{% if not loop.last -%}
             ,
         {% endif %}
     {% endfor %}

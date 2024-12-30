@@ -5,7 +5,7 @@
     <DIV class="categories">
         <UL class="category_long_list">
             {% for category in categories %}
-                <LI><A href="{{ to_root }}/category/{{ category.publisher.name }}/{{ category.name|normalize_tag }}/">{{ category.name }}</A> <P class="category_list_story_count">[{{ category.num_stories|format_number }}]</P></LI>
+                <LI><A href="{{ to_root }}/category/{{ category.publisher.name }}/{{ category.name|normalize_tag }}/">{{ category.name|escape }}</A> <P class="category_list_story_count">[{{ category.num_stories|format_number }}]</P></LI>
             {% endfor %}
         </UL>
     </DIV>

@@ -195,7 +195,9 @@ def normalize_tag(tag):
     """
     # return ALLOWED_TAG_LETTERS.sub("_", tag)
     # return urllib.parse.quote_plus(tag)
-    return tag.replace("+", "_plus_").replace(" ", "+").replace("/", "_slash_")
+    tag = tag.replace("+", "_plus_").replace(" ", "+").replace("/", "_slash_")
+    tag = tag.replace("<", "_lchevron_").replace(">", "_rchevron_")
+    return tag
 
 
 def normalize_relationship(tag):
@@ -314,6 +316,27 @@ def set_or_increment(d, k, v=1):
         d[k] = v
 
 
+def delete_or_decrement(d, k, v=1, delete_on=1):
+    """
+    Delete or increment a key in a dict for/by a value.
+
+    Basically, if d[k] > delete_on set d[k] -= v else del d[k]
+
+    @param d: dictionary to modify
+    @type d: L{dict}
+    @param k: key in dict to use
+    @type k: hashable
+    @type v: value to decrement by
+    @type v: L{int} or L{float}
+    @param delete_on: if prior to decrement the value is <= this value, delete it
+    @raises: L{KeyError} if k not in d
+    """
+    if d[k] <= delete_on:
+        del d[k]
+    else:
+        d[k] -= v
+
+
 def ensure_iterable(obj):
     """
     If obj is iterable, return obj, else return an iterable yielding obj.
@@ -346,6 +369,61 @@ def remove_duplicates(l):
         if e not in ret:
             ret.append(e)
     return ret
+
+
+def repair_html(html):
+    """
+    Attempt to perform some crude repairs on cut-off html snippets.
+
+    This method basically tries to detect (for some tags) if there are
+    more opening tags than closing tags and append closing tags.
+
+    @param html: html code to repair
+    @type html: L{str}
+    @return: the (hopefully repaired) html string
+    @rtype: L{str}
+    """
+    # list of tags to close (lowercase!)
+    tags = ["p", "i", "b", "a", "div", "pre", "li"]
+    lower_html = html.lower()
+    deficits = {}
+    for tag in tags:
+        # check both opener with space for attributes and tag end
+        # basically, we must ensure that we find <b ...> and <b>, but not
+        # <br>
+        for opener in ("<{}>".format(tag), "<{} ".format(tag)):
+            closer = "</{}>".format(tag)
+            n_opener = lower_html.count(opener)
+            n_closer = lower_html.count(closer)
+            if n_opener > n_closer:
+                deficits[(opener, closer)] = (n_opener - n_closer)
+
+    # check if we can return early
+    if not deficits:
+        # opening tags and closing tags match
+        return html
+
+    # now try to fix it
+    # until all deficits are 0, append the closer for the right-most, unclosed tag
+    # when finding the rightmost tag, only search up until (excluding) the start of the
+    # last position this specific opener was found
+    last_positions = {k: len(html) for k in deficits.keys()}
+    while deficits:
+        # find rightmost unopened tag
+        cur_max_value = None
+        cur_max_pos = -1
+        for pair, amount in deficits.items():
+            opener = pair[0]
+            op_position = lower_html[:last_positions[pair]].rfind(opener)
+            if op_position > cur_max_pos:
+                cur_max_value = pair
+                cur_max_pos = op_position
+        # close the tag, decrementing the deficit and marking the last position
+        closer = cur_max_value[1]
+        html += closer
+        delete_or_decrement(deficits, cur_max_value)
+        last_positions[cur_max_value] = cur_max_pos
+    return html
 
 
 if __name__ == "__main__":

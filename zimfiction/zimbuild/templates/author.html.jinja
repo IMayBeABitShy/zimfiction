@@ -2,7 +2,7 @@
 {% extends "base.html.jinja" %}
 
 {% block title %}
-    <TITLE>ZimFiction - Stories written by {{ author.name }} [{{ author.publisher.name }}]</TITLE>
+    <TITLE>ZimFiction - Stories written by {{ author.name|escape }} [{{ author.publisher.name }}]</TITLE>
 {% endblock %}
 
 {% block scripts %}
@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content %}
-    <H1>Stories written by {{ author.name }} [{{ author.publisher.name }}]</H1>
+    <H1>Stories written by {{ author.name|escape }} [{{ author.publisher.name }}]</H1>
     <HR>
     {% with stats=stats, to_root=to_root %}
         {% include "storyliststats.html.jinja" %}
@@ -19,7 +19,7 @@
     <HR>
     {% if options.include_external_links %}
         <DIV class="author_org_link_div">
-            <A class="external_link" href="{{ author.url }}">{{ author.name }} on {{ author.publisher.name }}</A>
+            <A class="external_link" href="{{ author.url }}">{{ author.name|escape }} on {{ author.publisher.name }}</A>
         </DIV>
         <HR>
     {% endif %}

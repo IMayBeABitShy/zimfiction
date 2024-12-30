@@ -2,7 +2,7 @@
 {% extends "base.html.jinja" %}
 
 {% block title %}
-    <TITLE>ZimFiction - {{ series.name }} on {{ series.publisher.name }}</TITLE>
+    <TITLE>ZimFiction - {{ series.name|escape }} on {{ series.publisher.name }}</TITLE>
 {% endblock %}
 
 {% block scripts %}
@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content %}
-    <H1>{{ series.name }} (Series) on {{ series.publisher.name }}</H1>
+    <H1>{{ series.name|escape }} (Series) on {{ series.publisher.name }}</H1>
     <HR>
     {% with to_root=to_root, stats=stats %}
         {% include "storyliststats.html.jinja" %}

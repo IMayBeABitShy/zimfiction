@@ -2,7 +2,7 @@
 
 <DIV class="story_summary">
     <DIV class="summary_title">
-        <A href="{{ to_root}}/story/{{ story.publisher.name }}/{{ story.id }}/" class="summary_title_link">{{ story.title }}</A> by <A class="summary_author_link" href="{{ to_root}}/author/{{ story.author.publisher.name }}/{{ story.author.name|normalize_tag }}/">{{ story.author.name }}</A>
+        <A href="{{ to_root}}/story/{{ story.publisher.name }}/{{ story.id }}/" class="summary_title_link">{{ story.title }}</A> by <A class="summary_author_link" href="{{ to_root}}/author/{{ story.author.publisher.name }}/{{ story.author.name|normalize_tag }}/">{{ story.author.name|escape }}</A>
         {% if not extended %}
             <P class="story_updated_text">{{ story.updated|format_date }}</P>
             <DIV class="short_categories">
@@ -130,7 +130,7 @@
         <BR>
     {% endif %}
     <DIV class="summary_text">
-        {{ story.summary|safe }}
+        {{ story.summary|repair_html|safe }}
     </DIV>
     {% if not extended %}
         <DIV class="summary_footer">
