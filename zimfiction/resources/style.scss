@@ -1,9 +1,57 @@
 /* SCSS file for zimfiction */
 
+// color configuration
+
+$background_color: white;
+$middleground_color: lightgray;
+$feature_color: darkgray;
+$text_color: black;
+$focus_color: darkgray;
+$navigation_background_color: #333399;
+$navigation_foreground_color: #ffffff;
+
+// mix-ins
+
+@mixin button {
+  color: black;
+  background: $focus_color;
+  border: 1px solid $feature_color;
+  border-radius: 0.3125em;
+  padding: 0.5em;
+  margin: 0.3125em;
+  text-decoration: none;
+
+  &:hover {
+    background: darken(rgba($focus_color), 10%);
+  }
+
+  A {
+    color: black;
+  }
+}
+
+@mixin box {
+  background: $middleground_color;
+  border: 1px solid $feature_color;
+  margin: 1em;
+  padding: 1em;
+}
+
+@mixin alternating_list($childselector) {
+  #{$childselector}:nth-child(even) {
+    background: scale-color(rgba(gray), $lightness: 10%);
+  }
+
+  #{$childselector}:nth-child(odd) {
+    background: lightgray;
+  }
+}
+
 /* general layout */
 
 html {
   height: webkit-fit-available;
+  background-color: $background_color;
 }
 
 body {
@@ -25,15 +73,15 @@ HR {
 }
 
 .nav {
-  background-color: #333399;
+  background-color: $navigation_background_color;
   display: flex;
   width: auto;
-  color: #ffffff;
+  color: $navigation_foreground_color;
   padding: 0.25em;
 }
 
 .nav * {
-  color: #ffffff;
+  color: $navigation_foreground_color;
 }
 
 /* story summary */
@@ -41,10 +89,8 @@ HR {
 .story_summary {
   &:not(.story_list_page_item .story_summary) {
     /* story summary that's not part of the story list */
-    background: lightgrey;
-    border: 1px solid darkgray;
-    margin: 1em;
-    padding: 1em;
+    @include box;
+
     padding-bottom: 0em;
   }
 
@@ -110,17 +156,14 @@ HR {
 
 /* story list page */
 .story_list_page_item {
-  background-color: lightgray;
+  background-color: $middleground_color;
   padding: 0.625em;
-  border: 1px solid gray;
+  border: 1px solid $feature_color;
 }
 
 .statslink {
-  color: black;
-  text-decoration: none;
-  background: darkgray;
-  border: 1px solid gray;
-  border-radius: 0.3125em;
+  @include button;
+
   padding: 0.5em;
   margin: auto;
 }
@@ -128,26 +171,31 @@ HR {
 /* page buttons */
 
 .page_button {
+  @include button;
+
   display: inline;
-  background: darkgray;
-  border: 1px solid gray;
-  border-radius: 0.3125em;
-  padding: 0.5em;
-  margin: 0.3125em;
 
   P {
     display: initial;
   }
+  .page_button_link {
+    text-decoration: none;
+  }
 }
 
-.page_button_link {
-  text-decoration: none;
-  color: blue;
-}
+.cur_page_button {
+  @include button;
 
-.cur_page_button_link {
-  color: black;
-  font-weight: bold;
+  display: inline;
+  background: darken($focus_color, 10%);
+
+  P {
+    display: initial;
+  }
+
+  .cur_page_button_link {
+    font-weight: bold;
+  }
 }
 
 .page_buttons {
@@ -160,32 +208,26 @@ HR {
 .chapter_index_list {
   list-style-type: none;
 
+  @include alternating-list(li);
+
   li {
     text-align: left;
     padding-top: 6px;
     padding-bottom: 6px;
     padding-left: 1em;
-    border: 1px solid black;
-
-    &:nth-child(even) {
-      background: darkgray;
-    }
-
-    &:nth-child(odd) {
-      background: lightgray;;
-    }
+    border: 1px solid $feature_color;
   }
 
   A {
-    color: black;
+    color: $text_color;
   }
 }
 
 /* publisher */
 
 .publisher_section {
-  background: lightgray;
-  border: 1px solid gray;
+  @include box;
+
   padding-left: 1em;
   padding-right: 1em;
   padding-top: 1px;
@@ -204,7 +246,7 @@ HR {
   A {
     text-decoration: none;
     color: black;
-    background: darkgray;
+    background: $focus_color;
     border: 1px solid gray;
     border-radius: 0.3125em;
     margin-right: 15px;
@@ -212,28 +254,30 @@ HR {
   }
 }
 
-.publisher_categories .categories {
-  border: none;
+.publisher_categories {
+  .categories {
+    border: none;
+  }
+
+  H2 {
+    color: $text_color;
+    width: 100%;
+    border-bottom: 1px solid $text_color;
+    margin-bottom: 0px;
+    display: flex;
+  }
 }
 
 /* category long list */
 
 .categories {
-  background: 1px lightgray;
-  border: 1px solid gray;
+  @include box;
 
   * {
     display: inline;
     padding-top: 1px;
     padding-bottom: 1px;
   }
-}
-
-.publisher_categories H2 {
-  width: 100%;
-  border-bottom: 1px solid black;
-  margin-bottom: 0px;
-  display: flex;
 }
 
 .category_long_list {
@@ -253,8 +297,8 @@ HR {
 }
 
 .category_list_quicknav_links {
-  background: 1px lightgray;
-  border: 1px solid gray;
+  @include box;
+
   padding: 0.625em;
   padding-left: 2.5em;
 }
@@ -284,11 +328,12 @@ HR {
 }
 
 .publisher {
+  @include box;
+
   display: inline-block;
-  background: lightgray;
+  padding: initial;
   padding-left: 1.25em;
   padding-bottom: 1.25em;
-  border: 1px solid gray;
   border-radius: 0.625em;
   width: 90%;
   margin: 0.625em;
@@ -316,34 +361,25 @@ HR {
 /* statistics */
 
 .statstable {
+  @include alternating_list(TR);
+
   width: 90%;
   padding: 1px;
   margin: auto;
   background: gray;
 
-  TR {
-    background: lightgray;
+  TH {
+    text-align: left;
+  }
 
-    &:nth-child(even) {
-      background: darkgray;
-    }
+  TD {
+  text-align: right;
   }
 }
 
-.statstable TH {
-  text-align: left;
-}
-
-.statstable TD {
-  text-align: right;
-}
-
 .stats_back_link {
-  text-decoration: none;
-  color: black;
-  background: darkgray;
-  border: 1px solid gray;
-  border-radius: 0.3125em;
+  @include button;
+
   padding: 0.5em;
   margin-left: 1.25em
 }
@@ -351,19 +387,22 @@ HR {
 /* search */
 
 #search_input_div {
-  background: lightgray;
-  border: 1px solid darkgray;
+  @include box;
+
+  padding: 0.25em;
+  padding-right: inherit;
+  margin: 0px;
   margin-bottom: 0.625em;
-  padding-bottom: 0.25em;
   overflow: visible;
 }
 
 #toggle_search_input_button {
+  @include button;
+
+  borde-radius: 0em;
   width: 100%;
-  background: darkgray;
   padding: 0.25em;
   font-weight: bold;
-  color: black;
 }
 
 .search_input_content {
@@ -371,20 +410,15 @@ HR {
 }
 
 #search_button {
+  @include button;
+
   float: right;
   margin: auto;
-  background: darkgray;
-  border: 1px solid gray;
   height: 2.125em;
   font-size: 110%;
   padding: 0.25em;
   padding-left: 2.5em;
   padding-right: 2.5em;
-  margin: 0.25em;
-}
-
-#search_button:hover {
-  background: gray;
 }
 
 #statusdiv {
@@ -434,7 +468,7 @@ HR {
 
 .search_criteria {
   display: initial;
-  border: 1px solid black;
+  border: 1px solid $feature_color;
   padding: 0.125em;
   margin: 0.125em;
   width: fit-content;
@@ -469,9 +503,12 @@ HR {
 }
 
 .include_button, .remove_button, .implied_button {
+  @include button;
+
   border-radius: 0;
   border: 1px solid black;
   margin: 0px;
+  padding: revert;
   background-color: lightgray;
   height: 100%;
   font-size: 100%;
@@ -489,8 +526,8 @@ HR {
 
 /* info page */
 .infobullet {
-  background: lightgray;
-  border: 1px solid darkgray;
+  @include box;
+
   border-radius: 1.5em;
   padding: 1em;
   margin-bottom: 1em;
@@ -501,10 +538,8 @@ HR {
 }
 
 .info_back_link {
-  text-decoration: none;
-  color: black;
-  background: darkgray;
-  border: 1px solid gray;
+  @include button;
+
   border-radius: 0.3125em;
   padding: 0.5em;
   margin-left: 1.25em
@@ -512,8 +547,8 @@ HR {
 
 /* acknowledgement page */
 .acknowledgement {
-  background: lightgray;
-  border: 1px solid darkgray;
+  @include box;
+
   border-radius: 1.5em;
   padding: 1em;
   margin-bottom: 1em;
@@ -523,7 +558,7 @@ HR {
   }
 
   .license {
-    background: darkgray;
+    background: $focus_color;
     padding: 0.8em;
     padding-top: 0.05em;
     border-radius: 0.5em;
