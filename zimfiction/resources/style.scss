@@ -1,4 +1,4 @@
-/* CSS file for zimfiction */
+/* SCSS file for zimfiction */
 
 /* general layout */
 
@@ -38,22 +38,30 @@ HR {
 
 /* story summary */
 
-.story_summary:not(.story_list_page_item .story_summary) {
-  /* story summary that's not part of the story list */
-  background: lightgrey;
-  border: 1px solid darkgray;
-  margin: 1em;
-  padding: 1em;
-  padding-bottom: 0em;
-}
+.story_summary {
+  &:not(.story_list_page_item .story_summary) {
+    /* story summary that's not part of the story list */
+    background: lightgrey;
+    border: 1px solid darkgray;
+    margin: 1em;
+    padding: 1em;
+    padding-bottom: 0em;
+  }
 
-.story_summary .summary_footer P {
-  text-align: right;
-}
+  .summary_footer P {
+    text-align: right;
+  }
 
-.story_summary .summary_meta TH {
-  text-align: left;
-  padding-right: 2.5em;
+  .summary_meta TH {
+    text-align: left;
+    padding-right: 2.5em;
+  }
+
+  .summary_title {
+    margin-bottom: 0.625em;
+    font-weight: bolder;
+    font-size: 132%
+  }
 }
 
 .taglink {
@@ -68,12 +76,6 @@ HR {
 
 .taglink-relationship {
   background: #eee;
-}
-
-.story_summary .summary_title {
-  margin-bottom: 0.625em;
-  font-weight: bolder;
-  font-size: 132%
 }
 
 .story_updated_text {
@@ -132,10 +134,10 @@ HR {
   border-radius: 0.3125em;
   padding: 0.5em;
   margin: 0.3125em;
-}
 
-.page_button P  {
-  display: initial;
+  P {
+    display: initial;
+  }
 }
 
 .page_button_link {
@@ -157,25 +159,26 @@ HR {
 
 .chapter_index_list {
   list-style-type: none;
-}
 
-.chapter_index_list li {
-  text-align: left;
-  padding-top: 6px;
-  padding-bottom: 6px;
-  padding-left: 1em;
-  border: 1px solid black;
-}
+  li {
+    text-align: left;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 1em;
+    border: 1px solid black;
 
-.chapter_index_list li:nth-child(even) {
-  background: darkgray;
-}
-.chapter_index_list li:nth-child(odd) {
-  background: lightgray;;
-}
+    &:nth-child(even) {
+      background: darkgray;
+    }
 
-.chapter_index_list a {
-  color: black;
+    &:nth-child(odd) {
+      background: lightgray;;
+    }
+  }
+
+  A {
+    color: black;
+  }
 }
 
 /* publisher */
@@ -197,16 +200,16 @@ HR {
 .publisher_quicklinks {
   padding-top: 15px;
   padding-bottom: 15px;
-}
 
-.publisher_quicklinks A {
-  text-decoration: none;
-  color: black;
-  background: darkgray;
-  border: 1px solid gray;
-  border-radius: 0.3125em;
-  margin-right: 15px;
-  padding: 6px;
+  A {
+    text-decoration: none;
+    color: black;
+    background: darkgray;
+    border: 1px solid gray;
+    border-radius: 0.3125em;
+    margin-right: 15px;
+    padding: 6px;
+  }
 }
 
 .publisher_categories .categories {
@@ -218,12 +221,12 @@ HR {
 .categories {
   background: 1px lightgray;
   border: 1px solid gray;
-}
 
-.categories * {
-  display: inline;
-  padding-top: 1px;
-  padding-bottom: 1px;
+  * {
+    display: inline;
+    padding-top: 1px;
+    padding-bottom: 1px;
+  }
 }
 
 .publisher_categories H2 {
@@ -238,11 +241,11 @@ HR {
   -webkit-columns: 2;
   -moz-columns: 2;
   display: inline-block;
-}
 
-.category_long_list LI {
-  display: block;
-  list-style: none;
+  LI {
+    display: block;
+    list-style: none;
+  }
 }
 
 .category_list_story_count {
@@ -266,16 +269,18 @@ HR {
 
 /* index page */
 
-.publisher_list UL {
-  list-style: none;
-  display: block;
-  columns: 2;
-  -webkit-columns: 2;
-  -moz-columns: 2;
-}
+.publisher_list {
+  UL {
+    list-style: none;
+    display: block;
+    columns: 2;
+    -webkit-columns: 2;
+    -moz-columns: 2;
+  }
 
-.publisher_list LI {
-  display: inline;
+  LI {
+    display: inline;
+  }
 }
 
 .publisher {
@@ -315,14 +320,14 @@ HR {
   padding: 1px;
   margin: auto;
   background: gray;
-}
 
-.statstable TR {
-  background: lightgray;
-}
+  TR {
+    background: lightgray;
 
-.statstable TR:nth-child(even) {
-  background: darkgray;
+    &:nth-child(even) {
+      background: darkgray;
+    }
+  }
 }
 
 .statstable TH {
@@ -405,23 +410,25 @@ HR {
   columns: 2;
   -webkit-columns: 2;
   -moz-columns: 2;
+
+  LI {
+    width: 90%;
+    page-break-inside: avoid;
+  }
 }
 
-.search_input_list LI {
-  width: 90%;
-  page-break-inside: avoid;
-}
+.search_field_div {
+  DIV:not(.autocomplete *) {
+    display: inline;
+  }
 
-.search_field_div DIV:not(.autocomplete *) {
-  display: inline;
-}
+  LABEL {
+    width: 100%;
+  }
 
-.search_field_div LABEL {
-  width: 100%;
-}
-
-.search_field_div INPUT {
-  width: 100%;
+  INPUT {
+    width: 100%;
+  }
 }
 
 
@@ -465,7 +472,7 @@ HR {
   border-radius: 0;
   border: 1px solid black;
   margin: 0px;
-  background-color:
+  background-color: lightgray;
   height: 100%;
   font-size: 100%;
 }
@@ -487,10 +494,10 @@ HR {
   border-radius: 1.5em;
   padding: 1em;
   margin-bottom: 1em;
-}
 
-.infobullet h2 {
-  margin-top: 0em;
+  h2 {
+    margin-top: 0em;
+  }
 }
 
 .info_back_link {
@@ -510,17 +517,17 @@ HR {
   border-radius: 1.5em;
   padding: 1em;
   margin-bottom: 1em;
-}
 
-.acknowledgement h2 {
-  margin-top: 0em;
-}
+   h2 {
+    margin-top: 0em;
+  }
 
-.acknowledgement .license {
-  background: darkgray;
-  padding: 0.8em;
-  padding-top: 0.05em;
-  border-radius: 0.5em;
+  .license {
+    background: darkgray;
+    padding: 0.8em;
+    padding-top: 0.05em;
+    border-radius: 0.5em;
+  }
 }
 
 /* css code for autocomplete from https://www.w3schools.com/howto/howto_js_autocomplete.asp */
@@ -562,9 +569,11 @@ HR {
 /* mobile */
 
 @media only screen and (max-width: 920px) {
-  .story_summary:not(.story_list_page_item .story_summary) {
-    padding: 0.4em;
-    margin: initial;
+  .story_summary {
+    &:not(.story_list_page_item .story_summary) {
+      padding: 0.4em;
+      margin: initial;
+    }
   }
 
   .category_long_list {
@@ -575,10 +584,10 @@ HR {
 
   .category_list_quicknav_links {
     font-size: large;
-  }
 
-  .category_list_quicknav_links a {
-    padding: 0.25em;
+    a {
+      padding: 0.25em;
+    }
   }
 
   .search_input_list {
@@ -600,15 +609,19 @@ HR {
     width: -moz-calc(100% - 0.5em);
   }
 
-  .publisher_list UL {
-    columns: 1;
-    -webkit-columns: 1;
-    -moz-columns: 1;
+  .publisher_list {
+    UL {
+      columns: 1;
+      -webkit-columns: 1;
+      -moz-columns: 1;
+    }
   }
 
-  .publisher_quicklinks A {
-    display: block;
-    margin-top: 0.5em;
+  .publisher_quicklinks {
+    A {
+      display: block;
+      margin-top: 0.5em;
+    }
   }
 
   .storytext {

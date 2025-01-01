@@ -42,6 +42,7 @@ setup(
         "EBookLib",
         "html2text",
         "beautifulsoup4",
+        "pyScss",
         ],
     extras_require={
         "optimize": [
