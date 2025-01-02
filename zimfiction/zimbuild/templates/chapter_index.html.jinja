@@ -18,7 +18,7 @@
     {% endwith %}
     <HR>
     {% block storyindex %}
-        <DIV class="storytext index" id="storytext">
+        <DIV class="storytext chapterindex" id="storytext">
             <UL class="chapter_index_list">
                 {% for chapter in story.chapters|sort(attribute="index") %}
                     <LI class="chapterlink"><A href="{{ chapter.index }}">{{ chapter.index }}. {{ chapter.title|escape }} ({{ chapter.num_words|format_number }} words)</A></LI>

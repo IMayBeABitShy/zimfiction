@@ -3,10 +3,10 @@
 // color configuration
 
 $background_color: white;
-$middleground_color: lightgray;
-$feature_color: darkgray;
-$text_color: black;
-$focus_color: darkgray;
+$middleground_color: white;
+$feature_color: #ddd;
+$text_color: #2a2a2a;
+$focus_color: #d3d3d3;
 $navigation_background_color: #333399;
 $navigation_foreground_color: #ffffff;
 
@@ -39,11 +39,11 @@ $navigation_foreground_color: #ffffff;
 
 @mixin alternating_list($childselector) {
   #{$childselector}:nth-child(even) {
-    background: scale-color(rgba(gray), $lightness: 10%);
+    background: scale-color(#ddd, $lightness: 10%);
   }
 
   #{$childselector}:nth-child(odd) {
-    background: lightgray;
+    background: white;
   }
 }
 
@@ -68,8 +68,9 @@ body {
 }
 
 HR {
-  margin: 1.25em;
+  margin: 4em;
   margin-bottom: 1.75em;
+  color: $feature_color;
 }
 
 .nav {
@@ -78,6 +79,7 @@ HR {
   width: auto;
   color: $navigation_foreground_color;
   padding: 0.25em;
+  padding-left: 2em;
 }
 
 .nav * {
@@ -91,7 +93,8 @@ HR {
     /* story summary that's not part of the story list */
     @include box;
 
-    padding-bottom: 0em;
+    margin-left: 4em;
+    margin-right: 4em;
   }
 
   .summary_footer P {
@@ -100,6 +103,7 @@ HR {
 
   .summary_meta TH {
     text-align: left;
+    vertical-align: top;
     padding-right: 2.5em;
   }
 
@@ -158,6 +162,7 @@ HR {
 .story_list_page_item {
   background-color: $middleground_color;
   padding: 0.625em;
+  margin-bottom: 1em;
   border: 1px solid $feature_color;
 }
 
@@ -203,12 +208,20 @@ HR {
   justify-content: center;
 }
 
+/* chapter page */
+
+.storytext {
+    margin-left: 4em;
+    margin-right: 4em;
+}
+
 /* chapter index */
 
 .chapter_index_list {
-  list-style-type: none;
-
   @include alternating-list(li);
+
+  list-style-type: none;
+  padding: initial;
 
   li {
     text-align: left;
@@ -225,7 +238,12 @@ HR {
 
 /* publisher */
 
+.publisher_title {
+  margin-left: 0.5em;
+}
+
 .publisher_section {
+
   @include box;
 
   padding-left: 1em;
@@ -284,6 +302,7 @@ HR {
   columns: 2;
   -webkit-columns: 2;
   -moz-columns: 2;
+  padding-left: initial;
   display: inline-block;
 
   LI {
@@ -313,6 +332,10 @@ HR {
 
 /* index page */
 
+.index_title, .index_explanation {
+  margin-left: 2em;
+}
+
 .publisher_list {
   UL {
     list-style: none;
@@ -320,6 +343,7 @@ HR {
     columns: 2;
     -webkit-columns: 2;
     -moz-columns: 2;
+    padding: 0em;
   }
 
   LI {
@@ -384,6 +408,11 @@ HR {
   margin-left: 1.25em
 }
 
+.storyupdatechart-container {
+  margin-left: 2em;
+  margin-right: 2em;
+}
+
 /* search */
 
 #search_input_div {
@@ -423,7 +452,7 @@ HR {
 
 #statusdiv {
   display: inline-block;
-  background: #bbbbbb;
+  background: $focus_color;
   width: 30%;
   text-align: center;
   margin: 0.25em;
@@ -525,9 +554,14 @@ HR {
 }
 
 /* info page */
+.infotitle {
+  margin-left: 2em;
+}
+
 .infobullet {
   @include box;
 
+  margin: 4em;
   border-radius: 1.5em;
   padding: 1em;
   margin-bottom: 1em;
@@ -542,7 +576,7 @@ HR {
 
   border-radius: 0.3125em;
   padding: 0.5em;
-  margin-left: 1.25em
+  margin-left: 4em;
 }
 
 /* acknowledgement page */
@@ -604,10 +638,26 @@ HR {
 /* mobile */
 
 @media only screen and (max-width: 920px) {
+  HR {
+    margin: 2em;
+    margin-left: 4em;
+    margin-right: 4em;
+  }
+
+  H1 {
+    font-size: 150%;
+  }
+
+  .index_title {
+    font-size: 150%;
+  }
+
   .story_summary {
     &:not(.story_list_page_item .story_summary) {
       padding: 0.4em;
       margin: initial;
+      margin-left: initial;
+      margin-right: initial;
     }
   }
 
@@ -619,6 +669,7 @@ HR {
 
   .category_list_quicknav_links {
     font-size: large;
+    padding-left: initial;
 
     a {
       padding: 0.25em;
@@ -661,5 +712,12 @@ HR {
 
   .storytext {
     font-size: 120%;
+    margin-left: 1em;
+    margin-right: 1em;
+  }
+
+  .storyupdatechart-container {
+    margin-left: initial;
+    margin-right: initial;
   }
 }
