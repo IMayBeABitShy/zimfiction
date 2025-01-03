@@ -22,9 +22,9 @@ class ImplicationFinder(object):
         @param story: story to scan for tag implications
         @type story: L{bool}
         @param implied_tags: list of newly implied tags from other finders
-        @type implied_tags: L{list} of L{tuple} of (L{str}, L{str})
-        @return: a list of implied tags as tuples of (type, name)
-        @rtype: L{list} of L{tuple} of (L{str}, L{str})
+        @type implied_tags: L{list} of L{tuple} of (L{str}, L{str}, L{zimfiction.implication.ImplicationLevel})
+        @return: a list of implied tags as tuples of (type, name, implication_level)
+        @rtype: L{list} of L{tuple} of (L{str}, L{str}, L{zimfiction.implication.ImplicationLevel})
         """
         return []
 
@@ -39,8 +39,8 @@ class ImplicationFinder(object):
         @param story: story to scan for category implications
         @type story: L{bool}
         @param implied_categories: list of newly implied categories from other finders
-        @type implied_categories: L{list} of L{tuple} of (L{str}, L{str})
-        @return: a list of implied categories as tuples of (publisher, name)
-        @rtype: L{list} of L{tuple} of (L{str}, L{str})
+        @type implied_categories: L{list} of L{tuple} of (L{str}, L{str}, L{zimfiction.implication.ImplicationLevel})
+        @return: a list of implied categories as tuples of (publisher, name, implication_level)
+        @rtype: L{list} of L{tuple} of (L{str}, L{str}, L{zimfiction.implication.ImplicationLevel})
         """
         return []

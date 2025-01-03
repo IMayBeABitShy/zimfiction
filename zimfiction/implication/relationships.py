@@ -10,6 +10,7 @@ import itertools
 
 from .finder import ImplicationFinder
 from ..util import normalize_relationship
+from .implicationlevel import ImplicationLevel
 
 
 class RelationshipCharactersFinder(ImplicationFinder):
@@ -39,5 +40,5 @@ class RelationshipCharactersFinder(ImplicationFinder):
                     splitted_relationship = [e.strip() for e in relationship.split(sep)]
                     for sr in itertools.combinations(splitted_relationship, 2):
                         subrelationships.append(normalize_relationship(sep.join(sr)))
-        found_implied_tags = [("character", c) for c in characters] + [("relationship", sr) for sr in subrelationships]
+        found_implied_tags = [("character", c, ImplicationLevel.DEDUCED) for c in characters] + [("relationship", sr, ImplicationLevel.DEDUCED) for sr in subrelationships]
         return found_implied_tags

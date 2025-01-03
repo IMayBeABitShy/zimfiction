@@ -16,7 +16,7 @@ the tags:
 import itertools
 
 from .finder import ImplicationFinder
-
+from .implicationlevel import ImplicationLevel
 
 MAX_COMBINATIONS = 512
 
@@ -54,7 +54,7 @@ class ExclamationTagFinder(ImplicationFinder):
                     # safety limit - do not imply more than this many combinations
                     break
 
-        implied_tags = [("genre", t) for t in tags]
+        implied_tags = [("genre", t, ImplicationLevel.MENTIONED) for t in tags]
         return implied_tags
 
     @staticmethod

@@ -86,10 +86,12 @@ class Implicator(object):
         @param story: story to process
         @type story: L{zimfiction.db.models.Story}
         """
-        existing_tags = [(t.type, t.name) for t in story.tags]
-        existing_categories = [(c.publisher.name, c.name) for c in story.categories]
+        known_tagdefs = [(t.type, t.name) for t in story.tags]
+        known_catdefs = [(c.publisher.name, c.name) for c in story.categories]
         new_tags = []
         new_categories = []
+
+        has_def = lambda l, d: ((d[0], d[1]) in l)
 
         # find implied tags and categories
         for finder in self.finders:
@@ -99,37 +101,39 @@ class Implicator(object):
                     # TODO: some warning
                     continue
                 if tagdef[0] == "relationship":
-                    tagdef = (tagdef[0], normalize_relationship(tagdef[1]))
-                if (tagdef not in existing_tags) and (tagdef not in new_tags):
+                    tagdef = (tagdef[0], normalize_relationship(tagdef[1]), tagdef[2])
+                if not has_def(known_tagdefs, tagdef):
                     new_tags.append(tagdef)
+                    known_tagdefs.append((tagdef[0], tagdef[1]))
             for catdef in finder.get_implied_categories(story, new_categories):
                 if len(catdef[1]) > MAX_CATEGORY_NAME_LENGTH:
                     # category to long, probably a bug in the implication finder
                     # TODO: some warning
                     continue
-                catdef = (catdef[0], normalize_category(catdef[1]))
-                if (catdef not in existing_categories) and (catdef not in new_categories):
+                catdef = (catdef[0], normalize_category(catdef[1]), catdef[2])
+                if not has_def(known_catdefs, catdef):
                     new_categories.append(catdef)
+                    known_catdefs.append((catdef[0], catdef[1]))
 
         # add implied tags
         tag_i = len(story.tag_associations)
-        for tagtype, tagname in new_tags:
+        for tagtype, tagname, implication_level in new_tags:
             story.tag_associations.append(
                 StoryTagAssociation(
                     Tag.as_unique(self.session, type=tagtype, name=tagname),
                     index=tag_i,
-                    implied=True,
+                    implication_level=implication_level,
                 ),
             )
             self.n_tags_implied += 1
             tag_i += 1
         # add implied categories
-        for (publisher_name, category_name) in new_categories:
+        for (publisher_name, category_name, implication_level) in new_categories:
             publisher = Publisher.as_unique(self.session, name=publisher_name.strip())
             story.category_associations.append(
                 StoryCategoryAssociation(
                     Category.as_unique(self.session, publisher=publisher, name=category_name),
-                    implied=True,
+                    implication_level = implication_level,
                 ),
             )
             self.n_categories_implied += 1

@@ -16,6 +16,7 @@ import csv
 
 from ..util import add_to_dict_list
 from .finder import ImplicationFinder
+from .implicationlevel import ImplicationLevel
 
 
 AO3_CATEGORY_TAG_TYPES = ["Category", "Media", "Fandom"]
@@ -155,7 +156,7 @@ class Ao3MergerFinder(ImplicationFinder):
                 # no tag implications
                 continue
             for other_tag in other_tags:
-                new_tags.append(other_tag)
+                new_tags.append((other_tag[0], other_tag[1], ImplicationLevel.MERGER))
         # process implicit tags
         for tag_info in implied_tags:
             try:
@@ -165,7 +166,7 @@ class Ao3MergerFinder(ImplicationFinder):
                 # no tag implications
                 continue
             for other_tag in other_tags:
-                new_tags.append(other_tag)
+                new_tags.append((other_tag[0], other_tag[1], ImplicationLevel.MERGER))
         return new_tags
 
     def get_implied_categories(self, story, implied_categories):
@@ -182,7 +183,7 @@ class Ao3MergerFinder(ImplicationFinder):
                 continue
             other_categories = self.category_implications[canon_category_name]
             for other_category in other_categories:
-                new_categories.append((AO3_PUBLISHER, other_category))
+                new_categories.append((AO3_PUBLISHER, other_category, ImplicationLevel.MERGER))
         # process implied categories
         for category_name in implied_categories:
             try:
@@ -191,5 +192,5 @@ class Ao3MergerFinder(ImplicationFinder):
                 # no category implications
                 continue
             for other_category in other_categories:
-                new_categories.append((AO3_PUBLISHER, other_category))
+                new_categories.append((AO3_PUBLISHER, other_category, ImplicationLevel.MERGER))
         return new_categories
