@@ -35,6 +35,7 @@ from ..statistics import query_story_list_stats
 from ..util import ensure_iterable, normalize_tag
 from ..db.models import Story, Chapter, Tag, Author, Category, Publisher
 from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation, Series
+from ..implication.implicationlevel import ImplicationLevel
 
 
 MARKER_WORKER_STOPPED = "stopped"
@@ -522,7 +523,7 @@ class Worker(object):
             select(func.count(StoryTagAssociation.story_uid))
             .where(
                 StoryTagAssociation.tag_uid == task.uid,
-                StoryTagAssociation.implied == False,
+                StoryTagAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
             )
         )
         n_stories_in_tag = self.session.execute(count_stmt).scalar_one()
@@ -535,7 +536,7 @@ class Worker(object):
                 Story.tag_associations.any(
                     and_(
                         StoryTagAssociation.tag_uid == task.uid,
-                        StoryTagAssociation.implied == False,
+                        StoryTagAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
                     )
                 ),
             )
@@ -589,7 +590,7 @@ class Worker(object):
                 and_(
                     StoryTagAssociation.story_uid == Story.uid,
                     StoryTagAssociation.tag_uid == task.uid,
-                    StoryTagAssociation.implied == False,
+                    StoryTagAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
                 )
             )
             .join(
@@ -667,7 +668,7 @@ class Worker(object):
             select(func.count(StoryCategoryAssociation.story_uid))
             .where(
                 StoryCategoryAssociation.category_uid == task.uid,
-                StoryCategoryAssociation.implied == False,
+                StoryCategoryAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
             )
         )
         n_stories_in_category = self.session.execute(count_stmt).scalar_one()
@@ -680,7 +681,7 @@ class Worker(object):
                 Story.category_associations.any(
                     and_(
                         StoryCategoryAssociation.category_uid == task.uid,
-                        StoryCategoryAssociation.implied == False,
+                        StoryCategoryAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
                     )
                 ),
             )
@@ -716,7 +717,7 @@ class Worker(object):
                 and_(
                     StoryCategoryAssociation.story_uid == Story.uid,
                     StoryCategoryAssociation.category_uid == task.uid,
-                    StoryCategoryAssociation.implied == False,
+                    StoryCategoryAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
                 )
             )
             .join(
@@ -808,7 +809,7 @@ class Worker(object):
                 StoryCategoryAssociation,
                 and_(
                     Category.uid == StoryCategoryAssociation.category_uid,
-                    StoryCategoryAssociation.implied == False,
+                    StoryCategoryAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
                 ),
             )
             .where(

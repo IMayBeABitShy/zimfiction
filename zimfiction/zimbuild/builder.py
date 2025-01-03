@@ -41,6 +41,7 @@ from ..util import get_package_dir, get_resource_file_path, set_or_increment
 from ..util import format_timedelta, format_size, format_number
 from ..db.models import Story, Author, Series, Publisher, StoryTagAssociation, StoryCategoryAssociation
 from ..db.unique import set_unique_enabled
+from ..implication.implicationlevel import ImplicationLevel
 from ..reporter import StdoutReporter
 from .renderer import HtmlPage, Redirect, JsonObject, Script, RenderOptions
 from .worker import Worker, WorkerOptions, StopTask, StoryRenderTask
@@ -742,7 +743,7 @@ class ZimBuilder(object):
                     distinct(StoryTagAssociation.tag_uid)
                 )
             ).where(
-                StoryTagAssociation.implied == False,
+                StoryTagAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
             )
         ).scalar_one()
         self.reporter.msg("found {} non-implied tags.".format(n_tags))
@@ -761,7 +762,7 @@ class ZimBuilder(object):
             select(
                 func.count(distinct(StoryCategoryAssociation.category_uid))
             ).where(
-                StoryCategoryAssociation.implied == False,
+                StoryCategoryAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
             )
         ).scalar_one()
         self.reporter.msg("found {} non-implied categories.".format(n_categories))
@@ -1054,7 +1055,13 @@ class ZimBuilder(object):
         @type session: L{sqlalchemy.orm.Session}
         """
         # select from tag association such that we only add non-implied tags
-        select_tags_stmt = select(distinct(StoryTagAssociation.tag_uid)).where(StoryTagAssociation.implied == False)
+        select_tags_stmt = (
+            select(
+                distinct(StoryTagAssociation.tag_uid)
+            ).where(
+                StoryTagAssociation.implication_level < ImplicationLevel.MIN_IMPLIED
+            )
+        )
         result = session.scalars(select_tags_stmt)
         for tag_uid in result:
             task = TagRenderTask(uid=tag_uid)
@@ -1080,7 +1087,13 @@ class ZimBuilder(object):
         @param session: sqlalchemy session for data querying
         @type session: L{sqlalchemy.orm.Session}
         """
-        select_categories_stmt = select(distinct(StoryCategoryAssociation.category_uid)).where(StoryCategoryAssociation.implied == False)
+        select_categories_stmt = (
+            select(
+                distinct(StoryCategoryAssociation.category_uid)
+            ).where(
+                StoryCategoryAssociation.implication_level < ImplicationLevel.MIN_IMPLIED
+            )
+        )
         result = session.scalars(select_categories_stmt)
         for category_uid in result:
             task = CategoryRenderTask(uid=category_uid)
