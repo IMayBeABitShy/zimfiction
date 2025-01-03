@@ -1,10 +1,10 @@
 """
 Definition of implication levels.
 """
-from enum import Enum
+from enum import IntEnum
 
 
-class ImplicationLevel(Enum):
+class ImplicationLevel(IntEnum):
     """
     The implication level indicates how sure we are of that a story has a tag/category.
 

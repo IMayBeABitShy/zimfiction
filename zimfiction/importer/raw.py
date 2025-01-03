@@ -6,6 +6,7 @@ import datetime
 from ..util import count_words, add_to_dict_list, normalize_category, normalize_relationship, remove_duplicates
 from ..db.models import Chapter, Story, Author, Category, Tag, Series, Publisher
 from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation
+from ..implication.implicationlevel import ImplicationLevel
 from ..exceptions import ParseError
 
 
@@ -549,7 +550,7 @@ class RawStory(object):
             story.category_associations.append(
                 StoryCategoryAssociation(
                     Category.as_unique(session, publisher=publisher, name=category_name),
-                    implied=False,
+                    implication_level=ImplicationLevel.SOURCE,
                 ),
             )
         # link tags
@@ -565,7 +566,7 @@ class RawStory(object):
                     StoryTagAssociation(
                         Tag.as_unique(session, type=tagtype, name=tagname),
                         index=tag_i,
-                        implied=False,
+                        implication_level=ImplicationLevel.SOURCE,
                     ),
                 )
                 tag_i += 1

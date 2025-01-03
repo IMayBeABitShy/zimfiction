@@ -16,7 +16,7 @@ from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from ..util import format_date, format_number
-from ..implication import ImplicationLevel
+from ..implication.implicationlevel import ImplicationLevel
 from .unique import UniqueMixin
 
 
@@ -182,7 +182,7 @@ class StoryCategoryAssociation(Base):
 
     story_uid = Column(Integer, primary_key=True)
     category_uid = Column(Integer, primary_key=True)
-    implied = Column(Integer, default=ImplicationLevel.UNKNOWN, nullable=False)
+    implication_level = Column(Integer, default=ImplicationLevel.UNKNOWN, nullable=False)
 
     story = relationship(
         "Story",
@@ -215,7 +215,7 @@ class StoryCategoryAssociation(Base):
         @type implication_level: L{zimfiction.implication.ImplicationLevel}
         """
         assert isinstance(category, Category)
-        assert isinstance(implied, ImplicationLevel)
+        assert isinstance(implication_level, ImplicationLevel)
         self.category = category
         self.implication_level = implication_level
 
@@ -268,7 +268,7 @@ class StoryTagAssociation(Base):
     story_uid = Column(Integer, autoincrement=False, primary_key=True)
     tag_uid = Column(Integer, primary_key=True)
     index = Column(Integer, autoincrement=False)
-    implied = Column(Integer, default=ImplicationLevel.UNKNOWN, nullable=False)
+    implication_level = Column(Integer, default=ImplicationLevel.UNKNOWN, nullable=False)
 
     story = relationship(
         "Story",
