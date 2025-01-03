@@ -11,8 +11,10 @@
 
 {% block content %}
     <H1>{{ title|escape }}</H1>
-    <A class="statslink" href="stats">View statistics</A>
     <HR>
+    <DIV class="story_list_button_div">
+        <A class="statslink" href="stats">View statistics</A>
+    </DIV>
     {% if include_search %}
         {% with to_root=to_root %}
             {% include "searchinput.html.jinja" %}

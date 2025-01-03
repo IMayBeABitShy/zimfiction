@@ -1,7 +1,7 @@
 {# A long, multi column list of categories. Expects "to_root", "title" and "categories" as arguments #}
 
 {% block category_long_list %}
-    <H2>{{ title }}</H2>
+    <H2 class="category_list_title">{{ title }}</H2>
     <DIV class="categories">
         <UL class="category_long_list">
             {% for category in categories %}

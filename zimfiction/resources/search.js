@@ -638,7 +638,7 @@ class ZimfictionSearch {
     render_curpagebutton(pagenum) {
         // render the current pagebutton
         var html = `
-        <DIV class="page_button">
+        <DIV class="page_button cur_page_button">
             <P><A class="page_button_link cur_page_button_link" id="page-button-${pagenum}">${pagenum}</A></P>
         </DIV>
         `

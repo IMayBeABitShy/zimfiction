@@ -915,6 +915,7 @@ class HtmlRenderer(object):
         for i, categorylist in enumerate(categories, start=1):
             page = category_page_template.render(
                 to_root="../../..",
+                publisher=publisher,
                 categories=categorylist,
                 startletters=startletters,
                 startletters_first_occurrences=startletters_first_occurrences,

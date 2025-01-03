@@ -121,6 +121,7 @@ def optimize_image(img, target_format, min_pixels=16, allow_bw=False, verbose=Fa
     # TODO: other optimizations
     return mode_optimized
 
+
 def format_timedelta(seconds):
     """
     Format seconds since event into a readable string.
@@ -135,6 +136,7 @@ def format_timedelta(seconds):
     if "." in formatted:
         formatted = formatted[:-4]
     return formatted
+
 
 def format_number(n):
     """
@@ -253,6 +255,16 @@ def normalize_category(category):
     return category
 
 
+def get_package_dir():
+    """
+    Return the path to the root directory of this package.
+
+    @return: the path to the root directory of this package (not repo!)
+    @rtype: L{str}
+    """
+    return os.path.dirname(__file__)
+
+
 def get_resource_file_path(*names):
     """
     Return the path to the specified resource file.
@@ -262,7 +274,7 @@ def get_resource_file_path(*names):
     @return: path to the resource file
     @rtype: L{str}
     """
-    p = os.path.join(os.path.dirname(__file__), "resources", *names)
+    p = os.path.join(get_package_dir(), "resources", *names)
     return p
 
 

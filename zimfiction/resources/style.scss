@@ -1,0 +1,806 @@
+/* SCSS file for zimfiction */
+
+// color configuration
+
+$background_color: white;
+$middleground_color: white;
+$feature_color: #ddd;
+$text_color: #2a2a2a;
+$focus_color: #d3d3d3;
+$navigation_background_color: #333399;
+$navigation_foreground_color: #ffffff;
+
+// mix-ins
+
+@mixin button {
+  color: black;
+  background: $focus_color;
+  border: 1px solid $feature_color;
+  border-radius: 0.3125em;
+  padding: 0.5em;
+  margin: 0.3125em;
+  text-decoration: none;
+
+  &:hover {
+    background: darken(rgba($focus_color), 10%);
+  }
+
+  A {
+    color: black;
+  }
+}
+
+@mixin box {
+  background: $middleground_color;
+  border: 1px solid $feature_color;
+  margin: 1em;
+  padding: 1em;
+}
+
+@mixin alternating_list($childselector) {
+  #{$childselector}:nth-child(even) {
+    background: scale-color(#ddd, $lightness: 10%);
+  }
+
+  #{$childselector}:nth-child(odd) {
+    background: white;
+  }
+}
+
+/* general layout */
+
+html {
+  height: webkit-fit-available;
+  background-color: $background_color;
+}
+
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0em;
+  min-height: 100vh;
+  min-height: -webkit-fit-available;
+}
+
+/* content container - use content-cntr to reduce html size */
+.content-cntr {
+  padding: 0.625em;
+}
+
+HR {
+  margin: 4em;
+  margin-bottom: 1.75em;
+  color: $feature_color;
+}
+
+.nav {
+  background-color: $navigation_background_color;
+  display: flex;
+  width: auto;
+  color: $navigation_foreground_color;
+  padding: 0.25em;
+  padding-left: 2em;
+}
+
+.nav * {
+  color: $navigation_foreground_color;
+}
+
+/* story summary */
+
+.story_summary {
+  &:not(.story_list_page_item .story_summary) {
+    /* story summary that's not part of the story list */
+    @include box;
+
+    margin-left: 4em;
+    margin-right: 4em;
+  }
+
+  .summary_footer P {
+    text-align: right;
+  }
+
+  .summary_meta TH {
+    text-align: left;
+    vertical-align: top;
+    padding-right: 2.5em;
+  }
+
+  .summary_title {
+    margin-bottom: 0.625em;
+    font-weight: bolder;
+    font-size: 132%;
+  }
+}
+
+.taglink {
+  color: #111;
+  text-decoration: none;
+  border-bottom: 1px dotted;
+}
+
+.taglink-warning {
+  font-weight: bold;
+}
+
+.taglink-relationship {
+  background: #eee;
+}
+
+.story_updated_text {
+  display:inline;
+  float: right;
+  font-weight: initial;
+  font-size:initial;
+}
+
+.short_categories {
+  font-size: initial;
+  font-weight: initial;
+  margin-bottom: 1em;
+  margin-left: 1em;
+}
+
+.short_tags {
+    margin-left: 1em;
+}
+
+.categorylink {
+  text-decoration: none;
+  color: black;
+  border-bottom: 1px dotted black;
+}
+
+.serieslink {
+  color: #111;
+  text-decoration: none;
+  border-bottom: 1px dotted;
+}
+
+/* story list page */
+.story_list_page_item {
+  @include box;
+
+  background-color: $middleground_color;
+  padding: 0.625em;
+  margin-bottom: 1em;
+  border: 1px solid $feature_color;
+}
+
+.statslink {
+  @include button;
+
+  display: flex;
+  padding: initial;
+  margin: auto;
+  justify-content: center;
+}
+
+.story_list_button_div {
+  @include box;
+
+  margin: 0em;
+  margin-left: 1em;
+  margin-right: 1em;
+  padding: 0.25em;
+
+  A, BUTTON {
+    height: 1.5rem;
+  }
+}
+
+/* page buttons */
+
+.page_button {
+  @include button;
+
+  display: inline;
+
+  P {
+    display: initial;
+  }
+  .page_button_link {
+    text-decoration: none;
+  }
+}
+
+.cur_page_button {
+  @include button;
+
+  display: inline;
+  background: darken($focus_color, 10%);
+
+  P {
+    display: initial;
+  }
+
+  .cur_page_button_link {
+    font-weight: bold;
+  }
+}
+
+.page_buttons {
+  display: flex;
+  justify-content: center;
+}
+
+/* chapter page */
+
+.storytext {
+  margin-left: 4em;
+  margin-right: 4em;
+}
+
+.storysummarylink {
+  @include button;
+
+  display: inline-block;
+  margin-left: 4em;
+  margin-top: 2em;
+  margin-bottom: 0em;
+}
+
+/* chapter index */
+
+.chapter_index_list {
+  @include alternating-list(li);
+
+  list-style-type: none;
+  padding: initial;
+
+  li {
+    text-align: left;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 1em;
+    border: 1px solid $feature_color;
+  }
+
+  A {
+    color: $text_color;
+  }
+}
+
+/* publisher */
+
+.publisher_title {
+  margin-left: 0.5em;
+}
+
+.publisher_section {
+
+  @include box;
+
+  padding-left: 1em;
+  padding-right: 1em;
+  padding-top: 1px;
+  margin-top: 1.25em;
+  margin-bottom: 1.25em;
+}
+
+.publisher_statistics {
+  padding-bottom: 1.25em;
+}
+
+.publisher_quicklinks {
+  padding-top: 15px;
+  padding-bottom: 15px;
+
+  A {
+    text-decoration: none;
+    color: black;
+    background: $focus_color;
+    border: 1px solid gray;
+    border-radius: 0.3125em;
+    margin-right: 15px;
+    padding: 6px;
+  }
+}
+
+.publisher_categories {
+  .categories {
+    border: none;
+  }
+
+  H2 {
+    color: $text_color;
+    width: 100%;
+    border-bottom: 1px solid $text_color;
+    margin-bottom: 0px;
+    display: flex;
+  }
+}
+
+/* category long list */
+
+.categories {
+  @include box;
+
+  * {
+    display: inline;
+    padding-top: 1px;
+    padding-bottom: 1px;
+  }
+}
+
+.category_long_list {
+  columns: 2;
+  -webkit-columns: 2;
+  -moz-columns: 2;
+  padding-left: initial;
+  display: inline-block;
+
+  LI {
+    display: block;
+    list-style: none;
+  }
+}
+
+.category_list_story_count {
+  color: gray;
+}
+
+.category_list_quicknav_links {
+  @include box;
+
+  padding: 0.625em;
+  padding-left: 2.5em;
+}
+
+/* category page */
+
+.category_story_count {
+  margin-left: 1em;
+  margin-bottom: -0.625em;
+  display: inline;
+}
+
+/* index page */
+
+.index_title, .index_explanation {
+  margin-left: 2rem;
+  margin-right: 2rem;
+  text-align: center;
+}
+
+.publisher_list {
+  UL {
+    list-style: none;
+    display: block;
+    columns: 2;
+    -webkit-columns: 2;
+    -moz-columns: 2;
+    padding: 0em;
+  }
+
+  LI {
+    display: inline;
+  }
+
+  .publisher_div_link {
+    text-decoration: none;
+    color: black;
+  }
+
+  .publisher {
+    @include box;
+
+    display: inline-block;
+    padding: initial;
+    padding-left: 1.25em;
+    padding-bottom: 1.25em;
+    margin-left: 2rem;
+    margin-right: 2rem;
+    border-radius: 0.625em;
+    width: 90%;
+    overflow-wrap: anywhere;
+  }
+}
+
+
+.publisher_name {
+  font-weight: bolder;
+  font-size: 150%;
+  border-bottom: 1px dotted black;
+  width: fit-content;
+}
+
+.publisher_num_categories, .publisher_num_stories {
+  display: inline;
+  margin: 0.625em;
+  color: #353535;
+}
+
+/* statistics */
+
+.statstable {
+  @include alternating_list(TR);
+
+  width: 90%;
+  padding: 1px;
+  margin: auto;
+  background: gray;
+
+  TH {
+    text-align: left;
+  }
+
+  TD {
+  text-align: right;
+  }
+}
+
+.stats_back_link {
+  @include button;
+
+  padding: 0.5em;
+  margin-left: 1.25em
+}
+
+.storyupdatechart-container {
+  margin-top: 1rem;
+  margin-left: 2em;
+  margin-right: 2em;
+}
+
+/* search */
+
+#search_input_div {
+  margin-bottom: 0.625em;
+  overflow: visible;
+}
+
+#toggle_search_input_button {
+  @include button;
+
+  padding: initial;
+  margin: revert;
+  width: 100%;
+  font-weight: bold;
+}
+
+.search_input_content {
+  display: none;
+}
+
+#search_button {
+  @include button;
+
+  float: right;
+  margin: auto;
+  height: 2.125em;
+  font-size: 110%;
+  padding: 0.25em;
+  padding-left: 2.5em;
+  padding-right: 2.5em;
+}
+
+#statusdiv {
+  display: inline-block;
+  background: $focus_color;
+  width: 30%;
+  text-align: center;
+  margin: 0.25em;
+  padding: 0.25em;
+  padding-left: 2.5em;
+  padding-right: 2.5em;
+  margin: 0.25em;
+}
+
+#statusdiv P {
+  display: inline;
+  font-size: 110%;
+}
+
+.search_input_list {
+  display: block;
+  list-style: none;
+  columns: 2;
+  -webkit-columns: 2;
+  -moz-columns: 2;
+
+  LI {
+    width: 90%;
+    page-break-inside: avoid;
+  }
+}
+
+.search_field_div {
+  DIV:not(.autocomplete *) {
+    display: inline;
+  }
+
+  LABEL {
+    width: 100%;
+  }
+
+  INPUT {
+    width: 100%;
+  }
+}
+
+
+.search_criteria {
+  display: initial;
+  border: 1px solid $feature_color;
+  padding: 0.125em;
+  margin: 0.125em;
+  width: fit-content;
+}
+
+.search_field_list {
+  list-style: none;
+}
+
+.search_field_list LI {
+  display: block;
+  width: 100%;
+}
+
+.criteria_buttons {
+  text-align: right;
+  float: right;
+}
+
+#search_sort_select_label {
+}
+
+#search_sort_select {
+  width: 100%;
+}
+
+.criteria_buttons {
+  height: 100%;
+  width: fit-content;
+  margin: 0px;
+  padding: 0px;
+}
+
+.include_button, .remove_button, .implied_button {
+  @include button;
+
+  border-radius: 0;
+  border: 1px solid black;
+  margin: 0px;
+  padding: revert;
+  background-color: lightgray;
+  height: 100%;
+  font-size: 100%;
+}
+
+.remove_button {
+  color: red;
+  font-weight: bolder;
+}
+
+/* author */
+.author_org_link_div .external_link {
+    margin-left: 1em;
+}
+
+/* info page */
+.infotitle {
+  margin-left: 2rem;
+}
+
+.infobullet {
+  @include box;
+
+  margin: 1em;
+  margin-left: 2rem;
+  margin-right: 2rem;
+  border-radius: 1.5em;
+  padding: 1em;
+  margin-bottom: 1em;
+
+  h2 {
+    margin-top: 0em;
+  }
+}
+
+.info_back_link {
+  @include button;
+
+  border-radius: 0.3125em;
+  padding: 0.5em;
+  margin-left: 4em;
+}
+
+/* acknowledgement page */
+.acknowledgement {
+  @include box;
+
+  border-radius: 1.5em;
+  padding: 1em;
+  margin-bottom: 1em;
+
+   h2 {
+    margin-top: 0em;
+  }
+
+  .license {
+    background: $focus_color;
+    padding: 0.8em;
+    padding-top: 0.05em;
+    border-radius: 0.5em;
+  }
+}
+
+/* css code for autocomplete from https://www.w3schools.com/howto/howto_js_autocomplete.asp */
+
+.autocomplete {
+  position: relative;
+  display: inline-block;
+  flex-wrap: nowrap;
+}
+
+.autocomplete-items {
+  position: absolute;
+  border: 1px solid #d4d4d4;
+  border-bottom: none;
+  border-top: none;
+  z-index: 99;
+  /*position the autocomplete items to be the same width as the container:*/
+  top: 100%;
+  left: 0;
+  right: 0;
+}
+.autocomplete-items div {
+  padding: 0.625em;
+  cursor: pointer;
+  background-color: #fff;
+  border-bottom: 1px solid #d4d4d4;
+  /*! display: initial; */
+}
+.autocomplete-items div:hover {
+  /*when hovering an item:*/
+  background-color: #e9e9e9;
+}
+.autocomplete-active {
+  /*when navigating through the items using the arrow keys:*/
+  background-color: DodgerBlue !important;
+  color: #ffffff;
+}
+
+/* mobile */
+
+@media only screen and (max-width: 920px) {
+  HR {
+    margin: 2em;
+    margin-left: 4em;
+    margin-right: 4em;
+  }
+
+  H1 {
+    font-size: 150%;
+    text-align: center;
+    margin-left: initial;
+  }
+
+  .index_title {
+    font-size: 150%;
+  }
+
+  .index_explanation {
+    P {
+      text-align: center;
+    }
+  }
+
+  .story_summary {
+    &:not(.story_list_page_item .story_summary) {
+      padding: 0.4em;
+      margin: initial;
+      margin-left: initial;
+      margin-right: initial;
+    }
+  }
+
+  .category_long_list {
+    columns: 1;
+    -webkit-columns: 1;
+    -moz-columns: 1;
+  }
+
+  .category_list_title {
+    text-align: center;
+  }
+
+  .category_list_quicknav_links {
+    font-size: large;
+    padding-left: initial;
+
+    a {
+      padding: 0.25em;
+    }
+  }
+
+  .search_input_list {
+    columns: 1;
+    -webkit-columns: 1;
+    -moz-columns: 1;
+  }
+
+  #statusdiv {
+    display: block;
+    width: auto;
+  }
+
+  #search_button {
+    display: block;
+    float: none;
+    width: calc(100% - 0.5em);
+    width: -webkit-calc(100% - 0.5em);
+    width: -moz-calc(100% - 0.5em);
+  }
+
+  .publisher_list {
+    UL {
+      columns: 1;
+      -webkit-columns: 1;
+      -moz-columns: 1;
+    }
+
+    LI {
+      display: inline-block;
+      width: 100%;
+    }
+
+    .publisher_div_link {
+      display: flex;
+      width: 100%;
+    }
+
+    .publisher {
+      margin-left: 1rem;
+      margin-right: 1rem;
+      box-sizing: border-box;
+      width: 100%;
+    }
+  }
+
+  .publisher_quicklinks {
+    A {
+      display: block;
+      margin-top: 0.5em;
+    }
+  }
+
+  .publisher_section {
+    H2 {
+      display: block;
+      text-align: center;
+    }
+  }
+
+  .storytext {
+    font-size: 120%;
+    margin-left: 1em;
+    margin-right: 1em;
+  }
+
+  .storysummarylink {
+    display: flex;
+    margin-left: initial;
+  }
+
+  .storyupdatechart-container {
+    margin-left: initial;
+    margin-right: initial;
+  }
+
+  .infotitle {
+    margin-left: initial;
+  }
+}
+
+/* for even smaller screens, mainly smartphones in portrait mode */
+
+@media only screen and (max-width: 414px) {
+  .nav {
+    padding-left: initial;
+    justify-content: center;
+    text-align: center;
+  }
+}

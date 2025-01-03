@@ -1,4 +1,4 @@
-{# This is a page for list of categories in/by a publisher. Expects "to_root", "categories", "title", "startletters", "startletters_first_occurrences", "cur_page" and "num_pages" as arguments #}
+{# This is a page for list of categories in/by a publisher. Expects "to_root", "publisher", "categories", "title", "startletters", "startletters_first_occurrences", "cur_page" and "num_pages" as arguments #}
 {% extends "base.html.jinja" %}
 
 {% block title %}
@@ -6,8 +6,9 @@
 {% endblock %}
 
 {% block content %}
+    <H1 class="publisher_title">{{ publisher.name }}</H1>
     <DIV class="category_list_quicknav">
-        <H2>Navigation</H2>
+        <H2 class="category_list_title">Navigation</H2>
         <DIV class="category_list_quicknav_links">
             {% for first_occurrence in startletters_first_occurrences %}
                 <A href="{{ first_occurrence[1] }}">{{ first_occurrence[0] }}</A>
@@ -18,7 +19,9 @@
         </DIV>
     </DIV>
     <DIV class="category_list_page_content">
-        {% include "category_long_list.html.jinja" %}
+        {% with to_root=to_root, title=title, categories=categories %}
+            {% include "category_long_list.html.jinja" %}
+        {% endwith %}
     </DIV>
     {% with num_pages=num_pages, cur_page=cur_page, labels=startletters, to_root=to_root %}
         {% include "pagebuttons.html.jinja" %}

@@ -21,7 +21,9 @@ import contextlib
 import math
 import pdb
 import signal
+import pathlib
 
+from scss.compiler import Compiler as ScssCompiler
 from sqlalchemy import select, func, distinct
 from sqlalchemy.orm import Session
 from libzim.writer import Creator, Item, StringProvider, FileProvider, Hint
@@ -35,7 +37,8 @@ try:
 except ImportError:
     setproctitle = None
 
-from ..util import format_timedelta, format_size, get_resource_file_path, format_number, set_or_increment
+from ..util import get_package_dir, get_resource_file_path, set_or_increment
+from ..util import format_timedelta, format_size, format_number
 from ..db.models import Story, Author, Series, Publisher, StoryTagAssociation, StoryCategoryAssociation
 from ..db.unique import set_unique_enabled
 from ..reporter import StdoutReporter
@@ -280,7 +283,16 @@ class StylesheetItem(Item):
         return "text/css"
 
     def get_contentprovider(self):
-        return FileProvider(get_resource_file_path("style.css"))
+        path = get_resource_file_path("style.scss")
+        with open(path, "r") as fin:
+            scss = fin.read()
+        compiler = ScssCompiler(
+            root=pathlib.Path(get_package_dir()),
+            search_path=["resources"],
+            live_errors=False,  # raise exception when compilation fails
+        )
+        css = compiler.compile_string(scss)
+        return StringProvider(css)
 
     def get_hints(self):
         return {
