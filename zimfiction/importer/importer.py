@@ -53,13 +53,13 @@ def import_from_fs(fs, session, ignore_errors=False, limit=None, force_publisher
         with fs.open(path, **open_kwargs) as fin:
             try:
                 if path.endswith(".txt"):
-                    raw = parse_txt_story(session, fin)
+                    raw = parse_txt_story(fin)
                 elif path.endswith(".html"):
-                    raw = parse_html_story(session, fin)
+                    raw = parse_html_story(fin)
                 elif path.endswith(".epub"):
-                    raw = parse_epub_story(session, fin)
+                    raw = parse_epub_story(fin)
                 elif path.endswith(".json"):
-                    raw = parse_json_story(session, fin)
+                    raw = parse_json_story(fin)
                 else:
                     raise ValueError("Don't know how to parse '{}'!".format(path))
                 story = raw.to_story(session=session, force_publisher=force_publisher)

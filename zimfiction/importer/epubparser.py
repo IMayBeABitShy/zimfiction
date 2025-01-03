@@ -164,12 +164,10 @@ def convert_epub(path):
     return story
 
 
-def parse_epub_story(session, fin):
+def parse_epub_story(fin):
     """
     Parse a story in epub format.
 
-    @param session: sqlalchemy session to use
-    @type session: L{sqlalchemy.orm.Session}
     @param fin: file-like object to read
     @type fin: file-like
     @return: the raw story

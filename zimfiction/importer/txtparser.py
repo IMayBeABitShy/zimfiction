@@ -13,12 +13,10 @@ from ..exceptions import ParseError
 CHAPTER_TITLE_REGEX = re.compile(r"\t[0-9]+\. .+")
 
 
-def parse_txt_story(session, fin):
+def parse_txt_story(fin):
     """
     Parse a story in txt/markdown format.
 
-    @param session: sqlalchemy session to use
-    @type session: L{sqlalchemy.orm.Session}
     @param fin: file-like object to read or text to parse
     @type fin: file-like or L{str}
     @return: the raw story

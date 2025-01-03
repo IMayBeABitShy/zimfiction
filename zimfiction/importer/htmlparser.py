@@ -25,12 +25,10 @@ def _is_chapter_a(tag):
     return (tag.name.lower() == "a") and tag.has_attr("name") and tag["name"].startswith("section")
 
 
-def parse_html_story(session, fin):
+def parse_html_story(fin):
     """
     Parse a story in html format.
 
-    @param session: sqlalchemy session to use
-    @type session: L{sqlalchemy.orm.Session}
     @param fin: file-like object to read
     @type fin: file-like
     @return: the raw story
