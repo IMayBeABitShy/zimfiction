@@ -360,6 +360,8 @@ HR {
 
 .index_title, .index_explanation {
   margin-left: 2rem;
+  margin-right: 2rem;
+  text-align: center;
 }
 
 .publisher_list {
@@ -375,26 +377,27 @@ HR {
   LI {
     display: inline;
   }
+
+  .publisher_div_link {
+    text-decoration: none;
+    color: black;
+  }
+
+  .publisher {
+    @include box;
+
+    display: inline-block;
+    padding: initial;
+    padding-left: 1.25em;
+    padding-bottom: 1.25em;
+    margin-left: 2rem;
+    margin-right: 2rem;
+    border-radius: 0.625em;
+    width: 90%;
+    overflow-wrap: anywhere;
+  }
 }
 
-.publisher {
-  @include box;
-
-  display: inline-block;
-  padding: initial;
-  padding-left: 1.25em;
-  padding-bottom: 1.25em;
-  margin-left: 2rem;
-  margin-right: 2rem;
-  border-radius: 0.625em;
-  width: 90%;
-  overflow-wrap: anywhere;
-}
-
-.publisher_div_link {
-  text-decoration: none;
-  color: black;
-}
 
 .publisher_name {
   font-weight: bolder;
@@ -679,6 +682,12 @@ HR {
     font-size: 150%;
   }
 
+  .index_explanation {
+    P {
+      text-align: center;
+    }
+  }
+
   .story_summary {
     &:not(.story_list_page_item .story_summary) {
       padding: 0.4em;
@@ -732,11 +741,23 @@ HR {
       -webkit-columns: 1;
       -moz-columns: 1;
     }
-  }
 
-  .publisher {
-    margin-left: 1rem;
-    margin-right: 1rem;
+    LI {
+      display: inline-block;
+      width: 100%;
+    }
+
+    .publisher_div_link {
+      display: flex;
+      width: 100%;
+    }
+
+    .publisher {
+      margin-left: 1rem;
+      margin-right: 1rem;
+      box-sizing: border-box;
+      width: 100%;
+    }
   }
 
   .publisher_quicklinks {
@@ -771,5 +792,15 @@ HR {
 
   .infotitle {
     margin-left: initial;
+  }
+}
+
+/* for even smaller screens, mainly smartphones in portrait mode */
+
+@media only screen and (max-width: 414px) {
+  .nav {
+    padding-left: initial;
+    justify-content: center;
+    text-align: center;
   }
 }
