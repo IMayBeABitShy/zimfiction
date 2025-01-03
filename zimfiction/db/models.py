@@ -16,6 +16,7 @@ from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from ..util import format_date, format_number
+from ..implication import ImplicationLevel
 from .unique import UniqueMixin
 
 
@@ -175,13 +176,13 @@ Index("category_name_index", Category.publisher_uid, Category.name, unique=True)
 
 class StoryCategoryAssociation(Base):
     """
-    A model for the association story<->category providing the "implied" attribute.
+    A model for the association story<->category providing the "implication_level" attribute.
     """
     __tablename__ = "story_has_category"
 
     story_uid = Column(Integer, primary_key=True)
     category_uid = Column(Integer, primary_key=True)
-    implied = Column(Boolean, default=False, nullable=False)
+    implied = Column(Integer, default=ImplicationLevel.UNKNOWN, nullable=False)
 
     story = relationship(
         "Story",
@@ -204,21 +205,21 @@ class StoryCategoryAssociation(Base):
         ),
     )
 
-    def __init__(self, category, implied=False):
+    def __init__(self, category, implication_level=ImplicationLevel.UNKNOWN):
         """
         The default constructor.
 
         @param category: category this association is for
         @type category: L{Category}
-        @param implied: whether this category is implied or not
-        @type implied: L{bool}
+        @param implication_level: implication level of this story/category association
+        @type implication_level: L{zimfiction.implication.ImplicationLevel}
         """
         assert isinstance(category, Category)
-        assert isinstance(implied, bool)
+        assert isinstance(implied, ImplicationLevel)
         self.category = category
-        self.implied = implied
+        self.implication_level = implication_level
 
-Index("category_implied_index", StoryCategoryAssociation.category_uid, StoryCategoryAssociation.implied)
+Index("category_implied_index", StoryCategoryAssociation.category_uid, StoryCategoryAssociation.implication_level)
 Index("story_to_category_index", StoryCategoryAssociation.story_uid)
 
 
@@ -260,14 +261,14 @@ Index("tag_name_index", Tag.type, Tag.name)
 class StoryTagAssociation(Base):
     """
     A model for the association of story->tag, providing the "index"
-    attribute for order and the "implied" attribute.
+    attribute for order and the "implication_level" attribute.
     """
     __tablename__ = "story_has_tag"
 
     story_uid = Column(Integer, autoincrement=False, primary_key=True)
     tag_uid = Column(Integer, primary_key=True)
     index = Column(Integer, autoincrement=False)
-    implied = Column(Boolean, default=False, nullable=False)
+    implied = Column(Integer, default=ImplicationLevel.UNKNOWN, nullable=False)
 
     story = relationship(
         "Story",
@@ -290,7 +291,7 @@ class StoryTagAssociation(Base):
         ),
     )
 
-    def __init__(self, tag, index=None, implied=False):
+    def __init__(self, tag, index=None, implication_level=ImplicationLevel.UNKNOWN):
         """
         The default constructor.
 
@@ -298,20 +299,20 @@ class StoryTagAssociation(Base):
         @type tag: L{Tag}
         @param index: index of this tag
         @type index: L{int} or L{None}
-        @param implied: wheteher this tag is implied or not
-        @type implied: L{bool}
+        @param implication_level: implication level of this story/tag association
+        @type implication_level: L{zimfiction.implication.ImplicationLevel}
         """
         assert isinstance(tag, Tag)
         assert isinstance(index, int) or (index is None)
-        assert isinstance(implied, bool)
+        assert isinstance(implication_level, ImplicationLevel)
         self.tag = tag
         if index is None:
             self.index = 0
         else:
             self.index = index
-        self.implied = implied
+        self.implication_level = implication_level
 
-Index("tag_implied_index", StoryTagAssociation.tag_uid, StoryTagAssociation.implied)
+Index("tag_implied_index", StoryTagAssociation.tag_uid, StoryTagAssociation.implication_level)
 Index("story_to_tag_index", StoryTagAssociation.story_uid)
 
 
@@ -500,7 +501,7 @@ class Story(Base):
         @return: a list of all implied categories
         @rtype: L{list} of L{Category}
         """
-        return [c_a.category for c_a in self.category_associations if c_a.implied]
+        return [c_a.category for c_a in self.category_associations if c_a.implication_level >= ImplicationLevel.MIN_IMPLIED]
 
     @property
     def explicit_categories(self):
@@ -510,7 +511,7 @@ class Story(Base):
         @return: a list of all non-implied categories
         @rtype: L{list} of L{Category}
         """
-        return [c_a.category for c_a in self.category_associations if not c_a.implied]
+        return [c_a.category for c_a in self.category_associations if not c_a.implication_level >= ImplicationLevel.MIN_IMPLIED]
 
     @property
     def implied_tags(self):
@@ -520,7 +521,7 @@ class Story(Base):
         @return: a list of all implied tags, regardless of type
         @rtype: L{list} of L{Tag}
         """
-        return [t_a.tag for t_a in self.tag_associations if t_a.implied]
+        return [t_a.tag for t_a in self.tag_associations if t_a.implication_level >= ImplicationLevel.MIN_IMPLIED]
 
     @property
     def explicit_tags(self):
@@ -530,7 +531,7 @@ class Story(Base):
         @return: a list of all non-implied tags, regardless of type
         @rtype: L{list} of L{Tag}
         """
-        return [t_a.tag for t_a in self.tag_associations if not t_a.implied]
+        return [t_a.tag for t_a in self.tag_associations if t_a.implication_level < ImplicationLevel.MIN_IMPLIED]
 
     @property
     def warnings(self):
