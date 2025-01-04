@@ -438,6 +438,27 @@ def repair_html(html):
     return html
 
 
+def chunked(iterable, n):
+    """
+    Split an iterable into multiple lists, each containing at most n elements.
+
+    @param iterable: iterable to split
+    @type iterable: iterable
+    @param n: number of elements each list should have at most
+    @type n: L{int}
+    @return: a generator yielding lists, each a chunk of the input data
+    @rtype: generator yielding L{list}
+    """
+    current = []
+    for element in iterable:
+        current.append(element)
+        if len(current) >= n:
+            yield current
+            current = []
+    if current:
+        yield current
+
+
 if __name__ == "__main__":
     # test code
     val = int(input("n: "))

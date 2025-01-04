@@ -55,10 +55,10 @@ def run_import(ns):
         for directory in ns.directories:
             if ns.verbose:
                 print("Importing from: ", directory)
-            fs = open_fs(directory)
             import_from_fs(
-                fs,
+                directory,
                 session,
+                workers=ns.workers,
                 ignore_errors=ns.ignore_errors,
                 limit=ns.limit,
                 force_publisher=ns.force_publisher,
@@ -186,6 +186,13 @@ def main():
         action="store_true",
         dest="remove",
         help="Remove imported fics",
+    )
+    import_parser.add_argument(
+        "--workers",
+        action="store",
+        type=int,
+        default=0,
+        help="Number of workers to use for import. May not be available with all filesystems.",
     )
     import_parser.add_argument(
         "directories",

@@ -41,10 +41,10 @@ def parse_html_story(fin):
     # find title, author
     title_h = soup.find("h1")
     title_a = title_h.find("a")
-    title = title_a.string
+    title = str(title_a.string)
     story_link = title_a["href"]
     author_a = title_h.find(class_="authorlink")
-    author = author_a.string
+    author = str(author_a.string)
     header["Author URL"] = author_a["href"]
     # metadata
     meta_table = soup.find("table")
@@ -60,7 +60,7 @@ def parse_html_story(fin):
     # --- chapters ---
     chapters = []
     for a in soup.find_all(_is_chapter_a):
-        chapter_title = a.next.next
+        chapter_title = str(a.next.next)
         chapter_i = int(a["name"].replace("section", ""))
         chapter_content = a.next_sibling.next_sibling
         chapter_text = html2text.html2text(str(chapter_content))
