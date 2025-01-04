@@ -10,6 +10,7 @@ from ..reporter import BaseReporter, VoidReporter
 from ..zimbuild.buckets import BucketMaker
 from ..util import normalize_category, normalize_relationship
 
+from .implicationlevel import ImplicationLevel
 from .finder import ImplicationFinder
 from .relationships import RelationshipCharactersFinder
 from .ao3dumpfinder import Ao3MergerFinder
@@ -67,13 +68,13 @@ class Implicator(object):
         # tags
         stmt = (
             delete(StoryTagAssociation)
-            .where(StoryTagAssociation.implied == True)
+            .where(StoryTagAssociation.implication_level >= ImplicationLevel.MIN_IMPLIED)
         )
         self.session.execute(stmt)
         # categories
         stmt = (
             delete(StoryCategoryAssociation)
-            .where(StoryCategoryAssociation.implied == True)
+            .where(StoryCategoryAssociation.implication_level >= ImplicationLevel.MIN_IMPLIED)
         )
         self.session.execute(stmt)
 
