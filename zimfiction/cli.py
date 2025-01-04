@@ -11,8 +11,6 @@ except Exception:
     multiprocessing = None
 
 from sqlalchemy.orm import Session
-from fs import open_fs
-
 
 from .reporter import StdoutReporter, VoidReporter
 from .importer.importer import import_from_fs

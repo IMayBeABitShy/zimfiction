@@ -8,7 +8,7 @@ from ..db.models import Story, StoryCategoryAssociation, StoryTagAssociation, Ta
 from ..db.models import  MAX_STORY_TAG_LENGTH, MAX_CATEGORY_NAME_LENGTH
 from ..reporter import BaseReporter, VoidReporter
 from ..zimbuild.buckets import BucketMaker
-from ..util import normalize_category, normalize_relationship
+from ..normalize import normalize_category, normalize_relationship
 
 from .implicationlevel import ImplicationLevel
 from .finder import ImplicationFinder

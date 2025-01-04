@@ -9,7 +9,7 @@ A relationship A/B/C will imply:
 import itertools
 
 from .finder import ImplicationFinder
-from ..util import normalize_relationship
+from ..normalize import normalize_relationship
 from .implicationlevel import ImplicationLevel
 
 

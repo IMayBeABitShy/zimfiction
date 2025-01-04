@@ -3,7 +3,8 @@ This module contains classes for raw (non-db) stories.
 """
 import datetime
 
-from ..util import count_words, add_to_dict_list, normalize_category, normalize_relationship, remove_duplicates
+from ..util import count_words, add_to_dict_list, remove_duplicates
+from ..normalize import normalize_category, normalize_relationship
 from ..db.models import Chapter, Story, Author, Category, Tag, Series, Publisher
 from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation
 from ..implication.implicationlevel import ImplicationLevel

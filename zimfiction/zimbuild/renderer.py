@@ -16,7 +16,8 @@ try:
 except ImportError:
     minify_html = None
 
-from ..util import format_size, format_number, normalize_tag, get_resource_file_path, repair_html
+from ..util import format_size, format_number, get_resource_file_path, repair_html
+from ..normalize import normalize_tag
 from ..statistics import StoryListStatCreator
 from .buckets import BucketMaker
 from .search import SearchMetadataCreator
