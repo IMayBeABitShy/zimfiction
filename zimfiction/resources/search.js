@@ -809,7 +809,7 @@ function autocomplete(inp, arr) {
         var a, b, i, val = this.value;
         /*close any already open lists of autocompleted values*/
         closeAllLists();
-        if (!val) { return false;}
+        // if (!val) { return false;}  // skip this as we want to show completions for empty strings
         currentFocus = -1;
         /*create a DIV element that will contain the items (values):*/
         a = document.createElement("DIV");
@@ -845,6 +845,12 @@ function autocomplete(inp, arr) {
                previews_created += 1;
             }
         }
+    });
+    /* fire an empty input event anytime someone selects the input field */
+    inp.addEventListener("click", function(e) {
+        e.stopPropagation();
+        var event = new InputEvent("input");
+        inp.dispatchEvent(event);
     });
     /*execute a function presses a key on the keyboard:*/
     inp.addEventListener("keydown", function(e) {
