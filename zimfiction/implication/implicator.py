@@ -16,6 +16,7 @@ from .relationships import RelationshipCharactersFinder
 from .ao3dumpfinder import Ao3MergerFinder
 from .ao3generalizer import Ao3GeneralizationFinder
 from .exclamationtagfinder import ExclamationTagFinder
+from .crossover import CrossoverFinder
 
 
 STORIES_PER_QUERY = 1000
@@ -158,6 +159,7 @@ def get_default_implicator(session, ao3_merger_path=None):
     if ao3_merger_path is not None:
         finders.append(Ao3MergerFinder(ao3_merger_path))
     finders.append(Ao3GeneralizationFinder())
+    finders.append(CrossoverFinder())
     implicator = Implicator(
         session,
         finders=finders,
