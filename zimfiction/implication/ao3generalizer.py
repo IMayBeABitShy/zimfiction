@@ -46,7 +46,7 @@ class Ao3GeneralizationFinder(ImplicationFinder):
             min_implication_level = min_implication_levels[category_key]
             # find the appropiate implication level
             if min_implication_level < ImplicationLevel.MIN_IMPLIED:
-                # deduced from a non-impleid source
+                # deduced from a non-implied source
                 implication_level = ImplicationLevel.STRONGLY_DEDUCED
             else:
                 # deduced from an implied source

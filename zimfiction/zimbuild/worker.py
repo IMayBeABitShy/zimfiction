@@ -524,7 +524,7 @@ class Worker(object):
             select(func.count(StoryTagAssociation.story_uid))
             .where(
                 StoryTagAssociation.tag_uid == task.uid,
-                StoryTagAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
+                StoryTagAssociation.implication_level <= ImplicationLevel.MAX_LIST_INCLUDE,
             )
         )
         n_stories_in_tag = self.session.execute(count_stmt).scalar_one()
@@ -537,7 +537,7 @@ class Worker(object):
                 Story.tag_associations.any(
                     and_(
                         StoryTagAssociation.tag_uid == task.uid,
-                        StoryTagAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
+                        StoryTagAssociation.implication_level <= ImplicationLevel.MAX_LIST_INCLUDE,
                     )
                 ),
             )
@@ -591,7 +591,7 @@ class Worker(object):
                 and_(
                     StoryTagAssociation.story_uid == Story.uid,
                     StoryTagAssociation.tag_uid == task.uid,
-                    StoryTagAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
+                    StoryTagAssociation.implication_level <= ImplicationLevel.MAX_LIST_INCLUDE,
                 )
             )
             .join(
@@ -669,7 +669,7 @@ class Worker(object):
             select(func.count(StoryCategoryAssociation.story_uid))
             .where(
                 StoryCategoryAssociation.category_uid == task.uid,
-                StoryCategoryAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
+                StoryCategoryAssociation.implication_level <= ImplicationLevel.MAX_LIST_INCLUDE,
             )
         )
         n_stories_in_category = self.session.execute(count_stmt).scalar_one()
@@ -682,7 +682,7 @@ class Worker(object):
                 Story.category_associations.any(
                     and_(
                         StoryCategoryAssociation.category_uid == task.uid,
-                        StoryCategoryAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
+                        StoryCategoryAssociation.implication_level <= ImplicationLevel.MAX_LIST_INCLUDE,
                     )
                 ),
             )
@@ -718,7 +718,7 @@ class Worker(object):
                 and_(
                     StoryCategoryAssociation.story_uid == Story.uid,
                     StoryCategoryAssociation.category_uid == task.uid,
-                    StoryCategoryAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
+                    StoryCategoryAssociation.implication_level <= ImplicationLevel.MAX_LIST_INCLUDE,
                 )
             )
             .join(
@@ -810,7 +810,7 @@ class Worker(object):
                 StoryCategoryAssociation,
                 and_(
                     Category.uid == StoryCategoryAssociation.category_uid,
-                    StoryCategoryAssociation.implication_level < ImplicationLevel.MIN_IMPLIED,
+                    StoryCategoryAssociation.implication_level <= ImplicationLevel.MAX_LIST_INCLUDE,
                 ),
             )
             .where(

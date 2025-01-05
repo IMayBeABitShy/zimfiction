@@ -511,7 +511,17 @@ class Story(Base):
         @return: a list of all non-implied categories
         @rtype: L{list} of L{Category}
         """
-        return [c_a.category for c_a in self.category_associations if not c_a.implication_level >= ImplicationLevel.MIN_IMPLIED]
+        return [c_a.category for c_a in self.category_associations if c_a.implication_level < ImplicationLevel.MIN_IMPLIED]
+
+    @property
+    def visible_categories(self):
+        """
+        A list of all categories that should be shown in UIs.
+
+        @return: a list of all visible categories
+        @rtype: L{list} of L{Category}
+        """
+        return [c_a.category for c_a in self.category_associations if c_a.implication_level <= ImplicationLevel.MAX_SHOW]
 
     @property
     def implied_tags(self):
@@ -534,6 +544,16 @@ class Story(Base):
         return [t_a.tag for t_a in self.tag_associations if t_a.implication_level < ImplicationLevel.MIN_IMPLIED]
 
     @property
+    def visible_tags(self):
+        """
+        A list of all tags that should be shown in UIs.
+
+        @return: a list of all visible tags, regardless of type
+        @rtype: L{list} of L{Tag}
+        """
+        return [t_a.tag for t_a in self.tag_associations if t_a.implication_level <= ImplicationLevel.MAX_SHOW]
+
+    @property
     def warnings(self):
         """
         A list of all explicit warning tags.
@@ -552,6 +572,16 @@ class Story(Base):
         @rtype: L{list} of L{Tag}
         """
         return [tag for tag in self.implied_tags if tag.type == "warning"]
+
+    @property
+    def visible_warnings(self):
+        """
+        A list of all visible warning tags.
+
+        @return: a list of all visible warning tags
+        @rtype: L{list} of L{Tag}
+        """
+        return [tag for tag in self.visible_tags if tag.type == "warning"]
 
     @property
     def genres(self):
@@ -574,6 +604,16 @@ class Story(Base):
         return [tag for tag in self.implied_tags if tag.type == "genre"]
 
     @property
+    def visible_genres(self):
+        """
+        A list of all visible genre tags.
+
+        @return: a list of all visible genre tags
+        @rtype: L{list} of L{Tag}
+        """
+        return [tag for tag in self.visible_tags if tag.type == "genre"]
+
+    @property
     def relationships(self):
         """
         A list of all relationship tags.
@@ -586,12 +626,22 @@ class Story(Base):
     @property
     def implied_relationships(self):
         """
-        A list of all relationship tags.
+        A list of all implied relationship tags.
 
         @return: a list of all implied relationship tags
         @rtype: L{list} of L{Tag}
         """
         return [tag for tag in self.implied_tags if tag.type == "relationship"]
+
+    @property
+    def visible_relationships(self):
+        """
+        A list of all visible relationship tags.
+
+        @return: a list of all visible relationship tags
+        @rtype: L{list} of L{Tag}
+        """
+        return [tag for tag in self.visible_tags if tag.type == "relationship"]
 
     @property
     def characters(self):
@@ -614,14 +664,34 @@ class Story(Base):
         return [tag for tag in self.implied_tags if tag.type == "character"]
 
     @property
+    def visible_characters(self):
+        """
+        A list of all visible character tags.
+
+        @return: a list of all visible character tags
+        @rtype: L{list} of L{Tag}
+        """
+        return [tag for tag in self.visible_tags if tag.type == "character"]
+
+    @property
     def ordered_tags(self):
         """
-        Return a list of all explicit tags, ordered by type to match ao3.
+        Return a list of all explicit tags, ordered by type to match ao3 order.
 
         @return: an ordered list of all tags
         @rtype: L{list} of L{Tag}
         """
         return self.warnings + self.relationships + self.characters + self.genres
+
+    @property
+    def ordered_visible_tags(self):
+        """
+        Return a list of all visible tags, ordered by type to match ao3 order.
+
+        @return: an ordered list of all visible tags
+        @rtype: L{list} of L{Tag}
+        """
+        return self.visible_warnings + self.visible_relationships + self.visible_characters + self.visible_genres
 
     @hybrid_property
     def total_words(self):
@@ -669,8 +739,8 @@ class Story(Base):
             "publisher": self.publisher.name,
             "id": self.id,
             "author": self.author.name,
-            "categories": [c.name for c in self.categories],
-            "tags": [(t.type, t.name) for t in self.ordered_tags],
+            "categories": [c.name for c in self.visible_categories],
+            "tags": [(t.type, t.name) for t in self.ordered_visible_tags],
             "updated": format_date(self.updated),
             "summary": self.summary,
             "language": self.language,

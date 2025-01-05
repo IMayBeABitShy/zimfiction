@@ -6,7 +6,7 @@
         {% if not extended %}
             <P class="story_updated_text">{{ story.updated|format_date }}</P>
             <DIV class="short_categories">
-                {% with categories=story.explicit_categories, to_root=to_root %}
+                {% with categories=story.visible_categories, to_root=to_root %}
                     {% include "categorylist.html.jinja" %}
                 {% endwith %}
             </DIV>
@@ -14,11 +14,11 @@
     </DIV>
     {% if extended %}
         <TABLE class="summary_meta">
-            {% if story.categories|length > 0 %}
+            {% if story.visible_categories|length > 0 %}
                 <TR>
                     <TH>Fandom</TH>
                     <TD>
-                        {% with categories=story.categories, to_root=to_root %}
+                        {% with categories=story.visible_categories, to_root=to_root %}
                             {% include "categorylist.html.jinja" %}
                         {% endwith %}
                     </TD>
@@ -64,41 +64,41 @@
                 <TH>Packaged</TH>
                 <TD>{{ story.packaged|format_date }}</TD>
             </TR>
-            {% if story.warnings|length > 0 %}
+            {% if story.visible_warnings|length > 0 %}
                 <TR>
                     <TH>Warnings</TH>
                     <TD>
-                        {% with to_root=to_root, tags=story.warnings %}
+                        {% with to_root=to_root, tags=story.visible_warnings %}
                             {% include "taglist.html.jinja" %}
                         {% endwith %}
                     </TD>
                 </TR>
             {% endif %}
-            {% if story.relationships|length > 0 %}
+            {% if story.visible_relationships|length > 0 %}
                 <TR>
                     <TH>Relationships</TH>
                     <TD>
-                        {% with to_root=to_root, tags=story.relationships %}
+                        {% with to_root=to_root, tags=story.visible_relationships %}
                             {% include "taglist.html.jinja" %}
                         {% endwith %}
                     </TD>
                 </TR>
             {% endif %}
-            {% if story.characters|length > 0 %}
+            {% if story.visible_characters|length > 0 %}
                 <TR>
                     <TH>Characters</TH>
                     <TD>
-                        {% with to_root=to_root, tags=story.characters %}
+                        {% with to_root=to_root, tags=story.visible_characters %}
                             {% include "taglist.html.jinja" %}
                         {% endwith %}
                     </TD>
                 </TR>
             {% endif %}
-            {% if story.genres|length > 0 %}
+            {% if story.visible_genres|length > 0 %}
                 <TR>
                     <TH>Tags</TH>
                     <TD>
-                        {% with to_root=to_root, tags=story.genres %}
+                        {% with to_root=to_root, tags=story.visible_genres %}
                             {% include "taglist.html.jinja" %}
                         {% endwith %}
                     </TD>
@@ -123,7 +123,7 @@
         </TABLE>
     {% else %}
         <DIV class="short_tags">
-            {% with to_root=to_root, tags=story.ordered_tags %}
+            {% with to_root=to_root, tags=story.ordered_visible_tags %}
                 {% include "taglist.html.jinja" %}
             {% endwith %}
         </DIV>
