@@ -15,15 +15,20 @@ class ImplicationLevel(IntEnum):
     Only explicit tags/... are shown in the UI, implied tags/... are mostly used to ensure that the search is more flexible.
 
     @var MIN_IMPLIED: implication levels above this value are considered implied.
+
     @var SOURCE: implication level of a tag/... directly from the source of the story
     @var UNKNOWN: implication level is unknown.
     @var DEDUCED: implication level indication that the tag was proceduraly deduced from existing tags
     @var MERGER: implication level indicating that this is the result of a tag merger
     @var MENTIONED: implication level indicating that this tag was mentioned in the story description
+    @var QUALIFIED: implication level indicating this tag was implied from a reliable source
+    @var STRONGLY_DEDUCED: implication level indicating that this tag was proceduarly deduced in such a way that it is pretty much guaranteed to be correct
     """
     MIN_IMPLIED = 100
     SOURCE = 0
+    QUALIFIED = 30
     MENTIONED = 50
     UNKNOWN = -1
+    STRONGLY_DEDUCED = 90;
     DEDUCED = 110
     MERGER = 150

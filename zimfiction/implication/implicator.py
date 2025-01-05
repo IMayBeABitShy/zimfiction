@@ -14,6 +14,7 @@ from .implicationlevel import ImplicationLevel
 from .finder import ImplicationFinder
 from .relationships import RelationshipCharactersFinder
 from .ao3dumpfinder import Ao3MergerFinder
+from .ao3generalizer import Ao3GeneralizationFinder
 from .exclamationtagfinder import ExclamationTagFinder
 
 
@@ -68,13 +69,13 @@ class Implicator(object):
         # tags
         stmt = (
             delete(StoryTagAssociation)
-            .where(StoryTagAssociation.implication_level >= ImplicationLevel.MIN_IMPLIED)
+            .where(StoryTagAssociation.implication_level > ImplicationLevel.SOURCE)
         )
         self.session.execute(stmt)
         # categories
         stmt = (
             delete(StoryCategoryAssociation)
-            .where(StoryCategoryAssociation.implication_level >= ImplicationLevel.MIN_IMPLIED)
+            .where(StoryCategoryAssociation.implication_level > ImplicationLevel.SOURCE)
         )
         self.session.execute(stmt)
 
@@ -156,6 +157,7 @@ def get_default_implicator(session, ao3_merger_path=None):
     finders.append(RelationshipCharactersFinder())
     if ao3_merger_path is not None:
         finders.append(Ao3MergerFinder(ao3_merger_path))
+    finders.append(Ao3GeneralizationFinder())
     implicator = Implicator(
         session,
         finders=finders,

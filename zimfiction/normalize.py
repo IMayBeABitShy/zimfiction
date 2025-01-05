@@ -84,3 +84,59 @@ def normalize_category(category):
     # done
     return category
 
+
+def get_ao3_category_base_name(name):
+    """
+    Get the base name of an ao3 category.
+
+    In ao3, categories/fandoms can be separated into multiple category "tags".
+    For example, there may be "foo", "foo (TV 2016)" "foo (Manga)",
+    "foo - All Media Types", "foo & Related Fandoms - All Media Types".
+    All these categories are slightly different, but we we want to get
+    the base name (i.e. "foo") from them.
+
+    @param name: name of category to get base name from
+    @type name: L{str}
+    @return: the base name
+    @rtype: L{str}
+    """
+    name = name.strip()
+    had_parentheses = False
+    while True:
+        if name.endswith("- All Media Types"):
+            name = name.replace("- All Media Types", "").strip()
+        elif name.endswith("& Related Fandoms"):
+            name = name.replace("& Related Fandoms", "").strip()
+        elif name.endswith("- Fandom"):
+            name = name.replace("- Fandom", "").strip()
+        elif name.endswith(")") and ("(" in name):
+            pos = name.rfind("(")
+            name = name[:pos].strip()
+            had_parentheses = True
+        elif ("- " in name) and (not had_parentheses):
+            # this is (hopefully) an author name
+            # No idea why "-" is used here rather than parentheses like
+            # everywhere else.
+            # we only strip if we have not encountered parentheses first,
+            # as it looks like these are mutually exclusive
+            name = name[:name.rfind("-")].strip()
+        else:
+            # no ending we strip in this phase remains
+            break
+    return name
+
+def get_ao3_category_generalized_name(name):
+    """
+    Return the most generalized name of an ao3 category.
+
+    As described in L{get_ao3_category_base_name}, an ao3  category
+    can consist of multiple names. This function tries to find the most
+    "inclusive" name of the category, meaning the name which would
+    include the most variations of the same category.
+
+    @param name: name of category to get generalized name for
+    @type name: L{str}
+    @return: the generalized name
+    @rtype: L{str}
+    """
+    return get_ao3_category_base_name(name) + " & Related Fandoms - All Media Types"
