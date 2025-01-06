@@ -7,14 +7,12 @@ from .raw import RawStory
 from ..exceptions import ParseError
 
 
-def parse_json_story(session, fin):
+def parse_json_story(fin):
     """
     'Parse' a story in json format.
 
     This is supposed to be used to re-import stories exported by L{zimfiction.exporter.jsondumper.JsonDumper}.
 
-    @param session: sqlalchemy session to use
-    @type session: L{sqlalchemy.orm.Session}
     @param fin: file-like object to read or text to parse
     @type fin: file-like or L{str}
     @return: the raw story
