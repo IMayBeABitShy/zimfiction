@@ -55,11 +55,8 @@ def split_categories(s):
     splitted = s.split(",")
     for e in splitted:
         e = e.strip()
-        subsplit = e.split(" > ")  # some sites use a hierarchy
-        for i in range(len(subsplit)):
-            c = " > ".join(subsplit[:i+1])
-            if c and (c not in categories):
-                categories.append(c)
+        if e and (e not in categories):
+            categories.append(e)
     return categories
 
 

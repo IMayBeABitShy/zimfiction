@@ -5,13 +5,13 @@ from ..normalize import get_ao3_category_base_name
 from .finder import ImplicationFinder
 from .implicationlevel import ImplicationLevel
 from .ao3dumpfinder import AO3_PUBLISHER
+from .hierarchyfinder import AF_PUBLISHER
 
 
 AO3_IGNORED_CATEGORIES = ["original work", "no fandom"]
 CROSSOVER_TAG = ("genre", "special:crossover", ImplicationLevel.DEDUCED)
 
 FICTIONPRESS_PUBLISHER = "www.fictionpress.com"
-AF_PUBLISHER = "adult-fanfiction.org"
 
 
 class CrossoverFinder(ImplicationFinder):
