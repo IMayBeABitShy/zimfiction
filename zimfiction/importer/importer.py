@@ -99,7 +99,7 @@ def import_from_fs(fs_url, session, workers=0, ignore_errors=False, limit=None, 
     @type fs_url: L{str}
     @param session: session to add stories to
     @type session: L{sqlalchemy.orm.Session}
-    @param workers: if > 0, use this many workers to parallelize import
+    @param workers: if > 0, use this many workers to parallelize import. if < 0, use as many workers as CPUs are available.
     @type workers: L{int}
     @param ignore_errors: if nonzero, ignore errors
     @type ignore_errors: L{bool}
@@ -113,7 +113,7 @@ def import_from_fs(fs_url, session, workers=0, ignore_errors=False, limit=None, 
     @type verbose: L{bool}
     """
     assert (limit is None) or (isinstance(limit, int) and limit >= 1)
-    assert isinstance(workers, int) and (workers >= 0)
+    assert isinstance(workers, int)
     fs = open_fs(fs_url)
 
     stories = []
@@ -123,8 +123,10 @@ def import_from_fs(fs_url, session, workers=0, ignore_errors=False, limit=None, 
     current_story_ids_to_stories = {}
     n_imported = 0
 
+    if workers < 0:
+        workers = multiprocessing.cpu_count()
     if workers > 0:
-        pool = multiprocessing.Pool()
+        pool = multiprocessing.Pool(processes=workers)
         map_f = lambda f, l: pool.imap(f, l, chunksize=64)
     else:
         map_f = map

@@ -80,7 +80,7 @@ def run_import(path, db_url):
     @param db_url: sqlalchemy database url to import to
     @type db_url: L{str}
     """
-    command = ["zimfiction", "--verbose", "import", "--ignore-errors", db_url, path]
+    command = ["zimfiction", "--verbose", "import", "--workers", "-1", "--ignore-errors", db_url, path]
     subprocess.check_call(command, bufsize=0)
 
 

@@ -1,7 +1,6 @@
 """
 An L{zimfiction.implication.finder.ImplicationFinder} for implying hierarchical orderings.
 """
-from ..normalize import get_ao3_category_base_name
 from .finder import ImplicationFinder
 from .implicationlevel import ImplicationLevel
 
