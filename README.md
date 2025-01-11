@@ -46,3 +46,12 @@ Finally, build the ZIM:
 `zimfiction -v build [--threaded] [--workers WORKERS] [--log-directory PATH] [--memprofile-directrory PATH] [--no-external-links] [--debug-skip-stories] <database> <zimpath>`
 
 The `database` argument behaves like the one used by `zimfiction import`, the `zimpath` argument specifies the path to write the ZIM file to. You can specifiy `--threaded` to use threads for workers rather than individual processes, but this is not recommended and may significantly reduce performance with no benefit. `--workers` specifies the amount of workers that should be used to render the pages, the number of workers used for compression is unaffected. The remaining arguments are for debug purposes and should probably not be specified unless you are actively debugging the build process.
+
+### A note on optimizing performance
+
+ZimFiction can gain some significant performance boosts with some tricks.
+
+First, be sure to install the `optimize` extra for zimfiction (e.g. `pip install path/to/zimfiction[optimize]`).
+
+Secondly, we can optimize the database. For one, using a posgtresql database rather than a sqlite one can make a huge difference. Installing the database server on the same device or on a device that has a very good network connection to the build device can make a huge difference too. If the latency of DB requests is low (e.g. because the DB is hosted on the same device as you are building the ZIM on), then enabling lazy loading using `--lazy` where supported can make a significant performance difference too.
+Finally, and this too can make a huge difference, make sure the DB indexes are used and up to date. In a postgresql shell, simply run `ANALYZE story; ANALYZE tag; ANALYZE story_has_tag; ANALYZE category; ANALYZE story_has_category; ANALYZE publisher; ANALYZE chapter; ANALYZE story_in_series; ANALYZE series; ANALYZE author;` After the tables have been created, which should happen during or before the first commit when importing. Repeat this when the import slows down and before the implication and build each and the time difference can be huge.
