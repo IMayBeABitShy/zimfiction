@@ -11,8 +11,10 @@ except:
 from fs import open_fs
 from fs.walk import Walker
 
-from sqlalchemy import and_, exists
+from sqlalchemy import and_, exists, select
+from sqlalchemy.orm import undefer
 
+from .raw import RawStory
 from .txtparser import parse_txt_story
 from .epubparser import parse_epub_story
 from .htmlparser import parse_html_story
@@ -89,6 +91,48 @@ def _parse_map_helper(kwargs):
         new_kwargs["fs"] = open_fs(new_kwargs["fs_url"])
         del new_kwargs["fs_url"]
     return parse_story(**new_kwargs)
+
+
+def should_replace(old, new):
+    """
+    Check if a story should replace an existing one,
+
+    @param old: old/existing story
+    @type old: L{zimfiction.importer.raw.RawStory}
+    @param new: new story that may replace the old one
+    @type new: L{zimfiction.importer.raw.RawStory}
+    @return: True if the new story should replace the old one.
+    @rtype: L{bool}
+    """
+    # first, check based on word and chapter counts
+    word_diff = new.total_words - old.total_words
+    if word_diff > 1000:
+        # keep some tolerance here in case newer version loses some words due to editing
+        return True
+    elif len(new.chapters) > len(old.chapters):
+        return True
+    # then check based on tag quality
+    elif len(new.relationships) > len(old.relationships):
+        return True
+    elif len(new.characters) > len(old.characters):
+        return True
+    elif len(new.genres) > len(old.genres):
+        return True
+    elif len(new.categories) > len(old.categories):
+        return True
+    # next, dates
+    elif new.updated > old.updated:
+        return True
+    elif new.packaged > old.packaged:
+        return True
+    elif new.published > old.published:
+        return True
+    # check if story has updated score values
+    elif new.score > old.score:
+        return True
+    # there's no reason to replace this story
+    else:
+        return False
 
 
 def import_from_fs(fs_url, session, workers=0, ignore_errors=False, limit=None, force_publisher=None, source_group=None, source_name=None, remove=False, verbose=False):
@@ -178,19 +222,25 @@ def import_from_fs(fs_url, session, workers=0, ignore_errors=False, limit=None, 
                 )
                 if already_exists:
                     # check if current story has more words than story in DB
-                    n_new_words = sum([c.num_words for c in story.chapters])
-                    n_old_words = session.query(
-                        Story.total_words,
-                    ).where(
-                        and_(
-                            Story.publisher.has(name=story.publisher.name),  # TODO: ensure this really works
-                            Story.id == story.id,
-                        )
-                    ).scalar()
-                    if n_new_words >= n_old_words:
+                    old_story_options = (
+                        undefer(Story.summary),
+                    )
+                    old_story = RawStory.from_story(
+                        session.scalars(
+                            select(Story)
+                            .where(
+                                Story.publisher.has(name=raw.publisher),
+                                Story.id == raw.id,
+                            )
+                            .options(
+                                *old_story_options,
+                            )
+                        ).first()
+                    )
+                    if should_replace(old_story, raw):
                         if verbose:
                             print(
-                                "Story {}-{} already exists in DB, replacing it...".format(
+                                "Story {}-{} already exists in DB, replacing it ...".format(
                                     story.publisher.name,
                                     story.id,
                                 )
@@ -204,7 +254,7 @@ def import_from_fs(fs_url, session, workers=0, ignore_errors=False, limit=None, 
                     else:
                         if verbose:
                             print(
-                                "Story {}-{} already exists in DB and has more words, not replacing it...".format(
+                                "Story {}-{} already exists in DB and does not fulfil replacement criteria, not replacing it...".format(
                                     story.publisher.name,
                                     story.id,
                                 )

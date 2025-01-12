@@ -124,7 +124,7 @@ class RawChapter(object):
         assert isinstance(index, int)
         assert isinstance(title, str)
         assert isinstance(text, str)
-        assert isinstance(text, str) or (text is None)
+        assert isinstance(num_words, int) or (num_words is None)
 
         self.index = index
         self.title = title
@@ -617,8 +617,8 @@ class RawStory(object):
             author_url=story.author.url,
             series=[
                 RawSeriesMembership(
-                    publisher=sa.series_publisher,
-                    name=sa.series_name,
+                    publisher=sa.series.publisher.name,
+                    name=sa.series.name,
                     index=sa.index,
                 )
                 for sa in story.series_associations
@@ -748,3 +748,13 @@ class RawStory(object):
             if key in ret:
                 ret[key] = remove_duplicates(ret[key])
         return ret
+
+    @property
+    def total_words(self):
+        """
+        Return the total number of words in this story
+
+        @return: the total number of words in this story
+        @rtype: L{int}
+        """
+        return sum([c.num_words for c in self.chapters])
