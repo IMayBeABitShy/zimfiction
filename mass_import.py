@@ -71,7 +71,7 @@ def extract_archive(inpath, outpath):
     subprocess.check_call(command)
 
 
-def run_import(path, db_url):
+def run_import(path, db_url, source_group=None, source_name=None):
     """
     Import a directory.
 
@@ -79,12 +79,21 @@ def run_import(path, db_url):
     @type path: L{str}
     @param db_url: sqlalchemy database url to import to
     @type db_url: L{str}
+    @param source_group: name of the source group these stories should be added to
+    @type source_group: L{str} or L{None}
+    @param source_group: name of the source these stories should be added to
+    @type source_group: L{str} or L{None}
     """
-    command = ["zimfiction", "--verbose", "import", "--workers", "-1", "--ignore-errors", db_url, path]
+    command = ["zimfiction", "--verbose", "import", "--workers", "-1", "--ignore-errors"]
+    if source_group is not None:
+        command += ["--source-group", source_group]
+    if source_name is not None:
+        command += ["--source-name", source_name]
+    command += [db_url, path]
     subprocess.check_call(command, bufsize=0)
 
 
-def process_dir(path, db_url, parallel=False):
+def process_dir(path, db_url, parallel=False, source_group=None):
     """
     Process a directory.
 
@@ -94,15 +103,17 @@ def process_dir(path, db_url, parallel=False):
     @type db_url: L{str}
     @param parallel: run imports in parallel
     @type parallel: L{bool}
+    @param source_group: name of the source group these stories should be added to
+    @type source_group: L{str} or L{None}
     """
     print("Descending into '{}'...".format(path))
     filenames = os.listdir(path)
     for fn in filenames:
         fp = os.path.join(path, fn)
-        process_path(fp, db_url=db_url, parallel=parallel)
+        process_path(fp, db_url=db_url, parallel=parallel, source_group=source_group)
 
 
-def process_file(path, db_url):
+def process_file(path, db_url, source_group=None):
     """
     Process a file.
 
@@ -110,13 +121,16 @@ def process_file(path, db_url):
     @type path: L{str}
     @param db_url: sqlalchemy url of database to import to
     @type db_url: L{str}
+    @param source_group: name of the source group these stories should be added to
+    @type source_group: L{str} or L{None}
     """
     with in_tempdir() as tempdir:
         extract_archive(path, tempdir)
-        run_import(tempdir, db_url=db_url)
+        source_name = os.path.basename(path)
+        run_import(tempdir, db_url=db_url, source_group=source_group, source_name=source_name)
 
 
-def process_path(path, db_url, parallel=False):
+def process_path(path, db_url, parallel=False, source_group=None):
     """
     Process a path (either file or directory).
 
@@ -126,23 +140,25 @@ def process_path(path, db_url, parallel=False):
     @type db_url: L{str}
     @param parallel: run imports in parallel
     @type parallel: L{bool}
+    @param source_group: name of the source group these stories should be added to
+    @type source_group: L{str} or L{None}
     """
     threads = []
     if os.path.isdir(path):
-        process_dir(path, db_url=db_url, parallel=parallel)
+        process_dir(path, db_url=db_url, parallel=parallel, source_group=source_group)
     elif is_archive(path):
         if parallel:
             thr = threading.Thread(
                 name="Import thread",
                 target=process_file,
                 args=(path, ),
-                kwargs={"db_url": db_url},
+                kwargs={"db_url": db_url, "source_group": source_group},
             )
             thr.daemon = False
             threads.append(thr)
             thr.start()
         else:
-            process_file(path, db_url=db_url)
+            process_file(path, db_url=db_url, source_group=source_group)
     else:
         print("Neither directory nor archive: '{}', skipping.".format(path))
     for thr in threads:
@@ -171,10 +187,15 @@ def main():
         action="store_true",
         help="Import archives inside a directory in parallel",
     )
+    parser.add_argument(
+        "--source-group",
+        action="store",
+        help="Name of the source group these stories should be added to",
+    )
     ns = parser.parse_args()
 
     for path in ns.path:
-        process_path(path, db_url=ns.database, parallel=ns.parallel)
+        process_path(path, db_url=ns.database, parallel=ns.parallel, source_group=ns.source_group)
 
 
 
