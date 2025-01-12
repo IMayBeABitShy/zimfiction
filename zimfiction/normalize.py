@@ -25,10 +25,10 @@ def normalize_tag(tag):
     @return: the normalized tag
     @rtype: L{str}
     """
-    # return ALLOWED_TAG_LETTERS.sub("_", tag)
-    # return urllib.parse.quote_plus(tag)
+    # NOTE: be sure to update the search too!
     tag = tag.replace("+", "_plus_").replace(" ", "+").replace("/", "_slash_")
     tag = tag.replace("<", "_lchevron_").replace(">", "_rchevron_")
+    tag = tag.replace("#", "_hash_")
     return tag
 
 

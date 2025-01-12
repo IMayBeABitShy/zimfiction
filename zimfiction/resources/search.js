@@ -69,6 +69,7 @@ function normalize_tag(tag) {
     // IMPORTANT: be sure this matches the behavior of the python function
     var t = tag.replaceAll("+", "_plus_").replaceAll(" ", "+").replaceAll("/", "_slash_");
     t = t.replaceAll("<", "_lchevron_").replaceAll(">", "_rchevron_");
+    t = t.replaceAll("#", "_hash_");
     return t;
 }
 
