@@ -91,7 +91,7 @@ def _parse_map_helper(kwargs):
     return parse_story(**new_kwargs)
 
 
-def import_from_fs(fs_url, session, workers=0, ignore_errors=False, limit=None, force_publisher=None, remove=False, verbose=False):
+def import_from_fs(fs_url, session, workers=0, ignore_errors=False, limit=None, force_publisher=None, source_group=None, source_name=None, remove=False, verbose=False):
     """
     Import all stories from a filesystem.
 
@@ -107,6 +107,10 @@ def import_from_fs(fs_url, session, workers=0, ignore_errors=False, limit=None, 
     @type limit: L{int} or L{None}
     @param force_publisher: if not None, force all stories imported to have this publisher
     @type force_publisher: L{str} or L{None}
+    @param source_group: if not None, set source group of imported stories
+    @type source_group: L{str} or L{None}
+    @param source_name: if not None, set source name of imported stories
+    @type source_name: L{str} or L{None}
     @param remove: if nonzero, remove imported fics
     @type remove: L{bool}
     @param verbose: if nonzero, be more verbose
@@ -114,6 +118,8 @@ def import_from_fs(fs_url, session, workers=0, ignore_errors=False, limit=None, 
     """
     assert (limit is None) or (isinstance(limit, int) and limit >= 1)
     assert isinstance(workers, int)
+    assert isinstance(source_group, str) or (source_group is None)
+    assert isinstance(source_name, str) or (source_name is None)
     fs = open_fs(fs_url)
 
     stories = []
@@ -147,6 +153,12 @@ def import_from_fs(fs_url, session, workers=0, ignore_errors=False, limit=None, 
         raw_stories = filter(lambda x: x is not None, raw_stories)
 
         for raw in raw_stories:
+            # adjust some attributes of the raw story
+            if source_group is not None:
+                raw.source_group = source_group
+            if source_name is not None:
+                raw.source_name = source_name
+            # add to database
             story = raw.to_story(session=session, force_publisher=force_publisher)
             full_story_id = (story.publisher.name, story.id)
 

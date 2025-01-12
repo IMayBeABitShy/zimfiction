@@ -40,6 +40,8 @@ MAX_CHAPTER_TITLE_LENGTH = 512
 MAX_CHAPTER_TEXT_LENGTH = 16 * 1024 * 1024
 MAX_AUTHOR_URL_LENGTH = 2 * 1024
 MAX_TAG_TYPE_LENGTH = 32
+MAX_SOURCE_GROUP_LENGTH = 128
+MAX_SOURCE_NAME_LENGTH = 128
 
 
 def _get_longtext_type(max_length=None):
@@ -56,6 +58,38 @@ def _get_longtext_type(max_length=None):
     @rtype:
     """
     return UnicodeText
+
+
+class Source(UniqueMixin, Base):
+    """
+    This class represents a source of stories.
+
+    This is used to keep track where which story is from.
+    """
+    __tablename__ = "source"
+
+    uid = Column(Integer, primary_key=True, autoincrement=True)
+    group = Column(String(MAX_SOURCE_GROUP_LENGTH))
+    name = Column(String(MAX_SOURCE_NAME_LENGTH))
+
+    stories = relationship(
+        "Story",
+        back_populates="source",
+        cascade="all, delete-orphan",
+    )
+
+    @classmethod
+    def unique_hash(cls, group, name):
+        return (group, name)
+
+    @classmethod
+    def unique_filter(cls, query, group, name):
+        return query.filter(
+            Source.group == group,
+            Source.name == name,
+        )
+
+Index("source_name_index", Source.group, Source.name, unique=True)
 
 
 class Publisher(UniqueMixin, Base):
@@ -408,6 +442,7 @@ class Story(Base):
     __tablename__ = "story"
 
     uid = Column(Integer, autoincrement=True, primary_key=True)
+    source_uid = Column(Integer, ForeignKey("source.uid"), autoincrement=False, nullable=False)
     publisher_uid = Column(Integer, ForeignKey("publisher.uid"), nullable=False)
     publisher = relationship("Publisher", back_populates="stories", overlaps="stories")
     id = Column(Integer, primary_key=False, autoincrement=False, nullable=False)
@@ -470,11 +505,20 @@ class Story(Base):
         "series_associations",
         "series",
     )
+    source = relationship(
+        "Source",
+        back_populates="stories",
+    )
 
     __table_args__ = (
         ForeignKeyConstraint(
             [author_uid],
             ["author.uid"],
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            [source_uid],
+            ["source.uid"],
             ondelete="CASCADE",
         ),
     )

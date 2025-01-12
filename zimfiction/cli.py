@@ -60,6 +60,8 @@ def run_import(ns):
                 ignore_errors=ns.ignore_errors,
                 limit=ns.limit,
                 force_publisher=ns.force_publisher,
+                source_group=ns.source_group,
+                source_name=ns.source_name,
                 remove=ns.remove,
                 verbose=ns.verbose,
             )
@@ -191,6 +193,16 @@ def main():
         type=int,
         default=0,
         help="Number of workers to use for import. May not be available with all filesystems.",
+    )
+    import_parser.add_argument(
+        "--source-group",
+        action="store",
+        help="Name of the group of the source of the imported stories",
+    )
+    import_parser.add_argument(
+        "--source-name",
+        action="store",
+        help="Name of the source of the imported stories",
     )
     import_parser.add_argument(
         "directories",

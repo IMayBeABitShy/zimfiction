@@ -5,7 +5,7 @@ import datetime
 
 from ..util import count_words, add_to_dict_list, remove_duplicates
 from ..normalize import normalize_category, normalize_relationship
-from ..db.models import Chapter, Story, Author, Category, Tag, Series, Publisher
+from ..db.models import Chapter, Story, Author, Category, Tag, Series, Publisher, Source
 from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation
 from ..implication.implicationlevel import ImplicationLevel
 from ..exceptions import ParseError
@@ -314,6 +314,10 @@ class RawStory(object):
     @type num_comments: L{int}
     @ivar chapters: chapters of this story
     @type chapters: L{list} of L{RawChapters}
+    @ivar source_group: name of the source group this story is from
+    @type source_group: L{str}
+    @ivar source_name: name of the source this story is from
+    @type source_name: L{str}
     """
     def __init__(
         self,
@@ -340,6 +344,8 @@ class RawStory(object):
         rating=None,
         score=0,
         num_comments=0,
+        source_group="unknown",
+        source_name="unknown",
         ):
         """
         The default constructor.
@@ -392,6 +398,10 @@ class RawStory(object):
         @type num_comments: L{int}
         @param chapters: chapters of this story
         @type chapters: L{list} of L{RawChapters}
+        @param source_group: name of the source group this story is from
+        @type source_group: L{str}
+        @param source_name: name of the source this story is from
+        @type source_name: L{str}
         """
         assert isinstance(id, int)
         assert isinstance(title, str)
@@ -415,6 +425,8 @@ class RawStory(object):
         assert isinstance(score, int)
         assert isinstance(num_comments, int)
         assert isinstance(chapters, list)
+        assert isinstance(source_group, str)
+        assert isinstance(source_name, str)
 
         self.id = id
         self.title = title
@@ -438,7 +450,8 @@ class RawStory(object):
         self.score = score
         self.num_comments = num_comments
         self.chapters = chapters
-
+        self.source_group = source_group
+        self.source_name = source_name
 
     def to_dict(self):
         """
@@ -471,6 +484,8 @@ class RawStory(object):
             "score": self.score,
             "num_comments": self.num_comments,
             "chapters": [c.to_dict() for c in self.chapters],
+            "source_group": self.source_group,
+            "source_name": self.source_name,
         }
         return data
 
@@ -525,6 +540,11 @@ class RawStory(object):
             name=self.author,
             url=self.author_url
         )
+        source = Source.as_unique(
+            session,
+            group=self.source_group,
+            name=self.source_name,
+        )
         kwargs = {
             "id": self.id,
             "title": self.title,
@@ -541,6 +561,7 @@ class RawStory(object):
             "score": self.score,
             "num_comments": self.num_comments,
             "chapters": chapters,
+            "source": source,
         }
         story = Story(**kwargs)
         # link categories
@@ -621,6 +642,8 @@ class RawStory(object):
                 RawChapter.from_chapter(c)
                 for c in story.chapters
             ],
+            source_group=story.source.group,
+            source_name=story.source.name,
         )
         return ins
 
@@ -636,6 +659,8 @@ class RawStory(object):
             - author
             - summary (unless metadata 'Summary' is correctly set)
             - chapters
+            - source_group
+            - source_name
 
         This method takes care of normalizing relationships, categories, and so on.
         This method may initialize some values with defaults. It is recommended
