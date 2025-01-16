@@ -93,7 +93,7 @@ def run_import(path, db_url, source_group=None, source_name=None):
     subprocess.check_call(command, bufsize=0)
 
 
-def process_dir(path, db_url, parallel=False, source_group=None):
+def process_dir(path, db_url, parallel=False, source_group=None, print_ignored=True):
     """
     Process a directory.
 
@@ -105,15 +105,23 @@ def process_dir(path, db_url, parallel=False, source_group=None):
     @type parallel: L{bool}
     @param source_group: name of the source group these stories should be added to
     @type source_group: L{str} or L{None}
+    @param print_ignored: if nonzero (default), print files skipped
+    @type print_ignored: L{bool}
     """
     print("Descending into '{}'...".format(path))
     filenames = os.listdir(path)
     for fn in filenames:
         fp = os.path.join(path, fn)
-        process_path(fp, db_url=db_url, parallel=parallel, source_group=source_group)
+        process_path(
+            fp,
+            db_url=db_url,
+            parallel=parallel,
+            source_group=source_group,
+            print_ignored=print_ignored,
+        )
 
 
-def process_file(path, db_url, source_group=None):
+def process_file(path, db_url, parallel=False, source_group=None):
     """
     Process a file.
 
@@ -121,6 +129,8 @@ def process_file(path, db_url, source_group=None):
     @type path: L{str}
     @param db_url: sqlalchemy url of database to import to
     @type db_url: L{str}
+    @param parallel: run imports in parallel
+    @type parallel: L{bool}
     @param source_group: name of the source group these stories should be added to
     @type source_group: L{str} or L{None}
     """
@@ -128,9 +138,17 @@ def process_file(path, db_url, source_group=None):
         extract_archive(path, tempdir)
         source_name = os.path.basename(path)
         run_import(tempdir, db_url=db_url, source_group=source_group, source_name=source_name)
+        # handle subarchives
+        process_dir(
+            tempdir,
+            db_url=db_url,
+            parallel=parallel,
+            source_group=source_group,
+            print_ignored=False,
+        )
 
 
-def process_path(path, db_url, parallel=False, source_group=None):
+def process_path(path, db_url, parallel=False, source_group=None, print_ignored=True):
     """
     Process a path (either file or directory).
 
@@ -142,25 +160,34 @@ def process_path(path, db_url, parallel=False, source_group=None):
     @type parallel: L{bool}
     @param source_group: name of the source group these stories should be added to
     @type source_group: L{str} or L{None}
+    @param print_ignored: if nonzero (default), print files skipped
+    @type print_ignored: L{bool}
     """
     threads = []
     if os.path.isdir(path):
-        process_dir(path, db_url=db_url, parallel=parallel, source_group=source_group)
+        process_dir(
+            path,
+            db_url=db_url,
+            parallel=parallel,
+            source_group=source_group,
+            print_ignored=print_ignored,
+        )
     elif is_archive(path):
         if parallel:
             thr = threading.Thread(
                 name="Import thread",
                 target=process_file,
                 args=(path, ),
-                kwargs={"db_url": db_url, "source_group": source_group},
+                kwargs={"db_url": db_url, "parallel": parallel, "source_group": source_group},
             )
             thr.daemon = False
             threads.append(thr)
             thr.start()
         else:
-            process_file(path, db_url=db_url, source_group=source_group)
+            process_file(path, db_url=db_url, parallel=parallel, source_group=source_group)
     else:
-        print("Neither directory nor archive: '{}', skipping.".format(path))
+        if print_ignored:
+            print("Neither directory nor archive: '{}', skipping.".format(path))
     for thr in threads:
         thr.join()
 

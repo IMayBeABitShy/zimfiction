@@ -262,13 +262,12 @@ def import_from_fs(fs_url, session, workers=0, ignore_errors=False, limit=None, 
                         do_not_commit.append(story)
                         continue
                 elif full_story_id in current_story_ids_to_stories:
-                    n_new_words = sum([c.num_words for c in story.chapters])
                     old_story = current_story_ids_to_stories[full_story_id]
-                    n_old_words = sum([c.num_words for c in old_story.chapters])
-                    if n_new_words < n_old_words:
+                    old_raw_story = RawStory.from_story(old_story)
+                    if not should_replace(old_raw_story, raw):
                         # do not replace old story
                         print(
-                            "Story {}-{} already staged for commit and has more words, not replacing it...".format(
+                            "Story {}-{} already staged for commit and is better candidate, not replacing it...".format(
                                 story.publisher.name,
                                 story.id,
                             )
@@ -276,6 +275,12 @@ def import_from_fs(fs_url, session, workers=0, ignore_errors=False, limit=None, 
                         do_not_commit.append(story)
                         continue
                     else:
+                        print(
+                            "Story {}-{} already staged for commit, but this is a better candidate, replacing it...".format(
+                                story.publisher.name,
+                                story.id,
+                            )
+                        )
                         stories.remove(old_story)
                         do_not_commit.append(old_story)
                 stories.append(story)
