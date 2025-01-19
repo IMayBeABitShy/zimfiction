@@ -34,7 +34,7 @@ from .renderer import HtmlRenderer, RenderResult
 from ..statistics import query_story_list_stats
 from ..util import ensure_iterable
 from ..normalize import normalize_tag
-from ..db.models import Story, Chapter, Tag, Author, Category, Publisher
+from ..db.models import Story, Chapter, Tag, Author, Category, Publisher, Source
 from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation, Series
 from ..implication.implicationlevel import ImplicationLevel
 
@@ -485,6 +485,7 @@ class Worker(object):
                 selectinload(Story.tag_associations, StoryTagAssociation.tag),
                 joinedload(Story.publisher),
                 joinedload(Story.author),
+                joinedload(Story.source),
                 selectinload(Story.series_associations),
                 selectinload(Story.series_associations, StorySeriesAssociation.series),
                 selectinload(Story.category_associations),

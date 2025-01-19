@@ -64,6 +64,10 @@
                 <TH>Packaged</TH>
                 <TD>{{ story.packaged|format_date }}</TD>
             </TR>
+            <TR>
+                <TH>Source</TH>
+                <TD>{{ story.source.group|default("[Unknown]", true) + "/" }} {{ story.source.name|default("[Unknown]", true) }}</TD>
+            </TR>
             {% if story.visible_warnings|length > 0 %}
                 <TR>
                     <TH>Warnings</TH>
