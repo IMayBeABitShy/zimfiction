@@ -64,6 +64,8 @@ def extract_archive(inpath, outpath):
         command = ["unzip", inpath, "-d", outpath]
     elif ext == ".gz":
         command = ["tar", "-C", outpath, "-xzf", inpath]
+    elif ext == ".zst" or ext == ".zstd":
+        command = ["tar", "-C", outpath, "-xf", inpath]
     elif ext == ".7z":
         command = ["7zz", "e", "-o"+outpath, inpath]
     else:
