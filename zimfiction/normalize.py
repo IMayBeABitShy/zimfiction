@@ -70,7 +70,7 @@ def normalize_category(category):
     # remove "- Fandom", as we do not need this differentiation
     category = category.replace("- Fandom", "")
     # replace "<" and ">" - they mess with HTML
-    category = category.replace("<", "").replace(">", "")
+    # category = category.replace("<", "").replace(">", "")
     # remove various special characters
     category = category.replace("\n", "").replace("\\", "").replace("\x00", "").replace("\r", "")
     # strip non-printable start and end characters

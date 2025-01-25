@@ -720,6 +720,8 @@ class RawStory(object):
                         add_to_dict_list(ret, "characters", tag)
         if "Language" in metadata:
             ret["language"] = metadata["Language"].strip()
+        else:
+            ret["language"] = "(Unknown)"
         if "Published" in metadata:
             ret["published"] = datetime.datetime.fromisoformat(metadata["Published"])
         if "Updated" in metadata:
@@ -741,6 +743,8 @@ class RawStory(object):
                 ret["score"] = int(metadata[key].strip())
         if "Status" in metadata:
             ret["is_done"] = is_done_from_status(metadata["Status"])
+        else:
+            ret["is_done"] = False
         if "Author URL" in metadata:
             ret["author_url"] = metadata["Author URL"].strip()
         # remove duplicate tags/categories/relationships
