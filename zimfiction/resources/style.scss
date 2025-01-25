@@ -575,8 +575,16 @@ HR {
 }
 
 /* author */
-.author_org_link_div .external_link {
+.author_org_link_div {
+  @include box;
+
+  .external_link {
     margin-left: 1em;
+  }
+}
+
+.author_alt_links {
+  @include box;
 }
 
 /* info page */

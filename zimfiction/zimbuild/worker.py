@@ -651,8 +651,21 @@ class Worker(object):
                 joinedload(Author.stories).undefer(Story.summary),
             )
         ).first()
+        self.log("Finding author activity on other publishers...")
+        other_identities = self.session.scalars(
+            select(Author)
+            .where(
+                and_(
+                    Author.name == author.name,
+                    Author.publisher_uid != author.publisher_uid,
+                )
+            )
+            .options(
+                # eager loading options
+            )
+        ).all()
         self.log("Rendering author...")
-        result = self.renderer.render_author(author)
+        result = self.renderer.render_author(author, other_identities=other_identities)
         self.log("Submitting result...")
         self.handle_result(result)
         self.log("Done.")

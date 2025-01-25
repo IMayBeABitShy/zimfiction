@@ -546,12 +546,14 @@ class HtmlRenderer(object):
         )
         return 1  # 1 item added
 
-    def render_author(self, author):
+    def render_author(self, author, other_identities=[]):
         """
         Render an author.
 
         @param author: author to render
         @type author: L{zimfiction.db.models.Author}
+        @param other_identities: list of potential other identities of this author on other sites
+        @type other_identities: L{list} of L{zimfiction.db.models.Author}
         @return: the rendered pages and redirects
         @rtype: L{RenderResult}
         """
@@ -592,6 +594,7 @@ class HtmlRenderer(object):
             page = list_page_template.render(
                 to_root="../../..",
                 author=author,
+                other_identities=other_identities,
                 stories=stories,
                 stats=stats,
                 num_pages=len(pages),

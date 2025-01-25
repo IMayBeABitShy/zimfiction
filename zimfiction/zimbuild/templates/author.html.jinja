@@ -1,4 +1,4 @@
-{# This is a page for list of stories by an author. Expects "to_root", "author", "stories", "stats", "num_pages" and "cur_page" as argument #}
+{# This is a page for list of stories by an author. Expects "to_root", "author", "other_identities", "stories", "stats", "num_pages" and "cur_page" as argument #}
 {% extends "base.html.jinja" %}
 
 {% block title %}
@@ -19,8 +19,21 @@
     <HR>
     {% if options.include_external_links %}
         <DIV class="author_org_link_div">
+            <H2>Link to the author's original profile</H2>
             <A class="external_link" href="{{ author.url }}">{{ author.name|escape }} on {{ author.publisher.name }}</A>
         </DIV>
+    {% endif %}
+    {% if other_identities|length > 0 %}
+        <DIV class="author_alt_links">
+            <H2>Authors sharing the same name on other publishing sites</H2>
+            <UL>
+                {% for alt_id in other_identities %}
+                    <LI><A href="{{ to_root }}/author/{{ alt_id.publisher.name }}/{{ alt_id.name|normalize_tag }}/">{{ alt_id.name|escape }} on {{ alt_id.publisher.name }}</A></LI>
+                {% endfor %}
+            </UL>
+        </DIV>
+    {% endif %}
+    {% if options.include_external_links or other_identities|length > 0 %}
         <HR>
     {% endif %}
     {% for story in stories %}
