@@ -1,4 +1,7 @@
-/* SCSS file for zimfiction */
+/*
+ * SCSS file for zimfiction
+ * You can specify a theme by setting the "theme" variable.
+ */
 
 // color configuration
 
@@ -6,14 +9,55 @@ $background_color: white;
 $middleground_color: white;
 $feature_color: #ccc;
 $text_color: #2a2a2a;
+$light_text_color: #353535;
 $focus_color: #d3d3d3;
+$link_color: blue;
+$tag_and_category_color: #111;
+$button_text_color: black;
 $navigation_background_color: #333399;
 $navigation_foreground_color: #ffffff;
+$list_background_color_odd: white;
+$list_background_color_even: scale-color(#ddd, $lightness: 10%);
+
+@if $theme == light {
+  // the light theme is actually the default, so change the above
+  // variables instead. these ones here are only for reference
+
+  // $background_color: white !global;
+  // $middleground_color: white !global;
+  // $feature_color: #ccc !global;
+  // $text_color: #2a2a2a !global;
+  // $light_text_color: #353535 !global;
+  // $focus_color: #d3d3d3 !global;
+  // $link_color: blue !global;
+  // $tag_and_category_color: #111 !global;
+  // $button_text_color: black !global;
+  // $navigation_background_color: #333399 !global;
+  // $navigation_foreground_color: #ffffff !global;
+  // $list_background_color_odd: white !global;
+  // $list_background_color_even: scale-color(#ddd, $lightness: 10%) !global;
+} @else if $theme == dark {
+  $background_color: #333 !global;
+  $middleground_color: scale-color(#000, $lightness: 20%) !global;
+  $feature_color: #808080 !global;
+  $text_color: white !global;
+  $light_text_color: #c5c5c5;
+  $focus_color: #888 !global;
+  $link_color: lightblue  !global;
+  $tag_and_category_color: #b5b5b5 !global;
+  $button_text_color: white !global;
+  $navigation_background_color: #000 !global;
+  $navigation_foreground_color: #ffffff !global;
+  $list_background_color_odd: #555 !global;
+  $list_background_color_even: #888 !global;
+} @else {
+  @error "Unknown theme #{$theme}";
+}
 
 // mix-ins
 
 @mixin button {
-  color: black;
+  color: $text_color;
   background: $focus_color;
   border: 1px solid $feature_color;
   border-radius: 0.3125em;
@@ -26,7 +70,7 @@ $navigation_foreground_color: #ffffff;
   }
 
   A {
-    color: black;
+    color: $text_color;
   }
 }
 
@@ -39,11 +83,11 @@ $navigation_foreground_color: #ffffff;
 
 @mixin alternating_list($childselector) {
   #{$childselector}:nth-child(even) {
-    background: scale-color(#ddd, $lightness: 10%);
+    background: $list_background_color_even;
   }
 
   #{$childselector}:nth-child(odd) {
-    background: white;
+    background: $list_background_color_odd;
   }
 }
 
@@ -60,6 +104,14 @@ body {
   margin: 0em;
   min-height: 100vh;
   min-height: -webkit-fit-available;
+}
+
+P, H1, H2, H3, TR, TH, LI {
+  color: $text_color;
+}
+
+A {
+  color: $link_color;
 }
 
 /* content container - use content-cntr to reduce html size */
@@ -111,13 +163,22 @@ HR {
     margin-bottom: 0.625em;
     font-weight: bolder;
     font-size: 132%;
+    color: $text_color;
+  }
+
+  .summary_text {
+    color: $text_color;
   }
 }
 
+.taglist {
+  color: $text_color;
+}
+
 .taglink {
-  color: #111;
+  color: $tag_and_category_color;
   text-decoration: none;
-  border-bottom: 1px dotted;
+  border-bottom: 1px dotted $tag_and_category_color;
 }
 
 .taglink-warning {
@@ -148,8 +209,8 @@ HR {
 
 .categorylink {
   text-decoration: none;
-  color: black;
-  border-bottom: 1px dotted black;
+  color: $tag_and_category_color;
+  border-bottom: 1px dotted $tag_and_category_color;
 }
 
 .serieslink {
@@ -402,14 +463,14 @@ HR {
 .publisher_name {
   font-weight: bolder;
   font-size: 150%;
-  border-bottom: 1px dotted black;
+  border-bottom: 1px dotted $text_color;
   width: fit-content;
 }
 
 .publisher_num_categories, .publisher_num_stories {
   display: inline;
   margin: 0.625em;
-  color: #353535;
+  color: $light_text_color;
 }
 
 /* statistics */
@@ -513,10 +574,14 @@ HR {
 
   LABEL {
     width: 100%;
+    color: $text_color;
   }
 
   INPUT {
     width: 100%;
+    color: $text_color;
+    background-color: $background_color;
+    border: 2px solid $feature_color;
   }
 }
 
@@ -544,10 +609,14 @@ HR {
 }
 
 #search_sort_select_label {
+  color: $text_color;
 }
 
 #search_sort_select {
   width: 100%;
+  color: $text_color;
+  background-color: $background_color;
+  border: 2px solid $feature_color;
 }
 
 .criteria_buttons {

@@ -24,6 +24,8 @@ import signal
 import pathlib
 
 from scss.compiler import Compiler as ScssCompiler
+from scss.namespace import Namespace as ScssNamespace
+from scss.types import String as ScssString
 from sqlalchemy import select, func, distinct
 from sqlalchemy.orm import Session
 from libzim.writer import Creator, Item, StringProvider, FileProvider, Hint
@@ -268,14 +270,18 @@ class StylesheetItem(Item):
     """
     A L{libzim.writer.Item} for the CSS stylesheet.
     """
-    def __init__(self):
+    def __init__(self, theme="light"):
         """
         The default constructor.
+
+        @param theme: theme to render
+        @type theme: L{str}
         """
         super().__init__()
+        self._theme = theme
 
     def get_path(self):
-        return "style.css"
+        return "style_{}.css".format(self._theme)
 
     def get_title(self):
         return "CSS Stylesheet"
@@ -287,10 +293,13 @@ class StylesheetItem(Item):
         path = get_resource_file_path("style.scss")
         with open(path, "r") as fin:
             scss = fin.read()
+        namespace = ScssNamespace()
+        namespace.set_variable("$theme", ScssString(self._theme))
         compiler = ScssCompiler(
             root=pathlib.Path(get_package_dir()),
             search_path=["resources"],
             live_errors=False,  # raise exception when compilation fails
+            namespace=namespace,
         )
         css = compiler.compile_string(scss)
         return StringProvider(css)
@@ -653,7 +662,8 @@ class ZimBuilder(object):
 
             # add general items
             self.reporter.msg("Adding stylesheet... ", end="")
-            creator.add_item(StylesheetItem())
+            creator.add_item(StylesheetItem(theme="light"))
+            creator.add_item(StylesheetItem(theme="dark"))
             set_or_increment(self.num_files_added, "css")
             self.reporter.msg("Done.")
             self.reporter.msg("Adding favicon... ", end="")

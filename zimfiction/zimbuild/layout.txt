@@ -7,6 +7,9 @@ This file describes the ZIM layout.
 +---index.html
 |   The main page.
 |
++---style_THEME.css
+|   The style for the specified theme
+|
 +-+-info/
 | | Info files
 | |
