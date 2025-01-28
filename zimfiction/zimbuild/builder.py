@@ -663,6 +663,7 @@ class ZimBuilder(object):
             # add general items
             self.reporter.msg("Adding stylesheet... ", end="")
             creator.add_item(StylesheetItem(theme="light"))
+            set_or_increment(self.num_files_added, "css")
             creator.add_item(StylesheetItem(theme="dark"))
             set_or_increment(self.num_files_added, "css")
             self.reporter.msg("Done.")

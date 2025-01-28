@@ -14,8 +14,8 @@ class HierarchyFinder(ImplicationFinder):
     """
     def get_implied_categories(self, story, implied_categories):
         all_categories = [(ca.category.publisher.name, ca.category.name, ca.implication_level) for ca in story.category_associations] + implied_categories
+        categories = []
         if story.publisher.name.endswith(AF_PUBLISHER):
-            categories = []
             for publisher_name, category_name, implication_level in all_categories:
                 category_name = category_name.strip()
                 if implication_level <= ImplicationLevel.MIN_IMPLIED:
