@@ -11,13 +11,14 @@ except Exception:
     multiprocessing = None
 
 from sqlalchemy.orm import Session
+from sqlalchemy import select, and_
 
 from .reporter import StdoutReporter, VoidReporter
 from .importer.importer import import_from_fs
 from .zimbuild.builder import ZimBuilder, BuildOptions
 from .implication.implicator import get_default_implicator, add_all_implications
 from .exporter.exporter import Exporter, get_dumper
-from .db.models import mapper_registry
+from .db.models import mapper_registry, Story, Publisher
 from .db.connection import ConnectionConfig
 
 
@@ -127,8 +128,15 @@ def run_export(ns):
     dumper = get_dumper(ns.format)
     engine = _connection_config_from_ns(ns).connect()
     with Session(engine) as session:
+        criteria = True
+        if ns.publisher is not None:
+            publisher = session.scalars(
+                select(Publisher)
+                .where(Publisher.name == ns.publisher)
+            ).first()
+            criteria = and_(criteria, Story.publisher_uid == publisher.uid)
         exporter = Exporter(session, dumper=dumper, grouped=ns.grouped, reporter=reporter)
-        exporter.export_to(ns.directory, criteria=True)
+        exporter.export_to(ns.directory, criteria=criteria)
 
 
 def main():
@@ -325,6 +333,11 @@ def main():
         "--grouped",
         action="store_true",
         help="Group stories by publisher and id in subdirectories",
+    )
+    export_parser.add_argument(
+        "--publisher",
+        action="store",
+        help="Only export stories from this publisher",
     )
 
     ns = parser.parse_args()
