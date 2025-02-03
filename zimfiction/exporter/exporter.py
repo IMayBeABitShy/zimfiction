@@ -79,6 +79,7 @@ class Exporter(object):
         # count stories
         n_stories = self.session.execute(
             select(func.count(Story.id))
+            .where(criteria)
         ).scalar_one()
         # get stories
         stmt = select(Story).where(criteria).options(
