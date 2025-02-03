@@ -44,6 +44,7 @@ MARKER_TASK_COMPLETED = "completed"
 
 MAX_STORY_EAGERLOAD = 10000
 MIN_STORIES_FOR_EXPLICIT_STATS = 10000
+MIN_STORIES_FOR_STREAM = 10000
 
 STORY_LIST_YIELD = 2000
 
@@ -585,6 +586,9 @@ class Worker(object):
             # raiseload(Story.category_associations, StoryCategoryAssociation.category, Category.story_associations),
             noload(Story.category_associations, StoryCategoryAssociation.category, Category.story_associations),
         )
+        execution_options = {}
+        if n_stories_in_tag >= MIN_STORIES_FOR_STREAM:
+            execution_options["yield_per"] = STORY_LIST_YIELD
         story_stmt = (
             select(Story)
             .join(
@@ -619,7 +623,7 @@ class Worker(object):
                 *options,
             )
             .execution_options(
-                yield_per=STORY_LIST_YIELD,
+                **execution_options,
             )
         )
         stories = self.session.scalars(story_stmt)
@@ -725,6 +729,9 @@ class Worker(object):
 
         # load non-implied stories
         self.log("Starting to load stories...")
+        execution_options = {}
+        if n_stories_in_category >= MIN_STORIES_FOR_STREAM:
+            execution_options["yield_per"] = STORY_LIST_YIELD
         story_stmt = (
             select(Story)
             .join(
@@ -770,7 +777,7 @@ class Worker(object):
                 raiseload(Story.category_associations, StoryCategoryAssociation.category, Category.story_associations),
             )
             .execution_options(
-                yield_per=STORY_LIST_YIELD,
+                **execution_options,
             )
         )
         stories = self.session.scalars(story_stmt)
