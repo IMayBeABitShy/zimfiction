@@ -536,10 +536,13 @@ class Worker(object):
             self.log("Collecting statistics...")
             statistics = query_story_list_stats(
                 self.session,
-                Story.tag_associations.any(
-                    and_(
-                        StoryTagAssociation.tag_uid == task.uid,
-                        StoryTagAssociation.implication_level <= ImplicationLevel.MAX_LIST_INCLUDE,
+                (
+                    select(StoryTagAssociation.story_uid)
+                    .where(
+                        and_(
+                            StoryTagAssociation.tag_uid == task.uid,
+                            StoryTagAssociation.implication_level <= ImplicationLevel.MAX_LIST_INCLUDE,
+                        )
                     )
                 ),
             )
@@ -697,8 +700,9 @@ class Worker(object):
             self.log("Collecting statistics...")
             statistics = query_story_list_stats(
                 self.session,
-                Story.category_associations.any(
-                    and_(
+                (
+                    select(StoryCategoryAssociation.story_uid)
+                    .where(
                         StoryCategoryAssociation.category_uid == task.uid,
                         StoryCategoryAssociation.implication_level <= ImplicationLevel.MAX_LIST_INCLUDE,
                     )
@@ -858,7 +862,10 @@ class Worker(object):
         self.log("Collecting statistics...")
         statistics = query_story_list_stats(
             self.session,
-            Story.publisher_uid == task.uid,
+            (
+                select(Story.uid)
+                .where(Story.publisher_uid == task.uid)
+            ),
         )
         self.log("Starting to fetch stories in publisher...")
         stories = self.session.scalars(

@@ -615,19 +615,30 @@ def _generate_timeline_data(published_counter, updated_counter):
     return ret
 
 
-def query_story_list_stats(session, condition=None):
+def query_story_list_stats(session, select_story_statement=None):
     """
     Query statistics directly from the database.
 
     @param session: sqlalachemy session to use for query
     @type session: L{sqlalchemy.orm.Session}
-    @param condition: condition for selecting stories
-    @type condition: L{None} or a sqlalchemy condition
+    @param select_story_statement: statement for selecting story uids that should be included in the statistic
+    @type select_story_statement: L{None} or a sqlalchemy statement returning story uids
     @return: the collected statistics
     @rtype: L{StoryListStats}
     """
-    if condition is None:
-        condition = True
+    if select_story_statement is None:
+        chapter_condition = True
+        tag_condition = True
+        category_condition = True
+        series_condition = True
+        story_condition = True
+    else:
+        chapter_condition = Chapter.story_uid.in_(select_story_statement)
+        tag_condition = StoryTagAssociation.story_uid.in_(select_story_statement)
+        category_condition = StoryCategoryAssociation.story_uid.in_(select_story_statement)
+        series_condition = StorySeriesAssociation.story_uid.in_(select_story_statement)
+        story_condition = Story.uid.in_(select_story_statement)  # TODO: probably suboptimal, optimize this
+
     # chaper stat query
     chapter_subquery = (
         select(
@@ -637,12 +648,7 @@ def query_story_list_stats(session, condition=None):
             func.max(Chapter.num_words).label("max_chapter_words"),
             func.count(Chapter.uid).label("num_chapters"),
         )
-        .join(
-            # join with story so we can check the condition
-            Story,
-            Story.uid == Chapter.story_uid,
-        )
-        .where(condition)
+        .where(chapter_condition)
         .group_by(literal_column("chapter_story_uid"))
         .subquery()
     )
@@ -692,12 +698,7 @@ def query_story_list_stats(session, condition=None):
             func.count(StoryTagAssociation.tag_uid.distinct()).label("tag_count"),
             func.count(StoryTagAssociation.tag_uid).label("total_tag_count"),
         )
-        .join(
-            # join with story so we can check the condition
-            Story,
-            Story.uid == StoryTagAssociation.story_uid,
-        )
-        .where(condition)
+        .where(tag_condition)
         .subquery()
     )
     # category stat subquery
@@ -706,12 +707,7 @@ def query_story_list_stats(session, condition=None):
             func.count(StoryCategoryAssociation.category_uid.distinct()).label("category_count"),
             func.count(StoryCategoryAssociation.category_uid).label("total_category_count"),
         )
-        .join(
-            # join with story so we can check the condition
-            Story,
-            Story.uid == StoryCategoryAssociation.story_uid,
-        )
-        .where(condition)
+        .where(category_condition)
         .subquery()
     )
     # series stat subquery
@@ -720,12 +716,7 @@ def query_story_list_stats(session, condition=None):
             func.count(StorySeriesAssociation.series_uid.distinct()).label("series_count"),
             func.count(StorySeriesAssociation.series_uid).label("total_series_count"),
         )
-        .join(
-            # join with story so we can check the condition
-            Story,
-            Story.uid == StorySeriesAssociation.story_uid,
-        )
-        .where(condition)
+        .where(series_condition)
         .subquery()
     )
     tcs_stmt = (
@@ -757,7 +748,7 @@ def query_story_list_stats(session, condition=None):
             Story.published,
             Story.updated,
         )
-        .where(condition)
+        .where(story_condition)
     )
     result = session.execute(timeline_stmt)
     for story in result:
