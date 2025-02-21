@@ -10,6 +10,8 @@ ZimFiction is a tool for converting downloaded fanfiction into ZIM files. These 
 - statistics in ZIM
 - organized by publisher
 - browse stories by category, tag, series and author
+- advanced search and filter functionality
+- mobile and darkmode
 
 ## Requirements
 
@@ -17,7 +19,7 @@ Building a ZimFiction dump takes both a significant amount of times and resouces
 
 First, you need a lot of disk space. To estimate this, take the total space of all extracted(!) dumps you wish to include, multiply it by three and add some buffer to be safe. Yes, this may be within the 1-2TiB range, but be assured, this is mostly temporarily. You basically need a third of the space just for the raw stories, a third for the database, less than a third for the final ZIM and some more for temporary files. Once you are done and sure you don't need to build such a ZIM a second time, you can delete the dump and database.
 
-Second, you need a lot of RAM. Again, this depends on the amount of stories you wish to include in the ZIM. Small dumps can be build with a couple GiB of RAM or even less, but for the full dump mentioned above 60GiB were already nearly not enough.
+Second, you need a lot of RAM. Again, this depends on the amount of stories you wish to include in the ZIM. Small dumps can be build with a couple GiB of RAM or even less, but for the full dump mentioned above 60GiB were already nearly not enough. You may want to setup some swap so you won't unexpectedly run out of memory.
 
 Third, you need time. Importing the stories may take a week or more, depending on how you import them. You may want to check the performance of your decompression tools before you begin. For example, some linux distributions ship with an outdated, very slow 7z tool that may increase extraction time by weeks. Running the implication may take another 1-2 days. The final build can take more than a week as well. You can pause the process between the individual imports and each stage, but the implication and final build must happen uninterrupted. These stages can also fail and may need to be restarted. Of course, the time requirements depend on the amount of stories you want to include and device you are using. The observations above are for the full story dump, but making small ZIMs is obviously faster.
 

@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name="zimfiction",
-    version="0.0.1",
+    version="1.0.0",
     author="IMayBeABitShy",
     author_email="IMayBeABitShy@gmail.com",
     description="Build ZIM files from fiction dumps",
