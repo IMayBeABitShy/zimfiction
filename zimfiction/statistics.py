@@ -622,22 +622,12 @@ def query_story_list_stats(session, select_story_statement=None):
     @param session: sqlalachemy session to use for query
     @type session: L{sqlalchemy.orm.Session}
     @param select_story_statement: statement for selecting story uids that should be included in the statistic
-    @type select_story_statement: L{None} or a sqlalchemy statement returning story uids
+    @type select_story_statement: L{None} or a sqlalchemy statement returning story uids in the "story_uid" column
     @return: the collected statistics
     @rtype: L{StoryListStats}
     """
-    if select_story_statement is None:
-        chapter_condition = True
-        tag_condition = True
-        category_condition = True
-        series_condition = True
-        story_condition = True
-    else:
-        chapter_condition = Chapter.story_uid.in_(select_story_statement)
-        tag_condition = StoryTagAssociation.story_uid.in_(select_story_statement)
-        category_condition = StoryCategoryAssociation.story_uid.in_(select_story_statement)
-        series_condition = StorySeriesAssociation.story_uid.in_(select_story_statement)
-        story_condition = Story.uid.in_(select_story_statement)  # TODO: probably suboptimal, optimize this
+    if select_story_statement is not None:
+        select_story_cte = select_story_statement.cte("story_uids")
 
     # chaper stat query
     chapter_subquery = (
@@ -648,7 +638,16 @@ def query_story_list_stats(session, select_story_statement=None):
             func.max(Chapter.num_words).label("max_chapter_words"),
             func.count(Chapter.uid).label("num_chapters"),
         )
-        .where(chapter_condition)
+    )
+    if select_story_statement is not None:
+        chapter_subquery = (
+            chapter_subquery.join(
+                select_story_cte,
+                select_story_cte.c.story_uid == Chapter.story_uid,
+            )
+        )
+    chapter_subquery = (
+        chapter_subquery
         .group_by(literal_column("chapter_story_uid"))
         .subquery()
     )
@@ -698,27 +697,39 @@ def query_story_list_stats(session, select_story_statement=None):
             func.count(StoryTagAssociation.tag_uid.distinct()).label("tag_count"),
             func.count(StoryTagAssociation.tag_uid).label("total_tag_count"),
         )
-        .where(tag_condition)
-        .subquery()
     )
+    if select_story_statement is not None:
+        tag_subquery = tag_subquery.join(
+            select_story_cte,
+            select_story_cte.c.story_uid == StoryTagAssociation.story_uid,
+        )
+    tag_subquery = tag_subquery.subquery()
     # category stat subquery
     category_subquery = (
         select(
             func.count(StoryCategoryAssociation.category_uid.distinct()).label("category_count"),
             func.count(StoryCategoryAssociation.category_uid).label("total_category_count"),
         )
-        .where(category_condition)
-        .subquery()
     )
+    if select_story_statement is not None:
+        category_subquery = category_subquery.join(
+            select_story_cte,
+            select_story_cte.c.story_uid == StoryCategoryAssociation.story_uid,
+        )
+    category_subquery = category_subquery.subquery()
     # series stat subquery
     series_subquery = (
         select(
             func.count(StorySeriesAssociation.series_uid.distinct()).label("series_count"),
             func.count(StorySeriesAssociation.series_uid).label("total_series_count"),
         )
-        .where(series_condition)
-        .subquery()
     )
+    if select_story_statement is not None:
+        series_subquery = series_subquery.join(
+            select_story_cte,
+            select_story_cte.c.story_uid == StorySeriesAssociation.story_uid,
+        )
+    series_subquery = series_subquery.subquery()
     tcs_stmt = (
         select(literal_column("*"))
         .select_from(
@@ -748,8 +759,12 @@ def query_story_list_stats(session, select_story_statement=None):
             Story.published,
             Story.updated,
         )
-        .where(story_condition)
     )
+    if select_story_statement is not None:
+        timeline_stmt = timeline_stmt.join(
+            select_story_cte,
+            select_story_cte.c.story_uid == Story.uid,
+        )
     result = session.execute(timeline_stmt)
     for story in result:
         published_counter.feed(story.published)

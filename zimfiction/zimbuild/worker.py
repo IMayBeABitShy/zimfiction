@@ -44,7 +44,7 @@ MARKER_TASK_COMPLETED = "completed"
 
 MAX_STORY_EAGERLOAD = 10000
 MIN_STORIES_FOR_EXPLICIT_STATS = 10000
-MIN_STORIES_FOR_STREAM = 10000
+MIN_STORIES_FOR_STREAM = 5000
 
 STORY_LIST_YIELD = 2000
 
@@ -537,7 +537,7 @@ class Worker(object):
             statistics = query_story_list_stats(
                 self.session,
                 (
-                    select(StoryTagAssociation.story_uid)
+                    select(StoryTagAssociation.story_uid.label("story_uid"))
                     .where(
                         and_(
                             StoryTagAssociation.tag_uid == task.uid,
@@ -591,6 +591,7 @@ class Worker(object):
         )
         execution_options = {}
         if n_stories_in_tag >= MIN_STORIES_FOR_STREAM:
+            self.log(" -> using yield_per to stream results")
             execution_options["yield_per"] = STORY_LIST_YIELD
         story_stmt = (
             select(Story)
@@ -701,7 +702,7 @@ class Worker(object):
             statistics = query_story_list_stats(
                 self.session,
                 (
-                    select(StoryCategoryAssociation.story_uid)
+                    select(StoryCategoryAssociation.story_uid.label("story_uid"))
                     .where(
                         StoryCategoryAssociation.category_uid == task.uid,
                         StoryCategoryAssociation.implication_level <= ImplicationLevel.MAX_LIST_INCLUDE,
@@ -735,6 +736,7 @@ class Worker(object):
         self.log("Starting to load stories...")
         execution_options = {}
         if n_stories_in_category >= MIN_STORIES_FOR_STREAM:
+            self.log(" -> using yield_per to stream results")
             execution_options["yield_per"] = STORY_LIST_YIELD
         story_stmt = (
             select(Story)
@@ -863,7 +865,7 @@ class Worker(object):
         statistics = query_story_list_stats(
             self.session,
             (
-                select(Story.uid)
+                select(Story.uid.label("story_uid"))
                 .where(Story.publisher_uid == task.uid)
             ),
         )
