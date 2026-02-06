@@ -38,6 +38,6 @@ class ImplicationLevel(IntEnum):
     QUALIFIED = 30
     MENTIONED = 70
     UNKNOWN = -1
-    STRONGLY_DEDUCED = 50;
+    STRONGLY_DEDUCED = 50
     DEDUCED = 110
     MERGER = 150

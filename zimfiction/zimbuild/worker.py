@@ -34,7 +34,7 @@ from .renderer import HtmlRenderer, RenderResult
 from ..statistics import query_story_list_stats
 from ..util import ensure_iterable
 from ..normalize import normalize_tag
-from ..db.models import Story, Chapter, Tag, Author, Category, Publisher, Source
+from ..db.models import Story, Chapter, Tag, Author, Category, Publisher
 from ..db.models import StoryTagAssociation, StorySeriesAssociation, StoryCategoryAssociation, Series
 from ..implication.implicationlevel import ImplicationLevel
 

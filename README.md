@@ -27,7 +27,7 @@ Third, you need time. Importing the stories may take a week or more, depending o
 
 ZimFiction works in three stages: the import, the implication and the build phase. The import phase imports directories of stories and inserts them into a database. The implication phase is optional and tries to find additional tags of stories in the database. The build phase takes this database and builds a ZIM file.
 
-Before we begin, be sure you have installed the `zimfiction` package. It is not on pypi, so instead clone the repo and install it (e.g. `pip install path/to/cloned/repo/`). You may want to setup a virtual environment to avoid compatibility problems, but this is generally optional.
+Before we begin, be sure you have installed the `zimfiction` package. It is not on PyPI, so instead clone the repo and install it (e.g. `pip install path/to/cloned/repo/`). You may want to setup a virtual environment to avoid compatibility problems, but this is generally optional.
 
 First, you need one or more fanfiction dumps. You can probably find one of those rather easily on reddit. Alternatively, you can also create a directory and download fics there using fanficfare (in this case, using `html` as an output format is recommended).
 
@@ -55,5 +55,5 @@ ZimFiction can gain some significant performance boosts with some tricks.
 
 First, be sure to install the `optimize` extra for zimfiction (e.g. `pip install path/to/zimfiction[optimize]`).
 
-Secondly, we can optimize the database. For one, using a posgtresql database rather than a sqlite one can make a huge difference. Installing the database server on the same device or on a device that has a very good network connection to the build device can make a huge difference too. If the latency of DB requests is low (e.g. because the DB is hosted on the same device as you are building the ZIM on), then enabling lazy loading using `--lazy` where supported can make a significant performance difference too.
+Secondly, we can optimize the database. For one, using a postgresql database rather than a sqlite one can make a huge difference. Installing the database server on the same device or on a device that has a very good network connection to the build device can make a huge difference too. If the latency of DB requests is low (e.g. because the DB is hosted on the same device as you are building the ZIM on), then enabling lazy loading using `--lazy` where supported can make a significant performance difference too.
 Finally, and this too can make a huge difference, make sure the DB indexes are used and up to date. In a postgresql shell, simply run `ANALYZE story; ANALYZE tag; ANALYZE story_has_tag; ANALYZE category; ANALYZE story_has_category; ANALYZE publisher; ANALYZE chapter; ANALYZE story_in_series; ANALYZE series; ANALYZE author;` After the tables have been created, which should happen during or before the first commit when importing. Repeat this when the import slows down and before the implication and build each and the time difference can be huge.

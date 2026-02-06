@@ -20,7 +20,7 @@ from ..exceptions import ParseError
 
 EPUB_ENCODING = "utf-8"
 TITLE_START_REGEX = re.compile(r"<[aA] href=\".+?\">")
-AUTHOR_START_REGEX =  re.compile(r"by <[aA] (class=\".+?\")? href=\".+?\">")
+AUTHOR_START_REGEX = re.compile(r"by <[aA] (class=\".+?\")? href=\".+?\">")
 CHAPTER_INDEX_REGEX = re.compile(r"[0-9]+")
 CHAPTER_TITLE_REGEX = re.compile(r"class=\"fff_chapter_title\">(.+?)</")
 

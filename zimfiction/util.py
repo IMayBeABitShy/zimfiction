@@ -144,7 +144,7 @@ def set_or_increment(d, k, v=1):
     @type v: L{int} or L{float}
     """
     if k in d:
-        d[k]+= v
+        d[k] += v
     else:
         d[k] = v
 
